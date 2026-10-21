@@ -19,29 +19,29 @@ cp .env.example .env.local   # then edit it
 npm run dev                  # http://localhost:3000
 ```
 
-Run ThinkTechErpAPI with its `http` launch profile (`http://localhost:5291`). If you use the `https`
-profile, set `API_BASE_URL=https://localhost:7071` and start Node with `NODE_USE_SYSTEM_CA=1` so it
-trusts the ASP.NET dev certificate. The client never follows API redirects (they would drop the
-`Authorization` header); a redirect shows up as an error telling you to fix `API_BASE_URL`.
+Locally, point `API_BASE_URL` at the API's plain-HTTP port `http://localhost:5291` (both launch
+profiles listen there, and the API skips its HTTPS redirect in Development). The calls are
+server-to-server, and Node rejects the ASP.NET development certificate even with the system CA store
+when Windows holds several `CN=localhost` certificates. The client never follows API redirects (they
+would drop the `Authorization` header); a redirect shows up as an error telling you to fix `API_BASE_URL`.
 
 ### Signing in
 
-ThinkTechErpAPI only *validates* JWTs today (HS256, `sub` + `jti` required, roles in the `role` claim);
-it has no endpoint that issues them. Two modes are supported:
+The default `AUTH_MODE=api` sends `{ email, password }` to
+`AUTH_LOGIN_PATH` (default `/api/security/auth/login`). It reads the API's `accessToken`,
+`refreshToken`, and `refreshTokenExpiresAt` response fields. The access token is stored in the
+httpOnly `tt_session` cookie and used for server-side bearer requests. The refresh token is stored
+in the httpOnly `tt_refresh` cookie and revoked through the API logout endpoint when the user signs
+out.
 
-- **`AUTH_MODE=api`** (default) — the login form posts `{ userName, password }` to
-  `AUTH_LOGIN_PATH` (default `/api/security/auth/login`) and expects `{ "accessToken": "<jwt>" }`.
-  Logout calls `AUTH_LOGOUT_PATH` best-effort.
-- **`AUTH_MODE=dev`** — local development only (disabled in production builds). The credentials in
-  `DEV_AUTH_USERNAME` / `DEV_AUTH_PASSWORD` are checked locally and a JWT is minted with
-  `AUTH_JWT_ISSUER` / `AUTH_JWT_AUDIENCE` / `AUTH_JWT_SIGNING_KEY` and the roles in `DEV_AUTH_ROLES`.
-  **Copy those three JWT values from the API's configuration** (user secrets
-  `Authentication:Jwt:*`) so the API accepts the tokens.
+The client trusts the access token the API returns (it only reads `sub` and `exp`); the API verifies
+it on every call, so the client does not need the API's signing key. Access tokens are short-lived:
+`proxy.ts` renews the session through `AUTH_REFRESH_PATH` (default `/api/security/auth/refresh`)
+when the access token is missing or about to expire, so users stay signed in for the refresh
+token's lifetime. Concurrent requests share one renewal, because the API rotates refresh tokens.
 
-The token lives only in an **httpOnly cookie** (`tt_session`). All API calls are made server-side
-(Server Components and Server Actions) with `Authorization: Bearer …`, so the token never reaches
-browser JavaScript. When the API answers 401 the session is cleared and the user is sent to
-`/login?expired=1`.
+`AUTH_MODE=dev` remains available for local-only sign-in using `DEV_AUTH_USERNAME` /
+`DEV_AUTH_PASSWORD` (it needs the `AUTH_JWT_*` values); it is disabled in production builds.
 
 Roles: `admin` can open every module; otherwise each module lists its roles (SMS needs `sms_admin`,
 matching the API's `SmsAdmin` policy; Security needs `security_admin`).
@@ -87,15 +87,14 @@ must render inside `<Suspense>`. Pages render a static header and put data in a 
 follow the existing pages. API data is never cached (`cache: "no-store"`); mutations call `refresh()`
 or `redirect()`.
 
-## Security API contract (to implement in ThinkTechErpAPI)
+## Security API contract
 
-`Areas/Security` in the API is empty. The client is built against these endpoints; until they exist
-the Security screens show "Not implemented".
+The security module uses these endpoints in ThinkTechErpAPI:
 
 | Method | Path | Body → Response |
 | --- | --- | --- |
-| POST | `/api/security/auth/login` (anonymous) | `{ userName, password }` → `{ accessToken }` (JWT with `sub`, `jti`, `name`, `email`, `role`[], optional `client_id`) |
-| POST | `/api/security/auth/logout` | — → 204 (revoke the token's `jti`) |
+| POST | `/api/security/auth/login` (anonymous) | `{ email, password }` → `AuthResponse` (`accessToken`, `refreshToken`, expiry times, user) |
+| POST | `/api/security/auth/logout` | `{ refreshToken }` → 204 |
 | GET | `/api/security/users?limit&offset&search` | → `SecurityUser[]` |
 | GET | `/api/security/users/{userId}` | → `SecurityUser` |
 | POST | `/api/security/users` | `{ userName, email, displayName, password, isActive, roles[] }` → `SecurityUser` |

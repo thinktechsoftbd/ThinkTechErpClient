@@ -33,8 +33,8 @@ export function LoginForm() {
         <NextField />
       </Suspense>
       <FormMessage />
-      <Field label="User name" name="userName" required>
-        <Input id="userName" name="userName" autoComplete="username" placeholder="Enter your user name" required autoFocus />
+      <Field label="Email or user name" name="email" required>
+        <Input id="email" name="email" autoComplete="username" placeholder="Enter your email or user name" required autoFocus />
       </Field>
       <Field label="Password" name="password" required>
         <div className="relative">

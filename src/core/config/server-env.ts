@@ -1,16 +1,8 @@
 import "server-only";
 import { jwtSettingsFromEnv } from "@/core/auth/token";
+import { apiBaseUrlFromEnv, authModeFromEnv, readEnv as read, type AuthMode } from "./env";
 
-export type AuthMode = "api" | "dev";
-
-function read(name: string): string | undefined {
-  const value = process.env[name]?.trim();
-  return value ? value : undefined;
-}
-
-function trimTrailingSlash(value: string) {
-  return value.replace(/\/+$/, "");
-}
+export type { AuthMode };
 
 /**
  * Server-only configuration. Values are read lazily so a missing optional
@@ -18,13 +10,10 @@ function trimTrailingSlash(value: string) {
  */
 export const serverEnv = {
   get apiBaseUrl() {
-    return trimTrailingSlash(read("API_BASE_URL") ?? "http://localhost:5291");
+    return apiBaseUrlFromEnv();
   },
   get authMode(): AuthMode {
-    const mode = read("AUTH_MODE");
-    // Dev sign-in is never available in a production build.
-    if (mode === "dev" && process.env.NODE_ENV !== "production") return "dev";
-    return "api";
+    return authModeFromEnv();
   },
   get authLoginPath() {
     return read("AUTH_LOGIN_PATH") ?? "/api/security/auth/login";

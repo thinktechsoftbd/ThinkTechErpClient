@@ -1,7 +1,10 @@
 import { decodeJwt, jwtVerify, type JWTPayload } from "jose";
+import { authModeFromEnv, readEnv } from "@/core/config/env";
 
 /** Session cookie holding the API access token (httpOnly, never readable by browser JS). */
 export const SESSION_COOKIE = "tt_session";
+/** httpOnly cookie holding the API refresh token; proxy.ts uses it to renew the session. */
+export const REFRESH_COOKIE = "tt_refresh";
 
 export type JwtSettings = {
   issuer?: string;
@@ -11,11 +14,30 @@ export type JwtSettings = {
 
 /** Reads JWT settings straight from the environment (usable from proxy.ts). */
 export function jwtSettingsFromEnv(): JwtSettings {
-  const read = (name: string) => process.env[name]?.trim() || undefined;
   return {
-    issuer: read("AUTH_JWT_ISSUER"),
-    audience: read("AUTH_JWT_AUDIENCE"),
-    signingKey: read("AUTH_JWT_SIGNING_KEY"),
+    issuer: readEnv("AUTH_JWT_ISSUER"),
+    audience: readEnv("AUTH_JWT_AUDIENCE"),
+    signingKey: readEnv("AUTH_JWT_SIGNING_KEY"),
+  };
+}
+
+/**
+ * How session tokens are checked. In api mode the token came straight from the API over a
+ * server-to-server call and the API verifies it on every request, so the client only decodes
+ * it and never needs the API's signing key. Dev mode verifies the tokens it minted itself.
+ */
+export function tokenVerificationFromEnv(): JwtSettings {
+  return authModeFromEnv() === "dev" ? jwtSettingsFromEnv() : {};
+}
+
+/** Options for the httpOnly session and refresh cookies; they expire with their token. */
+export function sessionCookieOptions(expiresAt: number) {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    expires: new Date(expiresAt),
   };
 }
 
@@ -25,8 +47,7 @@ const MS_ROLE_CLAIM = "http://schemas.microsoft.com/ws/2008/06/identity/claims/r
 
 /**
  * Validates the token's lifetime and required claims. When a signing key is
- * configured the signature is verified too; otherwise the API remains the
- * authority and verifies it on every call.
+ * given the signature, issuer and audience are verified too (see tokenVerificationFromEnv).
  */
 export async function readTokenClaims(token: string, settings: JwtSettings): Promise<TokenClaims | null> {
   try {

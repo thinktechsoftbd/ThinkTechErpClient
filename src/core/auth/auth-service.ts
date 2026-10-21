@@ -2,38 +2,36 @@ import "server-only";
 import { timingSafeEqual } from "node:crypto";
 import { SignJWT } from "jose";
 import { serverEnv } from "@/core/config/server-env";
-import { readTokenClaims } from "./token";
+import { readAuthResponse, type AuthResponseBody } from "./api-session";
 
 export type SignInResult =
-  | { ok: true; token: string; expiresAt: number }
+  | { ok: true; token: string; expiresAt: number; refreshToken?: string; refreshExpiresAt?: number }
   | { ok: false; message: string };
 
 const DEV_TOKEN_LIFETIME_SECONDS = 8 * 60 * 60;
 
-/** Expected response of the API's login endpoint (field names are matched loosely). */
-type LoginResponse = {
-  accessToken?: string;
-  access_token?: string;
-  token?: string;
-};
-
-export async function signIn(userName: string, password: string): Promise<SignInResult> {
-  return serverEnv.authMode === "dev" ? signInDev(userName, password) : signInWithApi(userName, password);
+export async function signIn(email: string, password: string): Promise<SignInResult> {
+  return serverEnv.authMode === "dev" ? signInDev(email, password) : signInWithApi(email, password);
 }
 
-async function signInWithApi(userName: string, password: string): Promise<SignInResult> {
+async function signInWithApi(email: string, password: string): Promise<SignInResult> {
   const url = `${serverEnv.apiBaseUrl}${serverEnv.authLoginPath}`;
   let response: Response;
   try {
     response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ userName, password }),
+      body: JSON.stringify({ email, password }),
       cache: "no-store",
       redirect: "manual",
     });
-  } catch {
-    return { ok: false, message: `Cannot reach the API at ${serverEnv.apiBaseUrl}. Is ThinkTechErpAPI running?` };
+  } catch (error) {
+    const cause = error instanceof Error && error.cause instanceof Error ? error.cause.message : undefined;
+    const detail = cause ? ` (${cause})` : "";
+    return {
+      ok: false,
+      message: `Could not connect to ${url}${detail}. Check that ThinkTechErpAPI is running and its HTTPS certificate is trusted.`,
+    };
   }
 
   if (response.status === 404 || response.status === 405) {
@@ -42,8 +40,20 @@ async function signInWithApi(userName: string, password: string): Promise<SignIn
       message: `The API has no login endpoint at ${serverEnv.authLoginPath}. Add it to ThinkTechErpAPI (see README) or use AUTH_MODE=dev locally.`,
     };
   }
-  if (response.status === 400 || response.status === 401 || response.status === 403) {
-    return { ok: false, message: "Invalid user name or password." };
+  if (response.status >= 300 && response.status < 400) {
+    const location = response.headers.get("location");
+    return {
+      ok: false,
+      message: location
+        ? `The API redirected the login request to ${location}. Set API_BASE_URL to the API's final HTTPS address and restart the client.`
+        : `The API redirected the login request (HTTP ${response.status}). Set API_BASE_URL to the API's final HTTPS address and restart the client.`,
+    };
+  }
+  if (response.status === 403) {
+    return { ok: false, message: "This account is inactive. Contact your administrator." };
+  }
+  if (response.status === 400 || response.status === 401) {
+    return { ok: false, message: "Invalid email or password." };
   }
   if (response.status === 429) {
     return { ok: false, message: "Too many sign-in attempts. Please wait a minute and try again." };
@@ -52,13 +62,8 @@ async function signInWithApi(userName: string, password: string): Promise<SignIn
     return { ok: false, message: `Sign-in failed (HTTP ${response.status}). Please try again.` };
   }
 
-  const body = (await response.json().catch(() => ({}))) as LoginResponse;
-  const token = body.accessToken ?? body.access_token ?? body.token;
-  const claims = token ? await readTokenClaims(token, serverEnv.jwt) : null;
-  if (!token || !claims?.exp) {
-    return { ok: false, message: "The API returned a token this app cannot use (missing, expired or invalid)." };
-  }
-  return { ok: true, token, expiresAt: claims.exp * 1000 };
+  const parsed = await readAuthResponse((await response.json().catch(() => ({}))) as AuthResponseBody);
+  return parsed.ok ? { ok: true, ...parsed.session } : parsed;
 }
 
 function safeEqual(a: string, b: string) {
@@ -105,12 +110,14 @@ async function signInDev(userName: string, password: string): Promise<SignInResu
 }
 
 /** Tells the API the session ended (best effort; the cookie is cleared regardless). */
-export async function signOut(token: string) {
+export async function signOut(refreshToken?: string) {
   if (serverEnv.authMode === "dev") return;
+  if (!refreshToken) return;
   try {
     await fetch(`${serverEnv.apiBaseUrl}${serverEnv.authLogoutPath}`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ refreshToken }),
       cache: "no-store",
       redirect: "manual",
       signal: AbortSignal.timeout(3000),

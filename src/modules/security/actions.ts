@@ -9,10 +9,12 @@ import { securityApi } from "./api";
 import { securityModule } from "./module";
 import {
   EMAIL_PATTERN,
+  MENU_GROUP_PATH,
   MAX_PASSWORD_BYTES,
   MIN_PASSWORD_LENGTH,
   PERMISSION_CODE_PATTERN,
   USER_STATUSES,
+  type MenuUpsertRequest,
   type OrganizationUpsertRequest,
   type UserMenuAccessItem,
   type UserStatus,
@@ -294,4 +296,65 @@ export async function setUserMenusAction(id: number, _previous: ActionState, for
   }
   refresh();
   return actionSuccess("Menu access saved.");
+}
+
+// ---- Menus
+
+/** Optional positive id from a select; null for "none". */
+function optionalId(formData: FormData, name: string) {
+  const id = Number(formString(formData, name));
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+/** Creates (id = null) or updates a menu row (security."Menu"). */
+export async function saveMenuAction(id: number | null, _previous: ActionState, formData: FormData): Promise<ActionState> {
+  const fieldErrors: FieldErrors = {};
+  const title = requiredText(formData, "title", 100, fieldErrors);
+  const path = requiredText(formData, "path", 300, fieldErrors);
+  if (path && path !== MENU_GROUP_PATH && !/^\/[^\s]*$/.test(path)) {
+    fieldErrors.path = `Use a page route starting with "/" (e.g. /sms/clients), or "${MENU_GROUP_PATH}" for a group.`;
+  }
+  const icon = text(formData, "icon", 100, fieldErrors);
+  const sortOrderRaw = formString(formData, "sortOrder") || "0";
+  const sortOrder = Number(sortOrderRaw);
+  if (!/^-?\d+$/.test(sortOrderRaw) || !Number.isSafeInteger(sortOrder)) fieldErrors.sortOrder = "Enter a whole number.";
+  const parentId = optionalId(formData, "parentId");
+  if (id !== null && parentId === id) fieldErrors.parentId = "A menu cannot be its own parent.";
+  if (hasErrors(fieldErrors)) return invalid(fieldErrors);
+
+  const body: MenuUpsertRequest = {
+    title,
+    path,
+    // Store Lucide names in kebab-case ("LayoutDashboard" → "layout-dashboard").
+    icon: icon ? icon.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase() : null,
+    sortOrder,
+    parentId,
+    roleId: optionalId(formData, "roleId"),
+    isActive: formData.get("isActive") === "on",
+  };
+
+  let createdId: number;
+  try {
+    await requireModuleAccess(securityModule);
+    if (id !== null) {
+      await securityApi.updateMenu(id, body);
+      // Also re-renders the sidebar, which is built from the menu table.
+      refresh();
+      return actionSuccess("Menu saved.");
+    }
+    createdId = (await securityApi.createMenu(body)).id;
+  } catch (error) {
+    return toActionError(error);
+  }
+  redirect(`/security/menus/${createdId}`);
+}
+
+export async function deleteMenuAction(id: number): Promise<ActionState> {
+  try {
+    await requireModuleAccess(securityModule);
+    await securityApi.deleteMenu(id);
+  } catch (error) {
+    return toActionError(error);
+  }
+  redirect("/security/menus");
 }

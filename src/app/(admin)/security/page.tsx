@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Building2, KeyRound, ShieldCheck, Users, type LucideIcon } from "lucide-react";
+import { Building2, KeyRound, ListTree, ShieldCheck, Users, type LucideIcon } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi, type ApiResult } from "@/core/api/client";
 import { Badge } from "@/core/ui/badge";
@@ -19,7 +19,7 @@ export default function SecurityOverviewPage() {
         description="Organizations, users, roles and the permissions that control access to every module."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Security" }]}
       />
-      <Suspense fallback={<StatGridSkeleton count={4} />}>
+      <Suspense fallback={<StatGridSkeleton count={5} />}>
         <SecuritySummary />
       </Suspense>
     </>
@@ -27,11 +27,12 @@ export default function SecurityOverviewPage() {
 }
 
 async function SecuritySummary() {
-  const [organizations, users, roles, permissions] = await Promise.all([
+  const [organizations, users, roles, permissions, menus] = await Promise.all([
     tryApi(async () => (await securityApi.getOrganizations()).length),
     tryApi(async () => (await securityApi.getUsers({ limit: 1, offset: 0 })).totalCount),
     tryApi(async () => (await securityApi.getRoles()).length),
     tryApi(async () => (await securityApi.getPermissions()).length),
+    tryApi(async () => (await securityApi.getMenus()).length),
   ]);
 
   const areas: { label: string; href: string; icon: LucideIcon; count: ApiResult<number>; hint: string }[] = [
@@ -39,10 +40,11 @@ async function SecuritySummary() {
     { label: "Users", href: "/security/users", icon: Users, count: users, hint: "Accounts that can sign in" },
     { label: "Roles", href: "/security/roles", icon: ShieldCheck, count: roles, hint: "Bundles of permissions" },
     { label: "Permissions", href: "/security/permissions", icon: KeyRound, count: permissions, hint: "MODULE.ACTION codes" },
+    { label: "Menus", href: "/security/menus", icon: ListTree, count: menus, hint: "Sidebar menu tree" },
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
       {areas.map((area) => (
         <Link key={area.href} href={area.href} className="rounded-2xl transition hover:shadow-theme-lg">
           <StatCard

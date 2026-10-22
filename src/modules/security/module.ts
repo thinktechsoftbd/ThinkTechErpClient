@@ -18,6 +18,7 @@ export const securityModule = defineModule({
     { label: "Users", href: "/security/users" },
     { label: "Roles", href: "/security/roles" },
     { label: "Permissions", href: "/security/permissions" },
+    { label: "Menus", href: "/security/menus" },
   ],
   permissions: [
     { key: SECURITY_VIEW_PERMISSION, label: "View organizations, users, roles and permissions" },

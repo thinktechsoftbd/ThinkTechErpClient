@@ -109,6 +109,11 @@ export type SecurityMenu = {
   isActive: boolean;
 };
 
+export type MenuUpsertRequest = Omit<SecurityMenu, "id">;
+
+/** Path of a menu that only groups child menus (it has no page of its own). */
+export const MENU_GROUP_PATH = "#";
+
 export const SECURITY_PAGE_SIZE = 25;
 export const MIN_PASSWORD_LENGTH = 8;
 /** bcrypt reads only the first 72 bytes; the API rejects longer passwords. */

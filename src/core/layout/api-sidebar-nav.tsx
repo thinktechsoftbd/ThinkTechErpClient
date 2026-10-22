@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, Circle } from "lucide-react";
-import { DynamicIcon, iconNames, type IconName } from "lucide-react/dynamic";
+import { ChevronDown } from "lucide-react";
 import { useState } from "react";
+import { LucideIcon } from "@/core/ui/lucide-icon";
 import { cn } from "@/core/utils/cn";
 import { useSidebar } from "./sidebar-context";
 import {
@@ -20,27 +20,9 @@ import {
 } from "./sidebar-nav";
 import type { MenuNode } from "./user-menus";
 
-const knownIcons = new Set<string>(iconNames);
-
 /** Accepts "layout-dashboard" as well as "LayoutDashboard" from the menu table. */
-function iconName(icon: string | null | undefined): IconName | undefined {
-  const name = icon?.trim().replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
-  return name && knownIcons.has(name) ? (name as IconName) : undefined;
-}
-
 function NodeIcon({ icon, active }: { icon?: string | null; active: boolean }) {
-  const className = menuIconClass(active);
-  const name = iconName(icon);
-  if (!name) return <Circle className={className} aria-hidden />;
-  // Icons load on demand; keep their space while they do.
-  return (
-    <DynamicIcon
-      name={name}
-      className={className}
-      aria-hidden
-      fallback={() => <span className="inline-block size-5 shrink-0" aria-hidden />}
-    />
-  );
+  return <LucideIcon name={icon} className={menuIconClass(active)} />;
 }
 
 /** Menus with a route; "#" (or anything not starting with "/") is a group without a page. */

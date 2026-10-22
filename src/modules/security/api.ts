@@ -1,6 +1,7 @@
 import "server-only";
 import { apiFetch } from "@/core/api/client";
 import type {
+  MenuUpsertRequest,
   Organization,
   OrganizationUpsertRequest,
   PagedResult,
@@ -19,6 +20,7 @@ import type {
 } from "./types";
 
 const base = "/api/security";
+const menu = (id: number) => `${base}/menus/${id}`;
 const organization = (id: number) => `${base}/organizations/${id}`;
 const permission = (id: number) => `${base}/permissions/${id}`;
 const role = (id: number) => `${base}/roles/${id}`;
@@ -60,6 +62,10 @@ export const securityApi = {
   setUserMenus: (id: number, menus: UserMenuAccessItem[]) =>
     apiFetch<UserMenuAccess[]>(`${user(id)}/menus`, { method: "PUT", body: { menus } }),
 
-  /** Every menu (administration list), for assigning per-user menu access. */
+  /** Every menu (administration list), for menu settings and per-user menu access. */
   getMenus: () => apiFetch<SecurityMenu[]>(`${base}/menus`),
+  getMenu: (id: number) => apiFetch<SecurityMenu>(menu(id)),
+  createMenu: (body: MenuUpsertRequest) => apiFetch<SecurityMenu>(`${base}/menus`, { method: "POST", body }),
+  updateMenu: (id: number, body: MenuUpsertRequest) => apiFetch<SecurityMenu>(menu(id), { method: "PUT", body }),
+  deleteMenu: (id: number) => apiFetch<void>(menu(id), { method: "DELETE" }),
 };

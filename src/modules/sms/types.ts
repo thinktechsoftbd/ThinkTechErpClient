@@ -70,6 +70,12 @@ export type SmsBalanceTransaction = {
 export type SmsClientCreateRequest = { clientId: string; displayName: string };
 export type SmsClientUpdateRequest = { displayName?: string | null; isActive?: boolean | null };
 export type SmsAllocationRequest = { smsQuantity: number; note?: string | null };
+export type SmsUsageRequest = {
+  smsQuantity: number;
+  requestReference: string;
+  recipient?: string | null;
+  providerMessageId?: string | null;
+};
 export type SmsPurchaseRequest = {
   smsQuantity: number;
   providerReference?: string | null;

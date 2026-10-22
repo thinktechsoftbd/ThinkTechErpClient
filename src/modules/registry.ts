@@ -1,4 +1,4 @@
-import { hasAnyRole } from "@/core/auth/roles";
+import { canAccessModule, type AccessSubject } from "@/core/auth/roles";
 import type { ModuleDefinition } from "@/core/modules/types";
 import { accountingModule } from "./accounting/module";
 import { inventoryModule } from "./inventory/module";
@@ -21,6 +21,6 @@ export function getModule(key: string) {
   return modules.find((module) => module.key === key);
 }
 
-export function getAccessibleModules(roles: readonly string[]) {
-  return modules.filter((module) => hasAnyRole(roles, module.roles));
+export function getAccessibleModules(user: AccessSubject) {
+  return modules.filter((module) => canAccessModule(user, module));
 }

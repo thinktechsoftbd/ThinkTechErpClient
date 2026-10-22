@@ -3,16 +3,18 @@ import { notFound } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
+import { requireSession } from "@/core/auth/session";
 import { ConfirmActionButton } from "@/core/forms/confirm-action-button";
 import { ApiErrorState } from "@/core/ui/api-error-state";
 import { Card, CardBody, CardHeader } from "@/core/ui/card";
 import { PageSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
-import { decodeParam } from "@/core/utils/params";
+import { formatNumber } from "@/core/utils/format";
+import { parseIdParam } from "@/core/utils/params";
+import { canManageSecurity } from "@/modules/security/access";
 import { deleteRoleAction } from "@/modules/security/actions";
 import { securityApi } from "@/modules/security/api";
 import { RoleForm } from "@/modules/security/components/forms";
-import { SecurityEndpointHint } from "@/modules/security/components/missing-endpoint";
 
 export const metadata: Metadata = { title: "Role" };
 
@@ -27,27 +29,36 @@ export default function RolePage({ params }: Props) {
 }
 
 async function RoleDetail({ params }: Pick<Props, "params">) {
-  const roleId = decodeParam((await params).roleId);
-  const result = await tryApi(() => securityApi.getRole(roleId));
+  const id = parseIdParam((await params).roleId);
+  if (id === null) notFound();
+  const [session, result, permissions] = await Promise.all([
+    requireSession(),
+    tryApi(() => securityApi.getRole(id)),
+    tryApi(() => securityApi.getPermissions()),
+  ]);
   if (!result.ok) {
-    if (result.error.status === 404) {
-      // Distinguish "role not found" from "endpoint not implemented".
-      const list = await tryApi(() => securityApi.getRoles());
-      if (list.ok) notFound();
-    }
+    if (result.error.status === 404) notFound();
     return (
       <Card>
-        <ApiErrorState error={result.error} notFoundHint={<SecurityEndpointHint endpoint="GET /api/security/roles/{roleId}" />} />
+        <ApiErrorState error={result.error} />
+      </Card>
+    );
+  }
+  if (!permissions.ok) {
+    return (
+      <Card>
+        <ApiErrorState error={permissions.error} />
       </Card>
     );
   }
 
   const role = result.data;
+  const canManage = canManageSecurity(session);
   return (
     <>
       <PageHeader
-        title={<span className="font-mono">{role.name}</span>}
-        description={role.description ?? undefined}
+        title={role.name}
+        description={`${role.description ? `${role.description} · ` : ""}${formatNumber(role.userCount)} user(s)`}
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
           { label: "Security", href: "/security" },
@@ -55,10 +66,10 @@ async function RoleDetail({ params }: Pick<Props, "params">) {
           { label: role.name },
         ]}
         actions={
-          !role.isSystem && (
+          canManage && (
             <ConfirmActionButton
-              action={deleteRoleAction.bind(null, role.roleId)}
-              confirmMessage={`Delete the role "${role.name}"? Users holding it will lose its permissions.`}
+              action={deleteRoleAction.bind(null, role.id)}
+              confirmMessage={`Delete the role "${role.name}"? This only works while no user holds it.`}
             >
               <Trash2 className="size-4" aria-hidden /> Delete role
             </ConfirmActionButton>
@@ -66,9 +77,9 @@ async function RoleDetail({ params }: Pick<Props, "params">) {
         }
       />
       <Card>
-        <CardHeader title="Role" />
+        <CardHeader title="Role" description="Permissions are grouped by the module part of their code." />
         <CardBody>
-          <RoleForm role={role} />
+          <RoleForm role={role} permissions={permissions.data} readOnly={!canManage} />
         </CardBody>
       </Card>
     </>

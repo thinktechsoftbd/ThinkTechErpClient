@@ -1,23 +1,65 @@
 import "server-only";
 import { apiFetch } from "@/core/api/client";
-import type { RoleUpsertRequest, SecurityRole, SecurityUser, UserCreateRequest, UserUpdateRequest } from "./types";
+import type {
+  Organization,
+  OrganizationUpsertRequest,
+  PagedResult,
+  PermissionUpsertRequest,
+  RoleUpsertRequest,
+  SecurityMenu,
+  SecurityPermission,
+  SecurityRole,
+  SecurityUser,
+  UserCreateRequest,
+  UserMenuAccess,
+  UserMenuAccessItem,
+  UserPermissionSet,
+  UserStatus,
+  UserUpdateRequest,
+} from "./types";
 
 const base = "/api/security";
-const user = (userId: string) => `${base}/users/${encodeURIComponent(userId)}`;
-const role = (roleId: string) => `${base}/roles/${encodeURIComponent(roleId)}`;
+const organization = (id: number) => `${base}/organizations/${id}`;
+const permission = (id: number) => `${base}/permissions/${id}`;
+const role = (id: number) => `${base}/roles/${id}`;
+const user = (id: number) => `${base}/users/${id}`;
 
 export const securityApi = {
-  getUsers: (limit: number, offset: number, search?: string) =>
-    apiFetch<SecurityUser[]>(`${base}/users`, { query: { limit, offset, search } }),
-  getUser: (userId: string) => apiFetch<SecurityUser>(user(userId)),
-  createUser: (body: UserCreateRequest) => apiFetch<SecurityUser>(`${base}/users`, { method: "POST", body }),
-  updateUser: (userId: string, body: UserUpdateRequest) => apiFetch<SecurityUser>(user(userId), { method: "PUT", body }),
-  resetPassword: (userId: string, newPassword: string) =>
-    apiFetch<void>(`${user(userId)}/password`, { method: "POST", body: { newPassword } }),
+  getOrganizations: () => apiFetch<Organization[]>(`${base}/organizations`),
+  getOrganization: (id: number) => apiFetch<Organization>(organization(id)),
+  createOrganization: (body: OrganizationUpsertRequest) =>
+    apiFetch<Organization>(`${base}/organizations`, { method: "POST", body }),
+  updateOrganization: (id: number, body: OrganizationUpsertRequest) =>
+    apiFetch<Organization>(organization(id), { method: "PUT", body }),
+
+  getPermissions: () => apiFetch<SecurityPermission[]>(`${base}/permissions`),
+  getPermission: (id: number) => apiFetch<SecurityPermission>(permission(id)),
+  createPermission: (body: PermissionUpsertRequest) =>
+    apiFetch<SecurityPermission>(`${base}/permissions`, { method: "POST", body }),
+  updatePermission: (id: number, body: PermissionUpsertRequest) =>
+    apiFetch<SecurityPermission>(permission(id), { method: "PUT", body }),
+  deletePermission: (id: number) => apiFetch<void>(permission(id), { method: "DELETE" }),
 
   getRoles: () => apiFetch<SecurityRole[]>(`${base}/roles`),
-  getRole: (roleId: string) => apiFetch<SecurityRole>(role(roleId)),
+  getRole: (id: number) => apiFetch<SecurityRole>(role(id)),
   createRole: (body: RoleUpsertRequest) => apiFetch<SecurityRole>(`${base}/roles`, { method: "POST", body }),
-  updateRole: (roleId: string, body: RoleUpsertRequest) => apiFetch<SecurityRole>(role(roleId), { method: "PUT", body }),
-  deleteRole: (roleId: string) => apiFetch<void>(role(roleId), { method: "DELETE" }),
+  updateRole: (id: number, body: RoleUpsertRequest) => apiFetch<SecurityRole>(role(id), { method: "PUT", body }),
+  deleteRole: (id: number) => apiFetch<void>(role(id), { method: "DELETE" }),
+
+  getUsers: (query: { limit: number; offset: number; search?: string; status?: UserStatus }) =>
+    apiFetch<PagedResult<SecurityUser>>(`${base}/users`, { query }),
+  getUser: (id: number) => apiFetch<SecurityUser>(user(id)),
+  createUser: (body: UserCreateRequest) => apiFetch<SecurityUser>(`${base}/users`, { method: "POST", body }),
+  updateUser: (id: number, body: UserUpdateRequest) => apiFetch<SecurityUser>(user(id), { method: "PUT", body }),
+  setPassword: (id: number, newPassword: string) =>
+    apiFetch<void>(`${user(id)}/password`, { method: "PUT", body: { newPassword } }),
+  getUserPermissions: (id: number) => apiFetch<UserPermissionSet>(`${user(id)}/permissions`),
+  setUserPermissions: (id: number, permissionIds: number[]) =>
+    apiFetch<UserPermissionSet>(`${user(id)}/permissions`, { method: "PUT", body: { permissionIds } }),
+  getUserMenus: (id: number) => apiFetch<UserMenuAccess[]>(`${user(id)}/menus`),
+  setUserMenus: (id: number, menus: UserMenuAccessItem[]) =>
+    apiFetch<UserMenuAccess[]>(`${user(id)}/menus`, { method: "PUT", body: { menus } }),
+
+  /** Every menu (administration list), for assigning per-user menu access. */
+  getMenus: () => apiFetch<SecurityMenu[]>(`${base}/menus`),
 };

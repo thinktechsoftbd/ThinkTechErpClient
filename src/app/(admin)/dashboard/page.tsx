@@ -36,7 +36,7 @@ export default function DashboardPage() {
 
 async function DashboardContent() {
   const session = await requireSession();
-  const accessible = getAccessibleModules(session.roles);
+  const accessible = getAccessibleModules(session);
   const canSeeSms = accessible.some((module) => module.key === "sms");
 
   return (

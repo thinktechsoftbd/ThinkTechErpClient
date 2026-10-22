@@ -6,6 +6,7 @@ import { tryApi } from "@/core/api/client";
 import { Alert } from "@/core/ui/alert";
 import { ApiErrorState } from "@/core/ui/api-error-state";
 import { StatusBadge } from "@/core/ui/badge";
+import { LinkButton } from "@/core/ui/button";
 import { Card, CardBody, CardHeader } from "@/core/ui/card";
 import { EmptyState, PageSkeleton, StatCard, TableSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
@@ -134,9 +135,15 @@ async function ClientHistory({
   if (tab === "usage") {
     const result = await tryApi(() => smsApi.getClientUsage(clientId, SMS_PAGE_SIZE, offset));
     if (!result.ok) return <ApiErrorState error={result.error} />;
-    if (result.data.length === 0 && offset === 0) return <EmptyState title="No SMS sent yet" />;
+    const recordLink = (
+      <LinkButton href={`/sms/usage?clientId=${encodeURIComponent(clientId)}`} variant="outline" size="sm">
+        Record usage
+      </LinkButton>
+    );
+    if (result.data.length === 0 && offset === 0) return <EmptyState title="No SMS sent yet" action={recordLink} />;
     return (
       <>
+        <div className="flex justify-end px-5 pt-4">{recordLink}</div>
         <UsageTable usage={result.data} />
         {pagination(result.data.length)}
       </>

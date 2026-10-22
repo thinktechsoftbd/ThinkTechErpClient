@@ -34,7 +34,7 @@ export default function LoginPage() {
               AUTH_MODE=dev: credentials are checked against DEV_AUTH_* in .env.local and a local token is issued.
             </Alert>
           )}
-          <LoginForm />
+          <LoginForm defaults={serverEnv.loginDefaults} />
         </div>
       </div>
 

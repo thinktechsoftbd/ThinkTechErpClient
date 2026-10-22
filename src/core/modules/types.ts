@@ -27,8 +27,10 @@ export type ModuleDefinition = {
   /** Route prefix owned by the module, e.g. "/sms". */
   basePath: string;
   status: ModuleStatus;
-  /** Roles allowed to use the module. Omit for any signed-in user. */
+  /** Roles allowed to use the module. Omit (with accessPermissions) for any signed-in user. */
   roles?: readonly string[];
+  /** API permission codes that also grant access (any one), e.g. "SECURITY.V". */
+  accessPermissions?: readonly string[];
   nav: readonly NavItem[];
   /** Permission keys the module exposes to the role editor. */
   permissions: readonly PermissionDefinition[];

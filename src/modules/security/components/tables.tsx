@@ -2,44 +2,68 @@ import Link from "next/link";
 import { Badge, StatusBadge } from "@/core/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatDateTime, formatNumber } from "@/core/utils/format";
-import type { SecurityRole, SecurityUser } from "../types";
+import type { Organization, SecurityPermission, SecurityRole, SecurityUser } from "../types";
 
 const muted = "text-gray-500 dark:text-gray-400";
+const link = "font-medium text-brand-500 hover:underline";
 
-export function UsersTable({ users }: { users: SecurityUser[] }) {
+export function OrganizationsTable({ organizations }: { organizations: Organization[] }) {
   return (
     <Table>
       <THead>
         <tr>
-          <TH>User</TH>
-          <TH>Email</TH>
-          <TH>Roles</TH>
+          <TH>Organization</TH>
+          <TH>Code</TH>
+          <TH>Contact</TH>
+          <TH>Location</TH>
           <TH>Status</TH>
-          <TH>Last sign-in</TH>
         </tr>
       </THead>
       <TBody>
-        {users.map((user) => (
-          <TR key={user.userId}>
+        {organizations.map((organization) => (
+          <TR key={organization.id}>
             <TD>
-              <Link
-                href={`/security/users/${encodeURIComponent(user.userId)}`}
-                className="font-medium text-brand-500 hover:underline"
-              >
-                {user.userName}
+              <Link href={`/security/organizations/${organization.id}`} className={link}>
+                {organization.nameEn}
               </Link>
-              {user.displayName && <p className={`text-xs ${muted}`}>{user.displayName}</p>}
+              {organization.nameBn && <p className={`text-xs ${muted}`}>{organization.nameBn}</p>}
             </TD>
-            <TD className={muted}>{user.email ?? "—"}</TD>
+            <TD className="font-mono text-xs">{organization.code ?? "—"}</TD>
+            <TD className={muted}>
+              {organization.email ?? "—"}
+              {organization.phone && <p className="text-xs">{organization.phone}</p>}
+            </TD>
+            <TD className={muted}>{[organization.city, organization.country].filter(Boolean).join(", ") || "—"}</TD>
             <TD>
-              <span className="flex flex-wrap gap-1">
-                {user.roles.length > 0 ? user.roles.map((role) => <Badge key={role} tone="brand">{role}</Badge>) : "—"}
-              </span>
+              <StatusBadge active={organization.isActive} />
             </TD>
+          </TR>
+        ))}
+      </TBody>
+    </Table>
+  );
+}
+
+export function PermissionsTable({ permissions }: { permissions: SecurityPermission[] }) {
+  return (
+    <Table>
+      <THead>
+        <tr>
+          <TH>Code</TH>
+          <TH>Name</TH>
+          <TH>Description</TH>
+        </tr>
+      </THead>
+      <TBody>
+        {permissions.map((permission) => (
+          <TR key={permission.id}>
             <TD>
-              <StatusBadge active={user.isActive} />
+              <Link href={`/security/permissions/${permission.id}`} className={`font-mono ${link}`}>
+                {permission.code}
+              </Link>
             </TD>
-            <TD className={`whitespace-nowrap ${muted}`}>{formatDateTime(user.lastLoginAt)}</TD>
+            <TD>{permission.name}</TD>
+            <TD className={`max-w-96 truncate ${muted}`}>{permission.description ?? "—"}</TD>
           </TR>
         ))}
       </TBody>
@@ -60,23 +84,57 @@ export function RolesTable({ roles }: { roles: SecurityRole[] }) {
       </THead>
       <TBody>
         {roles.map((role) => (
-          <TR key={role.roleId}>
+          <TR key={role.id}>
             <TD>
-              <Link
-                href={`/security/roles/${encodeURIComponent(role.roleId)}`}
-                className="font-mono font-medium text-brand-500 hover:underline"
-              >
+              <Link href={`/security/roles/${role.id}`} className={link}>
                 {role.name}
               </Link>
-              {role.isSystem && (
-                <span className="ml-2">
-                  <Badge>System</Badge>
-                </span>
-              )}
             </TD>
             <TD className={`max-w-96 truncate ${muted}`}>{role.description ?? "—"}</TD>
             <TD className="text-right">{formatNumber(role.permissions.length)}</TD>
-            <TD className="text-right">{formatNumber(role.userCount ?? null)}</TD>
+            <TD className="text-right">{formatNumber(role.userCount)}</TD>
+          </TR>
+        ))}
+      </TBody>
+    </Table>
+  );
+}
+
+export function UsersTable({ users }: { users: SecurityUser[] }) {
+  return (
+    <Table>
+      <THead>
+        <tr>
+          <TH>User</TH>
+          <TH>Roles</TH>
+          <TH>Status</TH>
+          <TH>Created</TH>
+        </tr>
+      </THead>
+      <TBody>
+        {users.map((user) => (
+          <TR key={user.id}>
+            <TD>
+              <Link href={`/security/users/${user.id}`} className={link}>
+                {user.name}
+              </Link>
+              <p className={`text-xs ${muted}`}>{user.email}</p>
+            </TD>
+            <TD>
+              <span className="flex flex-wrap gap-1">
+                {user.roles.length > 0
+                  ? user.roles.map((role) => (
+                      <Badge key={role.id} tone="brand">
+                        {role.name}
+                      </Badge>
+                    ))
+                  : "—"}
+              </span>
+            </TD>
+            <TD>
+              <StatusBadge active={user.status === "ACTIVE"} />
+            </TD>
+            <TD className={`whitespace-nowrap ${muted}`}>{formatDateTime(user.createdAt)}</TD>
           </TR>
         ))}
       </TBody>

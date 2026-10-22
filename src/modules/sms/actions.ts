@@ -71,6 +71,40 @@ export async function allocateAction(clientId: string, _previous: ActionState, f
   return actionSuccess(`Allocated ${smsQuantity.toLocaleString("en-US")} SMS.`);
 }
 
+/** Allocation form on the Allocations page, where the client is picked in the form. */
+export async function allocateToClientAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const clientId = formString(formData, "clientId");
+  if (!clientId) return actionError("Please correct the highlighted fields.", { clientId: "Choose a client." });
+  return allocateAction(clientId, _previous, formData);
+}
+
+export async function recordUsageAction(clientId: string, _previous: ActionState, formData: FormData): Promise<ActionState> {
+  const smsQuantity = positiveInteger(formData, "smsQuantity");
+  const requestReference = formString(formData, "requestReference");
+  const recipient = optionalString(formData, "recipient");
+  const providerMessageId = optionalString(formData, "providerMessageId");
+
+  const fieldErrors: Record<string, string> = {};
+  if (!smsQuantity) fieldErrors.smsQuantity = "Enter a whole number greater than 0.";
+  if (!requestReference || requestReference.length > 128) {
+    fieldErrors.requestReference = "Enter a unique reference (max 128 characters).";
+  }
+  if (recipient && recipient.length > 32) fieldErrors.recipient = "Max 32 characters.";
+  if (providerMessageId && providerMessageId.length > 128) fieldErrors.providerMessageId = "Max 128 characters.";
+  if (Object.keys(fieldErrors).length > 0 || !smsQuantity) {
+    return actionError("Please correct the highlighted fields.", fieldErrors);
+  }
+
+  try {
+    await requireModuleAccess(smsModule);
+    await smsApi.recordUsage(clientId, { smsQuantity, requestReference, recipient, providerMessageId });
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess(`Recorded ${smsQuantity.toLocaleString("en-US")} SMS sent for ${clientId}.`);
+}
+
 export async function recordPurchaseAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const smsQuantity = positiveInteger(formData, "smsQuantity");
   const providerReference = optionalString(formData, "providerReference");

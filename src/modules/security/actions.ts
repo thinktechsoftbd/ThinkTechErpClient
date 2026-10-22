@@ -7,129 +7,291 @@ import { formString, optionalString, toActionError } from "@/core/forms/action-e
 import { actionError, actionSuccess, type ActionState } from "@/core/forms/action-state";
 import { securityApi } from "./api";
 import { securityModule } from "./module";
-import { MIN_PASSWORD_LENGTH } from "./types";
+import {
+  EMAIL_PATTERN,
+  MAX_PASSWORD_BYTES,
+  MIN_PASSWORD_LENGTH,
+  PERMISSION_CODE_PATTERN,
+  USER_STATUSES,
+  type OrganizationUpsertRequest,
+  type UserMenuAccessItem,
+  type UserStatus,
+} from "./types";
 
-const USER_NAME_PATTERN = /^[A-Za-z0-9._@-]{3,64}$/;
-const ROLE_NAME_PATTERN = /^[a-z][a-z0-9_]{1,63}$/;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+type FieldErrors = Record<string, string>;
 
-function stringList(formData: FormData, name: string) {
-  return [...new Set(formData.getAll(name).filter((value): value is string => typeof value === "string" && !!value))];
+function hasErrors(fieldErrors: FieldErrors) {
+  return Object.keys(fieldErrors).length > 0;
 }
 
-function validateProfile(formData: FormData, fieldErrors: Record<string, string>) {
-  const email = optionalString(formData, "email");
-  const displayName = optionalString(formData, "displayName");
-  if (email && (!EMAIL_PATTERN.test(email) || email.length > 256)) fieldErrors.email = "Enter a valid email address.";
-  if (displayName && displayName.length > 200) fieldErrors.displayName = "Max 200 characters.";
-  return { email, displayName, isActive: formData.get("isActive") === "on", roles: stringList(formData, "roles") };
+function invalid(fieldErrors: FieldErrors) {
+  return actionError("Please correct the highlighted fields.", fieldErrors);
 }
 
-function validatePassword(formData: FormData, fieldErrors: Record<string, string>) {
-  const password = typeof formData.get("password") === "string" ? (formData.get("password") as string) : "";
+/** Optional text field limited to `max` characters. */
+function text(formData: FormData, name: string, max: number, fieldErrors: FieldErrors) {
+  const value = optionalString(formData, name);
+  if (value && value.length > max) fieldErrors[name] = `Max ${max} characters.`;
+  return value;
+}
+
+/** Required text field limited to `max` characters. */
+function requiredText(formData: FormData, name: string, max: number, fieldErrors: FieldErrors) {
+  const value = formString(formData, name);
+  if (!value) fieldErrors[name] = "Required.";
+  else if (value.length > max) fieldErrors[name] = `Max ${max} characters.`;
+  return value;
+}
+
+function email(formData: FormData, name: string, max: number, fieldErrors: FieldErrors, required: boolean) {
+  const value = optionalString(formData, name);
+  if (!value) {
+    if (required) fieldErrors[name] = "Required.";
+  } else if (!EMAIL_PATTERN.test(value) || value.length > max) {
+    fieldErrors[name] = "Enter a valid email address.";
+  }
+  return value;
+}
+
+/** Checked ids from checkboxes named `name`. */
+function ids(formData: FormData, name: string) {
+  return [...new Set(formData.getAll(name).map(Number).filter((id) => Number.isSafeInteger(id) && id > 0))];
+}
+
+function status(formData: FormData): UserStatus {
+  const value = formString(formData, "status");
+  return (USER_STATUSES as readonly string[]).includes(value) ? (value as UserStatus) : "ACTIVE";
+}
+
+function password(formData: FormData, fieldErrors: FieldErrors, name = "password") {
+  const value = typeof formData.get(name) === "string" ? (formData.get(name) as string) : "";
   const confirm = typeof formData.get("confirmPassword") === "string" ? (formData.get("confirmPassword") as string) : "";
-  if (password.length < MIN_PASSWORD_LENGTH) {
-    fieldErrors.password = `Use at least ${MIN_PASSWORD_LENGTH} characters.`;
-  } else if (password !== confirm) {
-    fieldErrors.confirmPassword = "Passwords do not match.";
-  }
-  return password;
+  if (value.length < MIN_PASSWORD_LENGTH) fieldErrors[name] = `Use at least ${MIN_PASSWORD_LENGTH} characters.`;
+  else if (Buffer.byteLength(value, "utf8") > MAX_PASSWORD_BYTES) fieldErrors[name] = `Use at most ${MAX_PASSWORD_BYTES} bytes.`;
+  else if (value !== confirm) fieldErrors.confirmPassword = "Passwords do not match.";
+  return value;
 }
 
-export async function createUserAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
-  const fieldErrors: Record<string, string> = {};
-  const userName = formString(formData, "userName");
-  if (!USER_NAME_PATTERN.test(userName)) {
-    fieldErrors.userName = "3–64 characters: letters, numbers, dots, dashes, underscores or @.";
-  }
-  const profile = validateProfile(formData, fieldErrors);
-  const password = validatePassword(formData, fieldErrors);
-  if (Object.keys(fieldErrors).length > 0) return actionError("Please correct the highlighted fields.", fieldErrors);
+// ---- Organizations
 
-  let userId: string;
+function organizationBody(formData: FormData, fieldErrors: FieldErrors): OrganizationUpsertRequest {
+  return {
+    nameEn: requiredText(formData, "nameEn", 200, fieldErrors),
+    nameBn: text(formData, "nameBn", 200, fieldErrors),
+    slogan: text(formData, "slogan", 500, fieldErrors),
+    code: text(formData, "code", 50, fieldErrors),
+    email: email(formData, "email", 150, fieldErrors, false),
+    phone: text(formData, "phone", 50, fieldErrors),
+    website: text(formData, "website", 255, fieldErrors),
+    addressLine1: text(formData, "addressLine1", 255, fieldErrors),
+    addressLine2: text(formData, "addressLine2", 255, fieldErrors),
+    city: text(formData, "city", 100, fieldErrors),
+    state: text(formData, "state", 100, fieldErrors),
+    postalCode: text(formData, "postalCode", 20, fieldErrors),
+    country: text(formData, "country", 100, fieldErrors),
+    logoUrl: text(formData, "logoUrl", 500, fieldErrors),
+    isActive: formData.get("isActive") === "on",
+  };
+}
+
+/** Creates (id = null) or updates an organization. */
+export async function saveOrganizationAction(
+  id: number | null,
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const fieldErrors: FieldErrors = {};
+  const body = organizationBody(formData, fieldErrors);
+  if (hasErrors(fieldErrors)) return invalid(fieldErrors);
+
+  let createdId: number;
   try {
     await requireModuleAccess(securityModule);
-    userId = (await securityApi.createUser({ userName, password, ...profile })).userId;
+    if (id !== null) {
+      await securityApi.updateOrganization(id, body);
+      refresh();
+      return actionSuccess("Organization saved.");
+    }
+    createdId = (await securityApi.createOrganization(body)).id;
   } catch (error) {
     return toActionError(error);
   }
-  redirect(`/security/users/${encodeURIComponent(userId)}`);
+  redirect(`/security/organizations/${createdId}`);
 }
 
-export async function updateUserAction(userId: string, _previous: ActionState, formData: FormData): Promise<ActionState> {
-  const fieldErrors: Record<string, string> = {};
-  const profile = validateProfile(formData, fieldErrors);
-  if (Object.keys(fieldErrors).length > 0) return actionError("Please correct the highlighted fields.", fieldErrors);
+// ---- Permissions
 
+/** Creates (id = null) or updates a permission. */
+export async function savePermissionAction(
+  id: number | null,
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const fieldErrors: FieldErrors = {};
+  const code = formString(formData, "code").toUpperCase();
+  if (!PERMISSION_CODE_PATTERN.test(code) || code.length > 100) {
+    fieldErrors.code = "Use uppercase MODULE.ACTION, e.g. PATIENT.V.";
+  }
+  const body = {
+    code,
+    name: requiredText(formData, "name", 200, fieldErrors),
+    description: text(formData, "description", 500, fieldErrors),
+  };
+  if (hasErrors(fieldErrors)) return invalid(fieldErrors);
+
+  let createdId: number;
   try {
     await requireModuleAccess(securityModule);
-    await securityApi.updateUser(userId, profile);
+    if (id !== null) {
+      await securityApi.updatePermission(id, body);
+      refresh();
+      return actionSuccess("Permission saved.");
+    }
+    createdId = (await securityApi.createPermission(body)).id;
   } catch (error) {
     return toActionError(error);
   }
-  refresh();
-  return actionSuccess("User updated.");
+  redirect(`/security/permissions/${createdId}`);
 }
 
-export async function resetPasswordAction(userId: string, _previous: ActionState, formData: FormData): Promise<ActionState> {
-  const fieldErrors: Record<string, string> = {};
-  const password = validatePassword(formData, fieldErrors);
-  if (Object.keys(fieldErrors).length > 0) return actionError("Please correct the highlighted fields.", fieldErrors);
-
+export async function deletePermissionAction(id: number): Promise<ActionState> {
   try {
     await requireModuleAccess(securityModule);
-    await securityApi.resetPassword(userId, password);
+    await securityApi.deletePermission(id);
   } catch (error) {
     return toActionError(error);
   }
-  return actionSuccess("Password reset. Share it with the user through a secure channel.");
+  redirect("/security/permissions");
 }
 
-function validateRole(formData: FormData) {
-  const fieldErrors: Record<string, string> = {};
-  const name = formString(formData, "name");
-  const description = optionalString(formData, "description");
-  if (!ROLE_NAME_PATTERN.test(name)) {
-    fieldErrors.name = "Lowercase letters, numbers and underscores, starting with a letter (e.g. sms_admin).";
-  }
-  if (description && description.length > 500) fieldErrors.description = "Max 500 characters.";
-  return { fieldErrors, body: { name, description, permissions: stringList(formData, "permissions") } };
-}
+// ---- Roles
 
-export async function createRoleAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
-  const { fieldErrors, body } = validateRole(formData);
-  if (Object.keys(fieldErrors).length > 0) return actionError("Please correct the highlighted fields.", fieldErrors);
+/** Creates (id = null) or updates a role and its permissions. */
+export async function saveRoleAction(id: number | null, _previous: ActionState, formData: FormData): Promise<ActionState> {
+  const fieldErrors: FieldErrors = {};
+  const body = {
+    name: requiredText(formData, "name", 100, fieldErrors),
+    description: text(formData, "description", 500, fieldErrors),
+    permissionIds: ids(formData, "permissionIds"),
+  };
+  if (hasErrors(fieldErrors)) return invalid(fieldErrors);
 
-  let roleId: string;
+  let createdId: number;
   try {
     await requireModuleAccess(securityModule);
-    roleId = (await securityApi.createRole(body)).roleId;
+    if (id !== null) {
+      await securityApi.updateRole(id, body);
+      refresh();
+      return actionSuccess("Role saved.");
+    }
+    createdId = (await securityApi.createRole(body)).id;
   } catch (error) {
     return toActionError(error);
   }
-  redirect(`/security/roles/${encodeURIComponent(roleId)}`);
+  redirect(`/security/roles/${createdId}`);
 }
 
-export async function updateRoleAction(roleId: string, _previous: ActionState, formData: FormData): Promise<ActionState> {
-  const { fieldErrors, body } = validateRole(formData);
-  if (Object.keys(fieldErrors).length > 0) return actionError("Please correct the highlighted fields.", fieldErrors);
-
+export async function deleteRoleAction(id: number): Promise<ActionState> {
   try {
     await requireModuleAccess(securityModule);
-    await securityApi.updateRole(roleId, body);
-  } catch (error) {
-    return toActionError(error);
-  }
-  refresh();
-  return actionSuccess("Role saved.");
-}
-
-export async function deleteRoleAction(roleId: string): Promise<ActionState> {
-  try {
-    await requireModuleAccess(securityModule);
-    await securityApi.deleteRole(roleId);
+    await securityApi.deleteRole(id);
   } catch (error) {
     return toActionError(error);
   }
   redirect("/security/roles");
+}
+
+// ---- Users
+
+function userProfile(formData: FormData, fieldErrors: FieldErrors) {
+  return {
+    name: requiredText(formData, "name", 200, fieldErrors),
+    email: email(formData, "email", 256, fieldErrors, true) ?? "",
+    photoUrl: text(formData, "photoUrl", 500, fieldErrors),
+    status: status(formData),
+    roleIds: ids(formData, "roleIds"),
+  };
+}
+
+export async function createUserAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const fieldErrors: FieldErrors = {};
+  const profile = userProfile(formData, fieldErrors);
+  const newPassword = password(formData, fieldErrors);
+  if (hasErrors(fieldErrors)) return invalid(fieldErrors);
+
+  let createdId: number;
+  try {
+    await requireModuleAccess(securityModule);
+    createdId = (await securityApi.createUser({ ...profile, password: newPassword })).id;
+  } catch (error) {
+    return toActionError(error);
+  }
+  redirect(`/security/users/${createdId}`);
+}
+
+export async function updateUserAction(id: number, _previous: ActionState, formData: FormData): Promise<ActionState> {
+  const fieldErrors: FieldErrors = {};
+  const profile = userProfile(formData, fieldErrors);
+  if (hasErrors(fieldErrors)) return invalid(fieldErrors);
+
+  try {
+    await requireModuleAccess(securityModule);
+    await securityApi.updateUser(id, profile);
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess("User saved.");
+}
+
+export async function setPasswordAction(id: number, _previous: ActionState, formData: FormData): Promise<ActionState> {
+  const fieldErrors: FieldErrors = {};
+  const newPassword = password(formData, fieldErrors);
+  if (hasErrors(fieldErrors)) return invalid(fieldErrors);
+
+  try {
+    await requireModuleAccess(securityModule);
+    await securityApi.setPassword(id, newPassword);
+  } catch (error) {
+    return toActionError(error);
+  }
+  return actionSuccess("Password changed. Share it with the user through a secure channel.");
+}
+
+export async function setUserPermissionsAction(
+  id: number,
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    await requireModuleAccess(securityModule);
+    await securityApi.setUserPermissions(id, ids(formData, "permissionIds"));
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess("Direct permissions saved. They apply from the user's next token renewal.");
+}
+
+/** Saves per-user menu overrides; menus left on "Default" follow their role. */
+export async function setUserMenusAction(id: number, _previous: ActionState, formData: FormData): Promise<ActionState> {
+  const flag = (menuId: number, name: string) => formData.get(`menu.${menuId}.${name}`) === "on";
+  const menus: UserMenuAccessItem[] = ids(formData, "menuIds")
+    .filter((menuId) => flag(menuId, "custom"))
+    .map((menuId) => ({
+      menuId,
+      canView: flag(menuId, "view"),
+      canCreate: flag(menuId, "create"),
+      canEdit: flag(menuId, "edit"),
+      canDelete: flag(menuId, "delete"),
+    }));
+
+  try {
+    await requireModuleAccess(securityModule);
+    await securityApi.setUserMenus(id, menus);
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess("Menu access saved.");
 }

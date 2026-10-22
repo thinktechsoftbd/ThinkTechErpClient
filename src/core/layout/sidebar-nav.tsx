@@ -17,24 +17,28 @@ function isInModule(pathname: string, module: ModuleDefinition) {
   return pathname === module.basePath || pathname.startsWith(`${module.basePath}/`);
 }
 
-const itemBase =
+// Shared with ApiSidebarNav (api-sidebar-nav.tsx).
+export const itemBase =
   "group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors";
-const itemIdle = "text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5";
-const itemActive = "bg-brand-50 text-brand-500 dark:bg-brand-500/[0.12] dark:text-brand-400";
+export const itemIdle = "text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5";
+export const itemActive = "bg-brand-50 text-brand-500 dark:bg-brand-500/[0.12] dark:text-brand-400";
+export const subItemBase = "block rounded-md px-3 py-1.5 text-sm transition-colors";
+export const subItemIdle = "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white";
+export const subItemActive = "font-medium text-brand-500 dark:text-brand-400";
+export const subListClass = "mt-1 ml-9 space-y-0.5 border-l border-gray-100 pl-3 dark:border-gray-800";
 
-function MenuIcon({ icon: Icon, active }: { icon: LucideIcon; active: boolean }) {
-  return (
-    <Icon
-      className={cn(
-        "size-5 shrink-0",
-        active ? "text-brand-500 dark:text-brand-400" : "text-gray-500 group-hover:text-gray-700 dark:text-gray-400",
-      )}
-      aria-hidden
-    />
+export function menuIconClass(active: boolean) {
+  return cn(
+    "size-5 shrink-0",
+    active ? "text-brand-500 dark:text-brand-400" : "text-gray-500 group-hover:text-gray-700 dark:text-gray-400",
   );
 }
 
-function SectionTitle({ children, showLabels }: { children: string; showLabels: boolean }) {
+function MenuIcon({ icon: Icon, active }: { icon: LucideIcon; active: boolean }) {
+  return <Icon className={menuIconClass(active)} aria-hidden />;
+}
+
+export function SectionTitle({ children, showLabels }: { children: string; showLabels: boolean }) {
   return (
     <h2
       className={cn(
@@ -91,7 +95,7 @@ function ModuleMenu({
         <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} aria-hidden />
       </button>
       {open && (
-        <ul className="mt-1 ml-9 space-y-0.5 border-l border-gray-100 pl-3 dark:border-gray-800">
+        <ul className={subListClass}>
           {module.nav.map((item) => {
             const active = isActive(pathname, item);
             return (
@@ -100,12 +104,7 @@ function ModuleMenu({
                   href={item.href}
                   onClick={closeMobile}
                   aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "block rounded-md px-3 py-1.5 text-sm transition-colors",
-                    active
-                      ? "font-medium text-brand-500 dark:text-brand-400"
-                      : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white",
-                  )}
+                  className={cn(subItemBase, active ? subItemActive : subItemIdle)}
                 >
                   {item.label}
                 </Link>

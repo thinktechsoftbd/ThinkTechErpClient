@@ -11,6 +11,7 @@ import type {
   SmsPlatformBalance,
   SmsPurchaseRequest,
   SmsUsageRecord,
+  SmsUsageRequest,
 } from "./types";
 
 const admin = "/api/sms/admin";
@@ -49,6 +50,14 @@ export const smsApi = {
   getTransactions: (clientId: string | undefined, limit: number, offset: number) =>
     apiFetch<SmsBalanceTransaction[]>(`${admin}/transactions`, { query: { clientId, limit, offset } }),
 
+  getClientBalance: (clientId: string) => apiFetch<SmsClient>(`${client(clientId)}/balance`),
+
   getClientUsage: (clientId: string, limit: number, offset: number) =>
     apiFetch<SmsUsageRecord[]>(`${client(clientId)}/usage`, { query: { limit, offset } }),
+
+  recordUsage: (clientId: string, body: SmsUsageRequest) =>
+    apiFetch<{ transactionId: number; clientId: string; smsQuantity: number; requestReference: string }>(
+      `${client(clientId)}/usage`,
+      { method: "POST", body },
+    ),
 };

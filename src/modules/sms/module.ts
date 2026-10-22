@@ -15,6 +15,7 @@ export const smsModule = defineModule({
     { label: "Clients", href: "/sms/clients" },
     { label: "Purchases", href: "/sms/purchases" },
     { label: "Allocations", href: "/sms/allocations" },
+    { label: "Usage", href: "/sms/usage" },
     { label: "Transactions", href: "/sms/transactions" },
   ],
   permissions: [
@@ -23,6 +24,7 @@ export const smsModule = defineModule({
     { key: "sms.clients.manage", label: "Create and edit SMS clients" },
     { key: "sms.purchases.manage", label: "Record ADN purchases" },
     { key: "sms.allocations.manage", label: "Allocate SMS to clients" },
+    { key: "sms.usage.manage", label: "View and record client SMS usage" },
     { key: "sms.transactions.view", label: "View balance transactions" },
   ],
 });

@@ -24,6 +24,11 @@ export const serverEnv = {
   get jwt() {
     return jwtSettingsFromEnv();
   },
+  /** Values pre-filled on the sign-in form for local development; never in a production build. */
+  get loginDefaults() {
+    if (process.env.NODE_ENV === "production") return {};
+    return { email: read("LOGIN_DEFAULT_EMAIL"), password: read("LOGIN_DEFAULT_PASSWORD") };
+  },
   get devUser() {
     return {
       userName: read("DEV_AUTH_USERNAME") ?? "admin",

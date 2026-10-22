@@ -95,18 +95,21 @@ The security module uses these endpoints in ThinkTechErpAPI:
 | --- | --- | --- |
 | POST | `/api/security/auth/login` (anonymous) | `{ email, password }` → `AuthResponse` (`accessToken`, `refreshToken`, expiry times, user) |
 | POST | `/api/security/auth/logout` | `{ refreshToken }` → 204 |
-| GET | `/api/security/users?limit&offset&search` | → `SecurityUser[]` |
-| GET | `/api/security/users/{userId}` | → `SecurityUser` |
-| POST | `/api/security/users` | `{ userName, email, displayName, password, isActive, roles[] }` → `SecurityUser` |
-| PUT | `/api/security/users/{userId}` | `{ email, displayName, isActive, roles[] }` → `SecurityUser` |
-| POST | `/api/security/users/{userId}/password` | `{ newPassword }` → 204 |
-| GET | `/api/security/roles` | → `SecurityRole[]` |
-| GET | `/api/security/roles/{roleId}` | → `SecurityRole` |
-| POST / PUT | `/api/security/roles[/{roleId}]` | `{ name, description, permissions[] }` → `SecurityRole` |
-| DELETE | `/api/security/roles/{roleId}` | → 204 |
+| POST | `/api/security/auth/refresh` (anonymous) | `{ refreshToken }` → `AuthResponse` (rotates the refresh token) |
+| GET | `/api/security/auth/menus` | → the signed-in user's menu tree (drives the sidebar) |
+| GET / POST / PUT | `/api/security/organizations[/{id}]` | `Organization` (no delete) |
+| GET / POST / PUT / DELETE | `/api/security/permissions[/{id}]` | `{ code, name, description }`; code is `MODULE.ACTION`; 409 while in use |
+| GET / POST / PUT / DELETE | `/api/security/roles[/{id}]` | `{ name, description, permissionIds[] }`; 409 while assigned |
+| GET | `/api/security/users?search&status&limit&offset` | → `{ items, totalCount, limit, offset }` |
+| GET / POST / PUT | `/api/security/users[/{id}]` | `{ name, email, password (create only), photoUrl, status, roleIds[] }` |
+| PUT | `/api/security/users/{id}/password` | `{ newPassword }` → 204 |
+| GET / PUT | `/api/security/users/{id}/permissions` | `{ permissionIds[] }` → `{ direct[], effective[] }` |
+| GET / PUT | `/api/security/users/{id}/menus` | `{ menus: [{ menuId, canView, canCreate, canEdit, canDelete }] }` (per-user overrides) |
+| GET | `/api/security/menus` | → every menu (for the menu-access editor) |
 
-`SecurityUser = { userId, userName, email, displayName, isActive, roles[], createdAt, lastLoginAt }`,
-`SecurityRole = { roleId, name, description, permissions[], userCount, isSystem }` (camelCase JSON).
+Ids are integers and JSON is camelCase; the types live in `src/modules/security/types.ts`. The
+Security screens need the `SECURITY.V` permission in the access token (`SECURITY.M` to change data),
+matching the API's `SecurityView` / `SecurityManage` policies; view-only users get read-only forms.
 Validation errors as ASP.NET `ValidationProblemDetails` or `{ "error": "…" }` are shown on the forms.
 
 ## Scripts

@@ -1,9 +1,16 @@
 import Form from "next/form";
 import { Search } from "lucide-react";
 import { ActionForm, FormMessage, SubmitButton } from "@/core/forms/action-form";
-import { Checkbox, Field, Input, Textarea } from "@/core/forms/fields";
+import { Checkbox, Field, Input, Select, Textarea } from "@/core/forms/fields";
 import { Button, LinkButton } from "@/core/ui/button";
-import { allocateAction, createClientAction, recordPurchaseAction, updateClientAction } from "../actions";
+import {
+  allocateAction,
+  allocateToClientAction,
+  createClientAction,
+  recordPurchaseAction,
+  recordUsageAction,
+  updateClientAction,
+} from "../actions";
 import type { SmsClient } from "../types";
 
 export function ClientCreateForm() {
@@ -86,6 +93,85 @@ export function PurchaseForm() {
         <SubmitButton pendingLabel="Recording…">Record purchase</SubmitButton>
       </div>
     </ActionForm>
+  );
+}
+
+function ClientOptions({ clients }: { clients: SmsClient[] }) {
+  return (
+    <>
+      {clients.map((client) => (
+        <option key={client.clientId} value={client.clientId}>
+          {client.displayName} ({client.clientId}){client.isActive ? "" : " — inactive"}
+        </option>
+      ))}
+    </>
+  );
+}
+
+/** Allocation with the client chosen in the form (Allocations page). */
+export function AllocateToClientForm({ clients, clientId }: { clients: SmsClient[]; clientId?: string }) {
+  return (
+    <ActionForm action={allocateToClientAction} className="grid grid-cols-1 gap-5 md:grid-cols-3" resetOnSuccess>
+      <FormMessage className="md:col-span-3" />
+      <Field label="Client" name="clientId" required>
+        <Select id="clientId" name="clientId" defaultValue={clientId ?? ""} required>
+          <option value="" disabled>
+            Choose a client
+          </option>
+          <ClientOptions clients={clients} />
+        </Select>
+      </Field>
+      <Field label="SMS quantity" name="smsQuantity" required>
+        <Input id="smsQuantity" name="smsQuantity" inputMode="numeric" placeholder="e.g. 5000" required />
+      </Field>
+      <Field label="Note" name="note">
+        <Input id="note" name="note" maxLength={500} placeholder="Optional" />
+      </Field>
+      <div className="md:col-span-3">
+        <SubmitButton pendingLabel="Allocating…">Allocate SMS</SubmitButton>
+      </div>
+    </ActionForm>
+  );
+}
+
+/** Records SMS sent by a client (POST /api/sms/clients/{clientId}/usage). */
+export function UsageForm({ clientId }: { clientId: string }) {
+  return (
+    <ActionForm action={recordUsageAction.bind(null, clientId)} className="grid grid-cols-1 gap-5 md:grid-cols-2" resetOnSuccess>
+      <FormMessage className="md:col-span-2" />
+      <Field label="SMS quantity" name="smsQuantity" required hint="Deducted from the client's available balance.">
+        <Input id="smsQuantity" name="smsQuantity" inputMode="numeric" placeholder="e.g. 1" required />
+      </Field>
+      <Field label="Request reference" name="requestReference" required hint="Unique per send; repeats are rejected.">
+        <Input id="requestReference" name="requestReference" maxLength={128} placeholder="e.g. order-5531" required />
+      </Field>
+      <Field label="Recipient" name="recipient">
+        <Input id="recipient" name="recipient" maxLength={32} placeholder="Optional, e.g. +8801700000000" />
+      </Field>
+      <Field label="Provider message ID" name="providerMessageId">
+        <Input id="providerMessageId" name="providerMessageId" maxLength={128} placeholder="Optional" />
+      </Field>
+      <div className="md:col-span-2">
+        <SubmitButton pendingLabel="Recording…">Record usage</SubmitButton>
+      </div>
+    </ActionForm>
+  );
+}
+
+/** GET form that picks the client shown on a page (client-side navigation via next/form). */
+export function ClientPickerForm({ action, clients, clientId }: { action: string; clients: SmsClient[]; clientId?: string }) {
+  return (
+    <Form action={action} className="flex flex-wrap items-center gap-2">
+      <Select name="clientId" defaultValue={clientId ?? ""} className="h-9 w-72" aria-label="Client">
+        <option value="" disabled>
+          Choose a client
+        </option>
+        <ClientOptions clients={clients} />
+      </Select>
+      <Button type="submit" variant="outline" size="sm">
+        Show
+      </Button>
+    </Form>
   );
 }
 

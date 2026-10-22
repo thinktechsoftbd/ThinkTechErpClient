@@ -24,7 +24,10 @@ export function ExpiredNotice() {
   );
 }
 
-export function LoginForm() {
+/** Pre-filled credentials for local development (LOGIN_DEFAULT_* in .env.local). */
+export type LoginDefaults = { email?: string; password?: string };
+
+export function LoginForm({ defaults = {} }: { defaults?: LoginDefaults }) {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
@@ -34,7 +37,15 @@ export function LoginForm() {
       </Suspense>
       <FormMessage />
       <Field label="Email or user name" name="email" required>
-        <Input id="email" name="email" autoComplete="username" placeholder="Enter your email or user name" required autoFocus />
+        <Input
+          id="email"
+          name="email"
+          autoComplete="username"
+          placeholder="Enter your email or user name"
+          defaultValue={defaults.email}
+          required
+          autoFocus
+        />
       </Field>
       <Field label="Password" name="password" required>
         <div className="relative">
@@ -44,6 +55,7 @@ export function LoginForm() {
             type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             placeholder="Enter your password"
+            defaultValue={defaults.password}
             className="pr-12"
             required
           />

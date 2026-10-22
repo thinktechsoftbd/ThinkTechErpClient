@@ -91,6 +91,8 @@ export function userFromClaims(claims: TokenClaims) {
     displayName: firstString(claims.name, claims.given_name, claims.unique_name, claims.preferred_username, userId) as string,
     email: firstString(claims.email),
     roles: rolesFromClaims(claims),
+    /** API permission codes from the token's `permission` claim, e.g. "SECURITY.M". */
+    permissions: [...new Set([...toList(claims.permission), ...toList(claims.permissions)])],
     clientId: firstString(claims.client_id),
     expiresAt: (claims.exp as number) * 1000,
   };

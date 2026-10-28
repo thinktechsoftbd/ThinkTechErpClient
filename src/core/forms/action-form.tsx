@@ -7,6 +7,7 @@ import {
   use,
   useActionState,
   useEffect,
+  useEffectEvent,
   useRef,
   type ReactNode,
 } from "react";
@@ -28,18 +29,25 @@ export function ActionForm({
   children,
   className,
   resetOnSuccess = false,
+  onSuccess,
 }: {
   action: FormAction;
   children: ReactNode;
   className?: string;
   resetOnSuccess?: boolean;
+  /** Called once per successful submit, e.g. to close the dialog holding the form. */
+  onSuccess?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(action, idleState);
   const formRef = useRef<HTMLFormElement>(null);
+  const handleSuccess = useEffectEvent(() => {
+    if (resetOnSuccess) formRef.current?.reset();
+    onSuccess?.();
+  });
 
   useEffect(() => {
-    if (resetOnSuccess && state.status === "success") formRef.current?.reset();
-  }, [state, resetOnSuccess]);
+    if (state.status === "success") handleSuccess();
+  }, [state]);
 
   return (
     <form

@@ -4,13 +4,13 @@ import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
 import { ApiErrorState } from "@/core/ui/api-error-state";
 import { StatusBadge } from "@/core/ui/badge";
-import { LinkButton } from "@/core/ui/button";
 import { Card, CardBody, CardHeader } from "@/core/ui/card";
 import { EmptyState, StatCard, TableSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
 import { Pagination, firstParam, parseOffset } from "@/core/ui/pagination";
 import { formatNumber } from "@/core/utils/format";
 import { smsApi } from "@/modules/sms/api";
+import { NewClientButton } from "@/modules/sms/components/client-dialogs";
 import { ClientPickerForm, UsageForm } from "@/modules/sms/components/forms";
 import { UsageTable } from "@/modules/sms/components/tables";
 import { SMS_PAGE_SIZE } from "@/modules/sms/types";
@@ -58,11 +58,7 @@ async function UsageContent({ searchParams }: Pick<PageProps<"/sms/usage">, "sea
   if (clients.data.length === 0) {
     return (
       <Card>
-        <EmptyState
-          icon={Users}
-          title="No SMS clients yet"
-          action={<LinkButton href="/sms/clients/new">New client</LinkButton>}
-        />
+        <EmptyState icon={Users} title="No SMS clients yet" action={<NewClientButton />} />
       </Card>
     );
   }

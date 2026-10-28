@@ -15,7 +15,7 @@ type SidebarState = {
 const SidebarContext = createContext<SidebarState | null>(null);
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
-  const [isExpanded, setExpanded] = useState(true);
+  const [isExpanded, setExpanded] = useState(false);
   const [isMobileOpen, setMobileOpen] = useState(false);
 
   const toggleSidebar = useCallback(() => setExpanded((value) => !value), []);

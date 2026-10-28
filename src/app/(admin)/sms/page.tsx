@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Plus } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
 import { ApiErrorState } from "@/core/ui/api-error-state";
@@ -9,6 +8,7 @@ import { EmptyState, StatGridSkeleton, TableSkeleton } from "@/core/ui/feedback"
 import { PageHeader } from "@/core/ui/page-header";
 import { smsApi } from "@/modules/sms/api";
 import { BalanceCards } from "@/modules/sms/components/balance-cards";
+import { NewClientButton } from "@/modules/sms/components/client-dialogs";
 import { TransactionsTable } from "@/modules/sms/components/tables";
 
 export const metadata: Metadata = { title: "SMS" };
@@ -25,9 +25,7 @@ export default function SmsOverviewPage() {
             <LinkButton href="/sms/purchases" variant="outline">
               Record purchase
             </LinkButton>
-            <LinkButton href="/sms/clients/new">
-              <Plus className="size-4" aria-hidden /> New client
-            </LinkButton>
+            <NewClientButton />
           </>
         }
       />

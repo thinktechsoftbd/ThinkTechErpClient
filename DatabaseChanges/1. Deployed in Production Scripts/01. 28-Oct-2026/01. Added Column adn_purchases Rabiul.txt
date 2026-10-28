@@ -1,0 +1,7 @@
+ALTER TABLE sms.adn_purchases
+ADD COLUMN exchange_rate numeric(18, 6);
+
+
+
+ALTER TABLE sms.client_allocations
+ADD COLUMN IF NOT EXISTS is_finalize boolean NOT NULL DEFAULT false;

@@ -28,6 +28,7 @@ export type SmsAdnPurchase = {
   smsQuantity: number;
   amountPaid: number | null;
   currency: string | null;
+  exchangeRate?: number | null;
   purchasedAt: string;
   note: string | null;
 };
@@ -36,8 +37,10 @@ export type SmsClientAllocation = {
   allocationId: number;
   transactionId: number;
   clientId: string;
+  clientName: string;
   smsQuantity: number;
   note: string | null;
+  isFinalized: boolean;
   allocatedAt: string;
 };
 
@@ -69,7 +72,8 @@ export type SmsBalanceTransaction = {
 
 export type SmsClientCreateRequest = { clientId: string; displayName: string };
 export type SmsClientUpdateRequest = { displayName?: string | null; isActive?: boolean | null };
-export type SmsAllocationRequest = { smsQuantity: number; note?: string | null };
+export type SmsAllocationRequest = { smsQuantity: number; note?: string | null; isFinalized?: boolean };
+export type SmsAllocationUpdateRequest = { note?: string | null };
 export type SmsUsageRequest = {
   smsQuantity: number;
   requestReference: string;
@@ -81,6 +85,14 @@ export type SmsPurchaseRequest = {
   providerReference?: string | null;
   amountPaid?: number | null;
   currency?: string | null;
+  exchangeRate?: number | null;
+  note?: string | null;
+};
+export type SmsPurchaseUpdateRequest = {
+  providerReference: string;
+  amountPaid: number;
+  currency: "BDT" | "USD";
+  exchangeRate?: number | null;
   note?: string | null;
 };
 

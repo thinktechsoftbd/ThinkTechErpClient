@@ -7,6 +7,7 @@ import {
   use,
   useActionState,
   useEffect,
+  useEffectEvent,
   useRef,
   type ReactNode,
 } from "react";
@@ -34,19 +35,19 @@ export function ActionForm({
   children: ReactNode;
   className?: string;
   resetOnSuccess?: boolean;
-  /** Called after the action reports success (e.g. to close a modal). */
-  onSuccess?: (state: ActionState) => void;
+  /** Called once per successful submit, e.g. to close the dialog holding the form. */
+  onSuccess?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(action, idleState);
   const formRef = useRef<HTMLFormElement>(null);
+  const handleSuccess = useEffectEvent(() => {
+    if (resetOnSuccess) formRef.current?.reset();
+    onSuccess?.();
+  });
 
   useEffect(() => {
-    if (state.status !== "success") return;
-    if (resetOnSuccess) formRef.current?.reset();
-    onSuccess?.(state);
-    // Run once per new result, not when the caller re-renders with a new callback.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, resetOnSuccess]);
+    if (state.status === "success") handleSuccess();
+  }, [state]);
 
   return (
     <form

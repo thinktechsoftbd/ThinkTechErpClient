@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import { Plus, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
 import { ApiErrorState } from "@/core/ui/api-error-state";
-import { LinkButton } from "@/core/ui/button";
 import { Card, CardHeader } from "@/core/ui/card";
 import { EmptyState, TableSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
 import { Pagination, parseOffset } from "@/core/ui/pagination";
 import { smsApi } from "@/modules/sms/api";
+import { NewClientButton } from "@/modules/sms/components/client-dialogs";
 import { ClientsTable } from "@/modules/sms/components/tables";
 import { SMS_PAGE_SIZE } from "@/modules/sms/types";
 
@@ -21,11 +21,7 @@ export default function SmsClientsPage({ searchParams }: PageProps<"/sms/clients
         title="SMS clients"
         description="Accounts that receive SMS allocations and send through the API."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "SMS", href: "/sms" }, { label: "Clients" }]}
-        actions={
-          <LinkButton href="/sms/clients/new">
-            <Plus className="size-4" aria-hidden /> New client
-          </LinkButton>
-        }
+        actions={<NewClientButton />}
       />
       <Card>
         <CardHeader title="All clients" description="Newest first." />
@@ -48,7 +44,7 @@ async function ClientsList({ searchParams }: Pick<PageProps<"/sms/clients">, "se
         icon={Users}
         title="No SMS clients yet"
         description="Create a client, then allocate SMS from the platform balance."
-        action={<LinkButton href="/sms/clients/new">New client</LinkButton>}
+        action={<NewClientButton />}
       />
     );
   }

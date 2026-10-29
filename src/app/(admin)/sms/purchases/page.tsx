@@ -3,12 +3,12 @@ import { ShoppingCart } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
 import { ApiErrorState } from "@/core/ui/api-error-state";
-import { Card, CardBody, CardHeader } from "@/core/ui/card";
+import { Card, CardHeader } from "@/core/ui/card";
 import { EmptyState, TableSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
 import { Pagination, parseOffset } from "@/core/ui/pagination";
 import { smsApi } from "@/modules/sms/api";
-import { PurchaseForm } from "@/modules/sms/components/forms";
+import { PurchaseDialogButton } from "@/modules/sms/components/client-dialogs";
 import { PurchasesTable } from "@/modules/sms/components/tables";
 import { SMS_PAGE_SIZE } from "@/modules/sms/types";
 
@@ -21,13 +21,8 @@ export default function SmsPurchasesPage({ searchParams }: PageProps<"/sms/purch
         title="ADN purchases"
         description="SMS bought from the ADN provider. Each purchase adds to the platform's unallocated balance."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "SMS", href: "/sms" }, { label: "Purchases" }]}
+        actions={<PurchaseDialogButton />}
       />
-      <Card>
-        <CardHeader title="Record purchase" />
-        <CardBody>
-          <PurchaseForm />
-        </CardBody>
-      </Card>
       <Card className="mt-6">
         <CardHeader title="Purchase history" description="Newest first." />
         <Suspense fallback={<TableSkeleton />}>

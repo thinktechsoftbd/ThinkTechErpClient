@@ -3,6 +3,7 @@ import { apiFetch } from "@/core/api/client";
 import type {
   SmsAdnPurchase,
   SmsAllocationRequest,
+  SmsAllocationUpdateRequest,
   SmsBalanceTransaction,
   SmsClient,
   SmsClientAllocation,
@@ -10,6 +11,7 @@ import type {
   SmsClientUpdateRequest,
   SmsPlatformBalance,
   SmsPurchaseRequest,
+  SmsPurchaseUpdateRequest,
   SmsUsageRecord,
   SmsUsageRequest,
 } from "./types";
@@ -32,11 +34,17 @@ export const smsApi = {
   updateClient: (clientId: string, body: SmsClientUpdateRequest) =>
     apiFetch<SmsClient>(`${admin}/clients/${encodeURIComponent(clientId)}`, { method: "PATCH", body }),
 
+  deleteClient: (clientId: string) =>
+    apiFetch<void>(`${admin}/clients/${encodeURIComponent(clientId)}`, { method: "DELETE" }),
+
   getPurchases: (limit: number, offset: number) =>
     apiFetch<SmsAdnPurchase[]>(`${admin}/purchases`, { query: { limit, offset } }),
 
   recordPurchase: (body: SmsPurchaseRequest) =>
     apiFetch<{ transactionId: number }>(`${admin}/purchases`, { method: "POST", body }),
+
+  updatePurchase: (purchaseId: number, body: SmsPurchaseUpdateRequest) =>
+    apiFetch<void>(`${admin}/purchases/${purchaseId}`, { method: "PATCH", body }),
 
   getAllocations: (clientId: string | undefined, limit: number, offset: number) =>
     apiFetch<SmsClientAllocation[]>(`${admin}/allocations`, { query: { clientId, limit, offset } }),
@@ -46,6 +54,12 @@ export const smsApi = {
       `${admin}/clients/${encodeURIComponent(clientId)}/allocations`,
       { method: "POST", body },
     ),
+
+  updateAllocation: (allocationId: number, body: SmsAllocationUpdateRequest) =>
+    apiFetch<void>(`${admin}/allocations/${allocationId}`, { method: "PATCH", body }),
+
+  finalizeAllocation: (allocationId: number) =>
+    apiFetch<void>(`${admin}/allocations/${allocationId}/finalize`, { method: "POST" }),
 
   getTransactions: (clientId: string | undefined, limit: number, offset: number) =>
     apiFetch<SmsBalanceTransaction[]>(`${admin}/transactions`, { query: { clientId, limit, offset } }),

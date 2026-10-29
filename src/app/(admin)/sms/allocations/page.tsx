@@ -3,13 +3,13 @@ import { ArrowLeftRight } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
 import { ApiErrorState } from "@/core/ui/api-error-state";
-import { LinkButton } from "@/core/ui/button";
-import { Card, CardBody, CardHeader } from "@/core/ui/card";
+import { Card, CardHeader } from "@/core/ui/card";
 import { EmptyState, TableSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
 import { Pagination, firstParam, parseOffset } from "@/core/ui/pagination";
 import { smsApi } from "@/modules/sms/api";
-import { AllocateToClientForm, ClientFilterForm } from "@/modules/sms/components/forms";
+import { AllocateDialogButton, NewClientButton } from "@/modules/sms/components/client-dialogs";
+import { ClientFilterForm } from "@/modules/sms/components/forms";
 import { AllocationsTable } from "@/modules/sms/components/tables";
 import { SMS_PAGE_SIZE } from "@/modules/sms/types";
 
@@ -24,15 +24,8 @@ export default function SmsAllocationsPage({ searchParams }: PageProps<"/sms/all
         title="Allocations"
         description="SMS moved from the platform balance to client accounts."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "SMS", href: "/sms" }, { label: "Allocations" }]}
+        actions={<Suspense fallback={null}><AllocateCard searchParams={searchParams} /></Suspense>}
       />
-      <Card className="mb-6">
-        <CardHeader title="Allocate SMS" description="Transfer SMS from the platform's unallocated balance to a client." />
-        <CardBody>
-          <Suspense fallback={<TableSkeleton rows={1} columns={3} />}>
-            <AllocateCard searchParams={searchParams} />
-          </Suspense>
-        </CardBody>
-      </Card>
       <Card>
         <Suspense fallback={<TableSkeleton />}>
           <AllocationsList searchParams={searchParams} />
@@ -48,9 +41,9 @@ async function AllocateCard({ searchParams }: Pick<PageProps<"/sms/allocations">
   const clients = await tryApi(() => smsApi.getClients(500, 0));
   if (!clients.ok) return <ApiErrorState error={clients.error} />;
   if (clients.data.length === 0) {
-    return <EmptyState title="No SMS clients yet" action={<LinkButton href="/sms/clients/new">New client</LinkButton>} />;
+    return <EmptyState title="No SMS clients yet" action={<NewClientButton />} />;
   }
-  return <AllocateToClientForm clients={clients.data} clientId={clientId} />;
+  return <AllocateDialogButton clients={clients.data} clientId={clientId} />;
 }
 
 async function AllocationsList({ searchParams }: Pick<PageProps<"/sms/allocations">, "searchParams">) {

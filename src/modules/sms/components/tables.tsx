@@ -3,12 +3,13 @@ import { Badge, StatusBadge } from "@/core/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatDateTime, formatMoney, formatNumber } from "@/core/utils/format";
 import type { SmsAdnPurchase, SmsBalanceTransaction, SmsClient, SmsClientAllocation, SmsUsageRecord } from "../types";
+import { AllocationRowActions, ClientRowActions, PurchaseRowActions } from "./client-dialogs";
 
-function ClientLink({ clientId }: { clientId: string | null }) {
+function ClientLink({ clientId, label }: { clientId: string | null; label?: string }) {
   if (!clientId) return <span className="text-gray-400">—</span>;
   return (
     <Link href={`/sms/clients/${encodeURIComponent(clientId)}`} className="font-medium text-brand-500 hover:underline">
-      {clientId}
+      {label ?? clientId}
     </Link>
   );
 }
@@ -44,6 +45,7 @@ export function ClientsTable({ clients }: { clients: SmsClient[] }) {
           <TH className="text-right">Allocated</TH>
           <TH className="text-right">Consumed</TH>
           <TH>Created</TH>
+          <TH className="text-right">Actions</TH>
         </tr>
       </THead>
       <TBody>
@@ -60,6 +62,9 @@ export function ClientsTable({ clients }: { clients: SmsClient[] }) {
             <TD className="text-right">{formatNumber(client.totalAllocatedSms)}</TD>
             <TD className="text-right">{formatNumber(client.totalConsumedSms)}</TD>
             <TD className={`whitespace-nowrap ${muted}`}>{formatDateTime(client.createdAt)}</TD>
+            <TD className="text-right">
+              <ClientRowActions client={client} />
+            </TD>
           </TR>
         ))}
       </TBody>
@@ -74,7 +79,8 @@ export function TransactionsTable({ transactions, showClient = true }: { transac
         <tr>
           <TH>#</TH>
           <TH>Type</TH>
-          {showClient && <TH>Client</TH>}
+          {showClient && <TH>Client ID</TH>}
+          {showClient && <TH>Client Name</TH>}
           <TH className="text-right">Quantity</TH>
           <TH className="text-right">Platform Δ</TH>
           <TH className="text-right">Client Δ</TH>
@@ -121,27 +127,31 @@ export function AllocationsTable({ allocations, showClient = true }: { allocatio
     <Table>
       <THead>
         <tr>
-          <TH>#</TH>
-          {showClient && <TH>Client</TH>}
+          {showClient && <TH>Client ID</TH>}
+          {showClient && <TH>Display name</TH>}
           <TH className="text-right">Quantity</TH>
           <TH>Note</TH>
+          <TH>Is Finalized</TH>
           <TH>Transaction</TH>
           <TH>Allocated</TH>
+          <TH className="text-right">Actions</TH>
         </tr>
       </THead>
       <TBody>
         {allocations.map((allocation) => (
           <TR key={allocation.allocationId}>
-            <TD className={muted}>{allocation.allocationId}</TD>
             {showClient && (
               <TD>
                 <ClientLink clientId={allocation.clientId} />
               </TD>
             )}
+            {showClient && <TD>{allocation.clientName}</TD>}
             <TD className="text-right font-medium">{formatNumber(allocation.smsQuantity)}</TD>
             <TD className={`max-w-80 truncate ${muted}`}>{allocation.note ?? "—"}</TD>
+            <TD>{allocation.isFinalized ? "Yes" : "No"}</TD>
             <TD className={muted}>{allocation.transactionId}</TD>
             <TD className={`whitespace-nowrap ${muted}`}>{formatDateTime(allocation.allocatedAt)}</TD>
+            <TD className="text-right"><AllocationRowActions allocation={allocation} /></TD>
           </TR>
         ))}
       </TBody>
@@ -154,25 +164,27 @@ export function PurchasesTable({ purchases }: { purchases: SmsAdnPurchase[] }) {
     <Table>
       <THead>
         <tr>
-          <TH>#</TH>
           <TH>Provider</TH>
-          <TH>Reference</TH>
           <TH className="text-right">Quantity</TH>
           <TH className="text-right">Amount</TH>
+          <TH className="text-right">Exchange rate</TH>
           <TH>Note</TH>
           <TH>Purchased</TH>
+          <TH className="text-right">Actions</TH>
         </tr>
       </THead>
       <TBody>
         {purchases.map((purchase) => (
           <TR key={purchase.purchaseId}>
-            <TD className={muted}>{purchase.purchaseId}</TD>
-            <TD>{purchase.provider}</TD>
-            <TD className={muted}>{purchase.providerReference ?? "—"}</TD>
+            <TD>{purchase.providerReference ?? purchase.provider}</TD>
             <TD className="text-right font-medium">{formatNumber(purchase.smsQuantity)}</TD>
             <TD className="text-right">{formatMoney(purchase.amountPaid, purchase.currency)}</TD>
+            <TD className="text-right">{purchase.exchangeRate == null ? "—" : purchase.exchangeRate.toLocaleString("en-US", { maximumFractionDigits: 6 })}</TD>
             <TD className={`max-w-64 truncate ${muted}`}>{purchase.note ?? "—"}</TD>
             <TD className={`whitespace-nowrap ${muted}`}>{formatDateTime(purchase.purchasedAt)}</TD>
+            <TD className="text-right">
+              <PurchaseRowActions purchase={purchase} />
+            </TD>
           </TR>
         ))}
       </TBody>

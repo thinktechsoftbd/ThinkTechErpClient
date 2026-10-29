@@ -28,3 +28,12 @@ export function formatDateTime(value: string | null | undefined) {
     timeZone: serverEnv.timeZone,
   }).format(date);
 }
+
+/** Formats a calendar date ("2026-10-29", e.g. a C# DateOnly) without shifting it across time zones. */
+export function formatDate(value: string | null | undefined) {
+  if (!value) return "—";
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!match) return value;
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "UTC" }).format(date);
+}

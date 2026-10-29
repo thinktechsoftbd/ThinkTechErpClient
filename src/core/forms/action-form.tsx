@@ -28,17 +28,24 @@ export function ActionForm({
   children,
   className,
   resetOnSuccess = false,
+  onSuccess,
 }: {
   action: FormAction;
   children: ReactNode;
   className?: string;
   resetOnSuccess?: boolean;
+  /** Called after the action reports success (e.g. to close a modal). */
+  onSuccess?: (state: ActionState) => void;
 }) {
   const [state, formAction, pending] = useActionState(action, idleState);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (resetOnSuccess && state.status === "success") formRef.current?.reset();
+    if (state.status !== "success") return;
+    if (resetOnSuccess) formRef.current?.reset();
+    onSuccess?.(state);
+    // Run once per new result, not when the caller re-renders with a new callback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, resetOnSuccess]);
 
   return (

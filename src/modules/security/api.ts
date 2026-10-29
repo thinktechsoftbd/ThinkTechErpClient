@@ -11,6 +11,11 @@ import type {
   SecurityPermission,
   SecurityRole,
   SecurityUser,
+  Subscription,
+  SubscriptionFilter,
+  SubscriptionModule,
+  SubscriptionModuleUpsertRequest,
+  SubscriptionUpsertRequest,
   UserCreateRequest,
   UserMenuAccess,
   UserMenuAccessItem,
@@ -21,6 +26,8 @@ import type {
 
 const base = "/api/security";
 const menu = (id: number) => `${base}/menus/${id}`;
+const subscriptionModule = (id: number) => `${base}/subscription-modules/${id}`;
+const subscription = (id: number) => `${base}/subscriptions/${id}`;
 const organization = (id: number) => `${base}/organizations/${id}`;
 const permission = (id: number) => `${base}/permissions/${id}`;
 const role = (id: number) => `${base}/roles/${id}`;
@@ -68,4 +75,22 @@ export const securityApi = {
   createMenu: (body: MenuUpsertRequest) => apiFetch<SecurityMenu>(`${base}/menus`, { method: "POST", body }),
   updateMenu: (id: number, body: MenuUpsertRequest) => apiFetch<SecurityMenu>(menu(id), { method: "PUT", body }),
   deleteMenu: (id: number) => apiFetch<void>(menu(id), { method: "DELETE" }),
+
+  getSubscriptionModules: (query: { search?: string; isActive?: boolean; limit: number; offset: number }) =>
+    apiFetch<PagedResult<SubscriptionModule>>(`${base}/subscription-modules`, { query }),
+  getSubscriptionModule: (id: number) => apiFetch<SubscriptionModule>(subscriptionModule(id)),
+  createSubscriptionModule: (body: SubscriptionModuleUpsertRequest) =>
+    apiFetch<SubscriptionModule>(`${base}/subscription-modules`, { method: "POST", body }),
+  updateSubscriptionModule: (id: number, body: SubscriptionModuleUpsertRequest) =>
+    apiFetch<SubscriptionModule>(subscriptionModule(id), { method: "PUT", body }),
+  deleteSubscriptionModule: (id: number) => apiFetch<void>(subscriptionModule(id), { method: "DELETE" }),
+
+  getSubscriptions: (filter: SubscriptionFilter & { limit: number; offset: number }) =>
+    apiFetch<PagedResult<Subscription>>(`${base}/subscriptions`, { query: filter }),
+  getSubscription: (id: number) => apiFetch<Subscription>(subscription(id)),
+  createSubscription: (body: SubscriptionUpsertRequest) =>
+    apiFetch<Subscription>(`${base}/subscriptions`, { method: "POST", body }),
+  updateSubscription: (id: number, body: SubscriptionUpsertRequest) =>
+    apiFetch<Subscription>(subscription(id), { method: "PUT", body }),
+  deleteSubscription: (id: number) => apiFetch<void>(subscription(id), { method: "DELETE" }),
 };

@@ -4,6 +4,7 @@ import { accountingModule } from "./accounting/module";
 import { inventoryModule } from "./inventory/module";
 import { purchaseModule } from "./purchase/module";
 import { securityModule } from "./security/module";
+import { settingsModule } from "./settings/module";
 import { smsModule } from "./sms/module";
 import { websiteModule } from "./website/module";
 
@@ -12,6 +13,7 @@ export const modules: readonly ModuleDefinition[] = [
   securityModule,
   smsModule,
   websiteModule,
+  settingsModule,
   inventoryModule,
   purchaseModule,
   accountingModule,

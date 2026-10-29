@@ -8,14 +8,18 @@ import { actionError, actionSuccess, type ActionState } from "@/core/forms/actio
 import { securityApi } from "./api";
 import { securityModule } from "./module";
 import {
+  BILLING_PERIOD_TYPES,
   EMAIL_PATTERN,
   MENU_GROUP_PATH,
   MAX_PASSWORD_BYTES,
   MIN_PASSWORD_LENGTH,
   PERMISSION_CODE_PATTERN,
+  SUBSCRIPTION_STATUSES,
+  SUBSCRIPTION_TYPES,
   USER_STATUSES,
   type MenuUpsertRequest,
   type OrganizationUpsertRequest,
+  type SubscriptionUpsertRequest,
   type UserMenuAccessItem,
   type UserStatus,
 } from "./types";
@@ -357,4 +361,131 @@ export async function deleteMenuAction(id: number): Promise<ActionState> {
     return toActionError(error);
   }
   redirect("/security/menus");
+}
+
+// ---- Subscription modules
+
+/** Creates (id = null) or updates a subscription module. */
+export async function saveSubscriptionModuleAction(
+  id: number | null,
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const fieldErrors: FieldErrors = {};
+  const body = {
+    moduleName: requiredText(formData, "moduleName", 200, fieldErrors),
+    remarks: text(formData, "remarks", 1000, fieldErrors),
+    isActive: formData.get("isActive") === "on",
+  };
+  if (hasErrors(fieldErrors)) return invalid(fieldErrors);
+
+  try {
+    await requireModuleAccess(securityModule);
+    if (id === null) await securityApi.createSubscriptionModule(body);
+    else await securityApi.updateSubscriptionModule(id, body);
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess(id === null ? "Subscription module created." : "Subscription module saved.");
+}
+
+export async function deleteSubscriptionModuleAction(id: number): Promise<ActionState> {
+  try {
+    await requireModuleAccess(securityModule);
+    await securityApi.deleteSubscriptionModule(id);
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess("Subscription module deleted.");
+}
+
+// ---- Subscriptions
+
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function requiredId(formData: FormData, name: string, message: string, fieldErrors: FieldErrors) {
+  const id = Number(formString(formData, name));
+  if (!Number.isSafeInteger(id) || id <= 0) fieldErrors[name] = message;
+  return id;
+}
+
+function oneOf<T extends string>(formData: FormData, name: string, allowed: readonly T[], fieldErrors: FieldErrors) {
+  const value = formString(formData, name);
+  if (!(allowed as readonly string[]).includes(value)) fieldErrors[name] = `Choose ${allowed.join(" or ")}.`;
+  return value as T;
+}
+
+/** A decimal field; empty uses `fallback`. Rejects values outside [min, max]. */
+function decimal(formData: FormData, name: string, fallback: number, min: number, max: number, fieldErrors: FieldErrors) {
+  const raw = formString(formData, name).replace(/,/g, "");
+  if (!raw) return fallback;
+  const value = Number(raw);
+  if (!/^\d+(\.\d+)?$/.test(raw) || value < min || value > max) {
+    fieldErrors[name] = `Enter a number from ${min} to ${max.toLocaleString("en-US")}.`;
+  }
+  return value;
+}
+
+/** Creates (id = null) or updates a subscription; the API calculates the total. */
+export async function saveSubscriptionAction(id: number | null, _previous: ActionState, formData: FormData): Promise<ActionState> {
+  const fieldErrors: FieldErrors = {};
+  const startDate = formString(formData, "startDate");
+  if (!DATE_PATTERN.test(startDate)) fieldErrors.startDate = "Choose a start date.";
+  const endDate = formString(formData, "endDate") || null;
+  if (endDate && !DATE_PATTERN.test(endDate)) fieldErrors.endDate = "Choose a valid date, or leave it empty.";
+  else if (endDate && endDate < startDate) fieldErrors.endDate = "Must be on or after the start date.";
+
+  const billingPeriodCount = Number(formString(formData, "billingPeriodCount"));
+  if (!Number.isInteger(billingPeriodCount) || billingPeriodCount < 1 || billingPeriodCount > 120) {
+    fieldErrors.billingPeriodCount = "Enter a whole number from 1 to 120.";
+  }
+
+  const subtotalAmount = decimal(formData, "subtotalAmount", 0, 0, 9_999_999_999_999_999, fieldErrors);
+  const discountPercentage = decimal(formData, "discountPercentage", 0, 0, 100, fieldErrors);
+  // A percentage overrides the amount (the API calculates it), so a disabled amount field is fine.
+  const discountAmount = discountPercentage > 0 ? 0 : decimal(formData, "discountAmount", 0, 0, 9_999_999_999_999_999, fieldErrors);
+  if (discountPercentage === 0 && discountAmount > subtotalAmount) {
+    fieldErrors.discountAmount = "Can't be more than the subtotal.";
+  }
+
+  const body: SubscriptionUpsertRequest = {
+    organizationId: requiredId(formData, "organizationId", "Choose an organization.", fieldErrors),
+    subscriptionModuleId: requiredId(formData, "subscriptionModuleId", "Choose a module.", fieldErrors),
+    subscriptionType: oneOf(formData, "subscriptionType", SUBSCRIPTION_TYPES, fieldErrors),
+    billingPeriodType: oneOf(formData, "billingPeriodType", BILLING_PERIOD_TYPES, fieldErrors),
+    billingPeriodCount,
+    startDate,
+    endDate,
+    currencyLookupDataId: requiredId(formData, "currencyLookupDataId", "Choose a currency.", fieldErrors),
+    localExchangeRate: decimal(formData, "localExchangeRate", 1, 0.000001, 999_999_999_999, fieldErrors),
+    subtotalAmount,
+    discountPercentage,
+    discountAmount,
+    vatAmount: decimal(formData, "vatAmount", 0, 0, 9_999_999_999_999_999, fieldErrors),
+    status: oneOf(formData, "status", SUBSCRIPTION_STATUSES, fieldErrors),
+  };
+  if (hasErrors(fieldErrors)) return invalid(fieldErrors);
+
+  try {
+    await requireModuleAccess(securityModule);
+    if (id === null) await securityApi.createSubscription(body);
+    else await securityApi.updateSubscription(id, body);
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess(id === null ? "Subscription created." : "Subscription saved.");
+}
+
+export async function deleteSubscriptionAction(id: number): Promise<ActionState> {
+  try {
+    await requireModuleAccess(securityModule);
+    await securityApi.deleteSubscription(id);
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess("Subscription deleted.");
 }

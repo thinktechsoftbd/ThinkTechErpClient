@@ -19,6 +19,8 @@ export const securityModule = defineModule({
     { label: "Roles", href: "/security/roles" },
     { label: "Permissions", href: "/security/permissions" },
     { label: "Menus", href: "/security/menus" },
+    { label: "Subscription Modules", href: "/security/subscription-modules" },
+    { label: "Subscriptions", href: "/security/subscriptions" },
   ],
   permissions: [
     { key: SECURITY_VIEW_PERMISSION, label: "View organizations, users, roles and permissions" },

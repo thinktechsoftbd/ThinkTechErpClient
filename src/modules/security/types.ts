@@ -120,3 +120,83 @@ export const MIN_PASSWORD_LENGTH = 8;
 export const MAX_PASSWORD_BYTES = 72;
 export const PERMISSION_CODE_PATTERN = /^[A-Z][A-Z0-9_]*(\.[A-Z0-9_]+)*$/;
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// ---- Subscriptions (modules an organization can subscribe to, and its subscriptions)
+
+export type SubscriptionModule = {
+  id: number;
+  objectId: string;
+  moduleName: string;
+  isActive: boolean;
+  remarks: string | null;
+  /** Number of subscriptions to this module. */
+  subscriptionCount: number;
+  createdAt: string;
+  createdBy: number | null;
+  updatedAt: string | null;
+  updatedBy: number | null;
+};
+
+export type SubscriptionModuleUpsertRequest = { moduleName: string; isActive: boolean; remarks: string | null };
+
+export const SUBSCRIPTION_TYPES = ["Free Trial", "Premium"] as const;
+export const BILLING_PERIOD_TYPES = ["Monthly", "Yearly"] as const;
+export const SUBSCRIPTION_STATUSES = ["Pending", "Active", "Expired", "Cancelled"] as const;
+export type SubscriptionType = (typeof SUBSCRIPTION_TYPES)[number];
+export type BillingPeriodType = (typeof BILLING_PERIOD_TYPES)[number];
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
+
+export type Subscription = {
+  id: number;
+  organizationId: number;
+  organizationName: string;
+  subscriptionModuleId: number;
+  moduleName: string;
+  subscriptionType: SubscriptionType;
+  billingPeriodType: BillingPeriodType;
+  billingPeriodCount: number;
+  /** Calendar dates, "YYYY-MM-DD". */
+  startDate: string;
+  endDate: string;
+  currencyLookupDataId: number;
+  currencyName: string;
+  localExchangeRate: number;
+  subtotalAmount: number;
+  discountPercentage: number;
+  discountAmount: number;
+  vatAmount: number;
+  /** subtotal − discount + VAT, calculated by the API. */
+  totalAmount: number;
+  status: SubscriptionStatus;
+  createdAt: string;
+  createdBy: number | null;
+  updatedAt: string | null;
+  updatedBy: number | null;
+};
+
+export type SubscriptionUpsertRequest = {
+  organizationId: number;
+  subscriptionModuleId: number;
+  subscriptionType: SubscriptionType;
+  billingPeriodType: BillingPeriodType;
+  billingPeriodCount: number;
+  startDate: string;
+  /** Null: the API sets start date + billing period × count − 1 day. */
+  endDate: string | null;
+  currencyLookupDataId: number;
+  localExchangeRate: number;
+  subtotalAmount: number;
+  /** Above 0, the API calculates the discount amount from it. */
+  discountPercentage: number;
+  discountAmount: number;
+  vatAmount: number;
+  status: SubscriptionStatus;
+};
+
+export type SubscriptionFilter = {
+  organizationId?: number;
+  subscriptionModuleId?: number;
+  status?: SubscriptionStatus;
+  subscriptionType?: SubscriptionType;
+  search?: string;
+};

@@ -8,8 +8,9 @@ import { Card, CardHeader } from "@/core/ui/card";
 import { EmptyState, TableSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
 import { securityApi } from "@/modules/security/api";
-import { ManageOnly } from "@/modules/security/components/manage-only";
+import { PermissionOnly } from "@/core/crud/permission-only";
 import { OrganizationsTable } from "@/modules/security/components/tables";
+import { ORGANIZATION_MANAGE_PERMISSION } from "@/modules/security/types";
 
 export const metadata: Metadata = { title: "Organizations" };
 
@@ -22,11 +23,11 @@ export default function OrganizationsPage() {
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Security", href: "/security" }, { label: "Organizations" }]}
         actions={
           <Suspense>
-            <ManageOnly>
+            <PermissionOnly code={ORGANIZATION_MANAGE_PERMISSION}>
               <LinkButton href="/security/organizations/new">
                 <Plus className="size-4" aria-hidden /> New organization
               </LinkButton>
-            </ManageOnly>
+            </PermissionOnly>
           </Suspense>
         }
       />

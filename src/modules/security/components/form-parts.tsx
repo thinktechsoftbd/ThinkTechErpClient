@@ -104,16 +104,19 @@ export function FormActions({
   submitLabel,
   cancelHref,
   className,
+  managePermission = SECURITY_MANAGE_PERMISSION,
 }: {
   readOnly?: boolean;
   submitLabel: string;
   cancelHref?: string;
   className?: string;
+  /** Permission code named in the view-only note. */
+  managePermission?: string;
 }) {
   if (readOnly) {
     return (
       <p className={`${emptyText} ${className ?? ""}`}>
-        View only: changing this needs the <code className="font-mono text-xs">{SECURITY_MANAGE_PERMISSION}</code> permission.
+        View only: changing this needs the <code className="font-mono text-xs">{managePermission}</code> permission.
       </p>
     );
   }

@@ -2,6 +2,9 @@
 
 export const SECURITY_VIEW_PERMISSION = "SECURITY.V";
 export const SECURITY_MANAGE_PERMISSION = "SECURITY.M";
+/** Organizations have their own pair; viewing also works with SECURITY.V/M (the API's OrganizationView policy). */
+export const ORGANIZATION_VIEW_PERMISSION = "ORGANIZATION.V";
+export const ORGANIZATION_MANAGE_PERMISSION = "ORGANIZATION.M";
 
 export type PagedResult<T> = { items: T[]; totalCount: number; limit: number; offset: number };
 
@@ -9,6 +12,8 @@ export type PagedResult<T> = { items: T[]; totalCount: number; limit: number; of
 
 export type Organization = {
   id: number;
+  /** The "Organization Id": a UUID, unique, editable. */
+  objectId: string;
   nameEn: string;
   nameBn: string | null;
   slogan: string | null;
@@ -23,6 +28,8 @@ export type Organization = {
   postalCode: string | null;
   country: string | null;
   logoUrl: string | null;
+  /** Outside this company (e.g. a customer) rather than one of its own organizations. */
+  isExternal: boolean;
   isActive: boolean;
   createdAt: string;
   createdBy: number | null;
@@ -30,7 +37,15 @@ export type Organization = {
   updatedBy: number | null;
 };
 
-export type OrganizationUpsertRequest = Omit<Organization, "id" | "createdAt" | "createdBy" | "updatedAt" | "updatedBy">;
+export type OrganizationUpsertRequest = Omit<
+  Organization,
+  "id" | "objectId" | "createdAt" | "createdBy" | "updatedAt" | "updatedBy"
+> & {
+  /** Null keeps the current Organization Id (or, on create, lets the API generate one). */
+  objectId: string | null;
+};
+
+export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // ---- Permissions and roles
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge, StatusBadge } from "@/core/ui/badge";
+import { CopyButton } from "@/core/ui/copy-button";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatDateTime, formatNumber } from "@/core/utils/format";
 import type { Organization, SecurityPermission, SecurityRole, SecurityUser } from "../types";
@@ -13,6 +14,7 @@ export function OrganizationsTable({ organizations }: { organizations: Organizat
       <THead>
         <tr>
           <TH>Organization</TH>
+          <TH>Organization Id</TH>
           <TH>Code</TH>
           <TH>Contact</TH>
           <TH>Location</TH>
@@ -23,10 +25,21 @@ export function OrganizationsTable({ organizations }: { organizations: Organizat
         {organizations.map((organization) => (
           <TR key={organization.id}>
             <TD>
-              <Link href={`/security/organizations/${organization.id}`} className={link}>
-                {organization.nameEn}
-              </Link>
+              <span className="flex flex-wrap items-center gap-2">
+                <Link href={`/security/organizations/${organization.id}`} className={link}>
+                  {organization.nameEn}
+                </Link>
+                {organization.isExternal && <Badge tone="warning">External</Badge>}
+              </span>
               {organization.nameBn && <p className={`text-xs ${muted}`}>{organization.nameBn}</p>}
+            </TD>
+            <TD>
+              <span className="flex items-center gap-1">
+                <code className={`font-mono text-xs ${muted}`} title={organization.objectId}>
+                  {organization.objectId.slice(0, 8)}…
+                </code>
+                <CopyButton value={organization.objectId} label="Copy" />
+              </span>
             </TD>
             <TD className="font-mono text-xs">{organization.code ?? "—"}</TD>
             <TD className={muted}>

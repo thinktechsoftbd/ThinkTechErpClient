@@ -17,6 +17,7 @@ import {
   SUBSCRIPTION_STATUSES,
   SUBSCRIPTION_TYPES,
   USER_STATUSES,
+  UUID_PATTERN,
   type MenuUpsertRequest,
   type OrganizationUpsertRequest,
   type SubscriptionUpsertRequest,
@@ -96,8 +97,19 @@ function organizationBody(formData: FormData, fieldErrors: FieldErrors): Organiz
     postalCode: text(formData, "postalCode", 20, fieldErrors),
     country: text(formData, "country", 100, fieldErrors),
     logoUrl: text(formData, "logoUrl", 500, fieldErrors),
+    objectId: organizationId(formData, fieldErrors),
+    isExternal: formData.get("isExternal") === "on",
     isActive: formData.get("isActive") === "on",
   };
+}
+
+/** The Organization Id field: a UUID, or null (empty) to keep the current one / generate one. */
+function organizationId(formData: FormData, fieldErrors: FieldErrors) {
+  const value = optionalString(formData, "objectId")?.toLowerCase() ?? null;
+  if (value && (!UUID_PATTERN.test(value) || /^[0-]+$/.test(value))) {
+    fieldErrors.objectId = "Enter a UUID like 3f2b8c1e-9a4d-4c2b-8f1e-2d7c6b5a4e31, or leave it empty.";
+  }
+  return value;
 }
 
 /** Creates (id = null) or updates an organization. */

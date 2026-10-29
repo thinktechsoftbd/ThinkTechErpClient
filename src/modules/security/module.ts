@@ -1,6 +1,11 @@
 import { ShieldCheck } from "lucide-react";
 import { defineModule } from "@/core/modules/types";
-import { SECURITY_MANAGE_PERMISSION, SECURITY_VIEW_PERMISSION } from "./types";
+import {
+  ORGANIZATION_MANAGE_PERMISSION,
+  ORGANIZATION_VIEW_PERMISSION,
+  SECURITY_MANAGE_PERMISSION,
+  SECURITY_VIEW_PERMISSION,
+} from "./types";
 
 export const securityModule = defineModule({
   key: "security",
@@ -10,8 +15,14 @@ export const securityModule = defineModule({
   basePath: "/security",
   status: "active",
   roles: ["security_admin"],
-  // The API's SecurityView / SecurityManage policies check these permission codes.
-  accessPermissions: [SECURITY_VIEW_PERMISSION, SECURITY_MANAGE_PERMISSION],
+  // The API's SecurityView / SecurityManage and OrganizationView / OrganizationManage policies
+  // check these permission codes.
+  accessPermissions: [
+    SECURITY_VIEW_PERMISSION,
+    SECURITY_MANAGE_PERMISSION,
+    ORGANIZATION_VIEW_PERMISSION,
+    ORGANIZATION_MANAGE_PERMISSION,
+  ],
   nav: [
     { label: "Overview", href: "/security", exact: true },
     { label: "Organizations", href: "/security/organizations" },
@@ -23,7 +34,9 @@ export const securityModule = defineModule({
     { label: "Subscriptions", href: "/security/subscriptions" },
   ],
   permissions: [
-    { key: SECURITY_VIEW_PERMISSION, label: "View organizations, users, roles and permissions" },
+    { key: SECURITY_VIEW_PERMISSION, label: "View users, roles, permissions and menus" },
     { key: SECURITY_MANAGE_PERMISSION, label: "Create and edit them" },
+    { key: ORGANIZATION_VIEW_PERMISSION, label: "View organizations" },
+    { key: ORGANIZATION_MANAGE_PERMISSION, label: "Add and edit organizations (incl. Organization Id)" },
   ],
 });

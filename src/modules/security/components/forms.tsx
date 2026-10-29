@@ -1,8 +1,9 @@
 import { ActionForm, FormMessage } from "@/core/forms/action-form";
 import { Checkbox, Field, Input, Textarea } from "@/core/forms/fields";
 import { saveOrganizationAction, savePermissionAction, saveRoleAction } from "../actions";
-import type { Organization, SecurityPermission, SecurityRole } from "../types";
+import { ORGANIZATION_MANAGE_PERMISSION, type Organization, type SecurityPermission, type SecurityRole } from "../types";
 import { FormActions, PermissionPicker } from "./form-parts";
+import { OrganizationIdField } from "./organization-id-field";
 
 const sectionTitle = "text-sm font-semibold text-gray-800 md:col-span-2 dark:text-white/90";
 
@@ -46,6 +47,18 @@ export function OrganizationForm({ organization, readOnly }: { organization?: Or
       <fieldset disabled={readOnly} className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <FormMessage className="md:col-span-2" />
         <h4 className={sectionTitle}>Identity</h4>
+        <Field
+          label="Organization Id"
+          name="objectId"
+          className="md:col-span-2"
+          hint={
+            organization
+              ? "Unique UUID that identifies this organization to other systems. Change it only if they use a different one."
+              : "Leave empty to generate one, or paste the UUID another system already uses."
+          }
+        >
+          <OrganizationIdField defaultValue={organization?.objectId} />
+        </Field>
         <OrganizationInput {...field} name="nameEn" label="Name (English)" maxLength={200} required />
         <OrganizationInput {...field} name="nameBn" label="Name (Bangla)" maxLength={200} />
         <OrganizationInput {...field} name="code" label="Code" maxLength={50} />
@@ -65,11 +78,18 @@ export function OrganizationForm({ organization, readOnly }: { organization?: Or
         <OrganizationInput {...field} name="postalCode" label="Postal code" maxLength={20} />
         <OrganizationInput {...field} name="country" label="Country" maxLength={100} />
 
+        <Checkbox
+          name="isExternal"
+          defaultChecked={organization?.isExternal ?? false}
+          label="External organization (outside this company, e.g. a customer)"
+          className="md:col-span-2"
+        />
         <Checkbox name="isActive" defaultChecked={organization?.isActive ?? true} label="Active" className="md:col-span-2" />
         <FormActions
           readOnly={readOnly}
           submitLabel={organization ? "Save organization" : "Create organization"}
           cancelHref={organization ? undefined : "/security/organizations"}
+          managePermission={ORGANIZATION_MANAGE_PERMISSION}
           className="md:col-span-2"
         />
       </fieldset>

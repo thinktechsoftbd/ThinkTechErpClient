@@ -54,6 +54,8 @@ export type Supplier = {
   mobileWalletNo: string | null;
   remarks: string | null;
   isActive: boolean;
+  /** Also a customer: the same party is listed on the sales screens. */
+  isCustomer: boolean;
   /** Owed to the supplier now (+) or advanced (-), base currency. */
   balance: number;
   createdAt: string;

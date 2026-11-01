@@ -53,28 +53,26 @@ export default function SubsidiaryLedgerPage({ searchParams }: Props) {
 async function SubsidiaryLedgerReport({ searchParams }: Pick<Props, "searchParams">) {
   const query = await searchParams;
   const accountId = idParam(query.account);
-  const supplierId = idParam(query.supplier);
-  const customerId = supplierId ? undefined : idParam(query.customer);
+  const partyId = idParam(query.party);
   const from = dateParam(query.from);
   const to = dateParam(query.to);
 
   const [options, result] = await Promise.all([
     loadVoucherEditorOptions(),
     accountId
-      ? tryApi(() => accountingApi.reports.subsidiaryLedger({ accountId, supplierId, customerId, from, to }))
+      ? tryApi(() => accountingApi.reports.subsidiaryLedger({ accountId, partyId, from, to }))
       : Promise.resolve(null),
   ]);
   if (!options.ok) return <Card><ApiErrorState error={options.error} /></Card>;
 
   return (
     <div className="space-y-6">
-      <ReportFilters basePath={basePath} query={{ account: accountId, supplier: supplierId, customer: customerId, from, to }}>
+      <ReportFilters basePath={basePath} query={{ account: accountId, party: partyId, from, to }}>
         <LedgerHeadPartyFilter
           heads={options.data.heads}
-          suppliers={options.data.suppliers}
-          customers={options.data.customers}
+          parties={options.data.parties}
           accountId={accountId}
-          partyId={supplierId ?? customerId}
+          partyId={partyId}
         />
         <ReportDate name="from" label="From" value={from} />
         <ReportDate name="to" label="To" value={to} />
@@ -90,7 +88,7 @@ async function SubsidiaryLedgerReport({ searchParams }: Pick<Props, "searchParam
         </Card>
       ) : !result.ok ? (
         <Card>
-          <ApiErrorState error={result.error} notFoundHint="That ledger head isn't a sub class in this organization." />
+          <ApiErrorState error={result.error} notFoundHint="That ledger head isn't a sub class of the chart of accounts." />
         </Card>
       ) : (
         <LedgerView ledger={result.data} />
@@ -101,8 +99,8 @@ async function SubsidiaryLedgerReport({ searchParams }: Pick<Props, "searchParam
 
 function LedgerView({ ledger }: { ledger: SubsidiaryLedger }) {
   const period = periodText(ledger.from, ledger.to);
-  // With no party chosen, a party head lists each line's supplier or customer.
-  const showParty = Boolean(ledger.partyType) && !ledger.partyName;
+  // With no party chosen, lines that name a supplier or customer show who it was.
+  const showParty = !ledger.partyName && ledger.entries.some((entry) => entry.partyName);
   const columns = showParty ? 5 : 4;
 
   return (
@@ -120,10 +118,9 @@ function LedgerView({ ledger }: { ledger: SubsidiaryLedger }) {
         <CardHeader
           title={`${ledger.accountCode} ${ledger.accountName}`}
           description={criteriaText(
-            ledger.partyName && `${ledger.partyType}: ${ledger.partyName} (${ledger.partyCode})`,
-            ledger.partyType && !ledger.partyName && `All ${ledger.partyType.toLowerCase()}s`,
+            ledger.partyName && `${ledger.partyName} (${ledger.partyCode})`,
             period,
-            `${ledger.nature} head`,
+            ledger.nature && `${ledger.nature} head`,
           )}
         />
         <ReportTable>
@@ -132,7 +129,7 @@ function LedgerView({ ledger }: { ledger: SubsidiaryLedger }) {
               <TH>Date</TH>
               <TH>Voucher</TH>
               <TH>Particulars</TH>
-              {showParty && <TH>{ledger.partyType}</TH>}
+              {showParty && <TH>Supplier / customer</TH>}
               <TH>Narration</TH>
               <TH className="text-right">Debit</TH>
               <TH className="text-right">Credit</TH>

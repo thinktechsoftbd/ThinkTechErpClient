@@ -32,29 +32,26 @@ export function BillForm({
   kind,
   action,
   parties,
-  partyHeads,
-  cashHeads,
+  heads,
   initialPartyId,
   cancelHref,
 }: {
   kind: "payment" | "collection";
   action: FormAction;
   parties: PartyOption[];
-  /** Heads keeping the supplier (or customer) ledger. */
-  partyHeads: LedgerHeadOption[];
-  cashHeads: LedgerHeadOption[];
+  /** Every sub class: the party's head and the cash or bank head are both chosen from them. */
+  heads: LedgerHeadOption[];
   initialPartyId: number | null;
   cancelHref: string;
 }) {
   const isPayment = kind === "payment";
   const partyWord = isPayment ? "supplier" : "customer";
-  const firstActive = (heads: LedgerHeadOption[]) => heads.find((head) => head.isActive)?.id;
 
   const [form, setForm] = useState(() => ({
     voucherDate: todayIso(),
     partyId: initialPartyId ? String(initialPartyId) : "",
-    partyAccountId: String(firstActive(partyHeads) ?? ""),
-    cashAccountId: String(firstActive(cashHeads) ?? ""),
+    partyAccountId: "",
+    cashAccountId: "",
     paymentMethod: "Cash",
     referenceNo: "",
     chequeDate: "",
@@ -69,7 +66,7 @@ export function BillForm({
   useEffect(() => {
     if (!balanceKey) return;
     let cancelled = false;
-    const params = new URLSearchParams({ accountId: form.partyAccountId, [isPayment ? "supplierId" : "customerId"]: form.partyId });
+    const params = new URLSearchParams({ accountId: form.partyAccountId, partyId: form.partyId });
     fetch(`/api/lookup/party-balance?${params}`, { headers: { Accept: "application/json" } })
       .then(async (response) => {
         const data = await response.json().catch(() => null);
@@ -123,15 +120,11 @@ export function BillForm({
               label={isPayment ? "Payable head (Dr)" : "Receivable head (Cr)"}
               name="partyAccountId"
               required
-              hint={
-                partyHeads.length === 0
-                  ? `No ledger head keeps a ${partyWord} ledger yet. Set "Subsidiary ledger" on one in the chart of accounts.`
-                  : `The head that keeps the ${partyWord} ledger.`
-              }
+              hint={`The sub class the ${partyWord}'s balance is kept on, such as ${isPayment ? "Accounts Payable" : "Accounts Receivable"}.`}
             >
               <LedgerHeadSelect
                 id="partyAccountId"
-                heads={partyHeads}
+                heads={heads}
                 value={form.partyAccountId}
                 onChange={(event) => set("partyAccountId", event.target.value)}
                 required
@@ -141,11 +134,11 @@ export function BillForm({
               label={isPayment ? "Paid from (Cr)" : "Deposited to (Dr)"}
               name="cashAccountId"
               required
-              hint={cashHeads.length === 0 ? "No Cash or Bank head yet. Set the ledger type on one in the chart of accounts." : "A Cash or Bank head."}
+              hint="The cash-in-hand or bank sub class."
             >
               <LedgerHeadSelect
                 id="cashAccountId"
-                heads={cashHeads}
+                heads={heads}
                 value={form.cashAccountId}
                 onChange={(event) => set("cashAccountId", event.target.value)}
                 required

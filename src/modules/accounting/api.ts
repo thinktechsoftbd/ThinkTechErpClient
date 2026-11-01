@@ -2,10 +2,10 @@ import "server-only";
 import { apiFetch } from "@/core/api/client";
 import type { PagedResult } from "@/modules/security/types";
 import type {
+  AccountClassNode,
   BalanceSheet,
   BillVoucherRequest,
-  ChartAccount,
-  ChartAccountUpsertRequest,
+  EditableAccountClassKind,
   LedgerHeadOption,
   PartyBalance,
   PartyOption,
@@ -20,28 +20,22 @@ import type {
 const base = "/api/accounting";
 
 export const accountingApi = {
-  chart: {
-    /** Every account, every level, flat (parentId links the tree). */
-    list: () => apiFetch<ChartAccount[]>(`${base}/chart-of-accounts`),
-    create: (body: ChartAccountUpsertRequest) => apiFetch<ChartAccount>(`${base}/chart-of-accounts`, { method: "POST", body }),
-    update: (id: number, body: ChartAccountUpsertRequest) =>
-      apiFetch<ChartAccount>(`${base}/chart-of-accounts/${id}`, { method: "PUT", body }),
-    /** Ticking activates the branch and its parents; clearing deactivates the branch. */
-    setActive: (id: number, isActive: boolean) =>
-      apiFetch<ChartAccount>(`${base}/chart-of-accounts/${id}/active`, { method: "PUT", body: { isActive } }),
-    remove: (id: number) => apiFetch<void>(`${base}/chart-of-accounts/${id}`, { method: "DELETE" }),
-    /** Adds the ready-made chart to an organization without accounts. */
-    importStandard: () => apiFetch<ChartAccount[]>(`${base}/chart-of-accounts/standard`, { method: "POST", body: {} }),
-    ledgerHeads: (query: {
-      search?: string;
-      ledgerTypes?: string;
-      partyType?: PartyType;
-      ids?: string;
-      includeInactive?: boolean;
-      limit?: number;
-    }) => apiFetch<LedgerHeadOption[]>(`${base}/chart-of-accounts/ledger-heads`, { query }),
+  /** Sub classes of the chart for the voucher and report pickers. */
+  ledgerHeads: (query: { search?: string; ids?: string; limit?: number }) =>
+    apiFetch<LedgerHeadOption[]>(`${base}/ledger-heads`, { query }),
+  /** The chart of accounts screen's tree on the acc_* tables (one chart for every organization). */
+  accountClasses: {
+    tree: () => apiFetch<AccountClassNode[]>(`${base}/account-classes`),
+    /** Adds a main class under an account class, a map class under a main class or a sub class under a map class. */
+    create: (body: { kind: EditableAccountClassKind; parentId: number; name: string }) =>
+      apiFetch<AccountClassNode>(`${base}/account-classes`, { method: "POST", body }),
+    rename: (kind: EditableAccountClassKind, id: number, name: string) =>
+      apiFetch<AccountClassNode>(`${base}/account-classes/${kind}/${id}`, { method: "PUT", body: { name } }),
+    remove: (kind: EditableAccountClassKind, id: number) =>
+      apiFetch<void>(`${base}/account-classes/${kind}/${id}`, { method: "DELETE" }),
   },
-  parties: (type: PartyType, query: { search?: string; ids?: string; limit?: number } = {}) =>
+  /** Suppliers, customers, or both when no type is given. */
+  parties: (type: PartyType | undefined, query: { search?: string; ids?: string; limit?: number } = {}) =>
     apiFetch<PartyOption[]>(`${base}/parties`, { query: { type, ...query } }),
 
   vouchers: {
@@ -67,12 +61,13 @@ export const accountingApi = {
   },
 
   reports: {
-    subsidiaryLedger: (query: { accountId: number; supplierId?: number; customerId?: number; from?: string; to?: string }) =>
+    /** partyId narrows the ledger to one supplier or customer. */
+    subsidiaryLedger: (query: { accountId: number; partyId?: number; from?: string; to?: string }) =>
       apiFetch<SubsidiaryLedger>(`${base}/reports/subsidiary-ledger`, { query }),
     trialBalance: (query: { from?: string; to?: string; includeZero?: boolean }) =>
       apiFetch<TrialBalance>(`${base}/reports/trial-balance`, { query }),
     balanceSheet: (query: { asOf?: string }) => apiFetch<BalanceSheet>(`${base}/reports/balance-sheet`, { query }),
-    partyBalance: (query: { accountId: number; supplierId?: number; customerId?: number; asOf?: string }) =>
+    partyBalance: (query: { accountId: number; partyId: number; asOf?: string }) =>
       apiFetch<PartyBalance>(`${base}/reports/party-balance`, { query }),
   },
 };

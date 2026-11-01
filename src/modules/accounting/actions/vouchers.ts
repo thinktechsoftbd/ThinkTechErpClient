@@ -27,6 +27,8 @@ export async function saveVoucherAction(id: number | null, _previous: ActionStat
     if (!line.accountId) return actionError(`${label}: choose the ledger head.`);
     if (!isAmount(line.debitAmount) || !isAmount(line.creditAmount) || (line.debitAmount > 0) === (line.creditAmount > 0))
       return actionError(`${label}: enter either a debit or a credit amount.`);
+    if (line.localExchangeRate !== null && !(isAmount(line.localExchangeRate) && line.localExchangeRate > 0))
+      return actionError(`${label}: the exchange rate must be more than 0.`);
   }
 
   const post = readIntent(formData) === "post";

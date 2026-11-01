@@ -43,6 +43,7 @@ export async function addQuickCustomerAction(input: { name: string; mobile: stri
       openingBalanceDate: null,
       remarks: null,
       isActive: true,
+      isSupplier: false,
     });
     return {
       ok: true,

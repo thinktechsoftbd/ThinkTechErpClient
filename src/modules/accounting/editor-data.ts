@@ -1,18 +1,20 @@
 import "server-only";
 import type { ApiResult } from "@/core/api/client";
+import { getCurrencyOptions } from "@/modules/inventory/queries";
+import type { LookupOption } from "@/modules/settings/types";
 import { getLedgerHeads, getParties } from "./queries";
 import type { LedgerHeadOption, PartyOption, Voucher } from "./types";
 import type { VoucherEditorInitial } from "./components/voucher-editor";
 
-export type VoucherEditorOptions = { heads: LedgerHeadOption[]; suppliers: PartyOption[]; customers: PartyOption[] };
+export type VoucherEditorOptions = { heads: LedgerHeadOption[]; parties: PartyOption[]; currencies: LookupOption[] };
 
-/** The ledger heads, suppliers and customers the voucher and bill screens pick from. */
+/** The ledger heads, parties (suppliers and customers) and currencies the voucher and bill screens pick from. */
 export async function loadVoucherEditorOptions(): Promise<ApiResult<VoucherEditorOptions>> {
-  const [heads, suppliers, customers] = await Promise.all([getLedgerHeads(), getParties("Supplier"), getParties("Customer")]);
+  const [heads, parties, currencies] = await Promise.all([getLedgerHeads(), getParties(), getCurrencyOptions()]);
   if (!heads.ok) return heads;
-  if (!suppliers.ok) return suppliers;
-  if (!customers.ok) return customers;
-  return { ok: true, data: { heads: heads.data, suppliers: suppliers.data, customers: customers.data } };
+  if (!parties.ok) return parties;
+  if (!currencies.ok) return currencies;
+  return { ok: true, data: { heads: heads.data, parties: parties.data, currencies: currencies.data } };
 }
 
 /** A saved draft as the editor's starting state. */
@@ -24,9 +26,11 @@ export function editorInitialFrom(voucher: Voucher): VoucherEditorInitial {
     narration: voucher.narration ?? "",
     lines: voucher.lines.map((line) => ({
       accountId: String(line.accountId),
-      partyId: String(line.supplierId ?? line.customerId ?? ""),
+      partyId: line.partyId ? String(line.partyId) : "",
       debit: line.debitAmount ? String(line.debitAmount) : "",
       credit: line.creditAmount ? String(line.creditAmount) : "",
+      currencyId: String(line.currencyLookupDataId),
+      rate: String(line.localExchangeRate),
       narration: line.lineNarration ?? "",
     })),
   };

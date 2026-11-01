@@ -12,8 +12,10 @@ import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { cn } from "@/core/utils/cn";
 import { formatAmount, parseDecimal, round, todayIso } from "@/core/utils/number";
 import { IntentSubmit, useSubmitIntent } from "@/modules/inventory/components/documents/intent-submit";
+import type { LookupOption } from "@/modules/settings/types";
 import {
   GENERAL_VOUCHER_TYPES,
+  LOCAL_CURRENCY,
   VOUCHER_TYPE_HINTS,
   type GeneralVoucherType,
   type LedgerHeadOption,
@@ -28,6 +30,10 @@ export type EditorLine = {
   partyId: string;
   debit: string;
   credit: string;
+  /** A Currency lookup id; empty = BDT. */
+  currencyId: string;
+  /** Local exchange rate; the amounts themselves are always in BDT. */
+  rate: string;
   narration: string;
 };
 
@@ -40,28 +46,37 @@ export type VoucherEditorInitial = {
 };
 
 const amount = (value: string) => Math.max(0, parseDecimal(value) ?? 0);
-const emptyLine = (): Omit<EditorLine, "key"> => ({ accountId: "", partyId: "", debit: "", credit: "", narration: "" });
 
 /**
- * A Journal, Payment, Receipt or Contra voucher: a header and debit/credit lines on ledger heads
- * (sub classes). Lines on a head that keeps a supplier or customer ledger name the party.
- * Submits JSON in the hidden "payload" field, with intent "save" (draft) or "post".
+ * A Journal, Payment, Receipt or Contra voucher: a header and debit/credit lines (in BDT) on ledger
+ * heads (sub classes). A line may name the supplier or customer it is for, and records its currency
+ * and local exchange rate. Submits JSON in the hidden "payload" field, with intent "save" (draft) or "post".
  */
 export function VoucherEditor({
   action,
   heads,
-  suppliers,
-  customers,
+  parties,
+  currencies,
   initial,
   cancelHref,
 }: {
   action: FormAction;
   heads: LedgerHeadOption[];
-  suppliers: PartyOption[];
-  customers: PartyOption[];
+  parties: PartyOption[];
+  currencies: LookupOption[];
   initial?: VoucherEditorInitial;
   cancelHref: string;
 }) {
+  const localCurrencyId = String(currencies.find((currency) => currency.name.toUpperCase() === LOCAL_CURRENCY)?.id ?? "");
+  const emptyLine = (): Omit<EditorLine, "key"> => ({
+    accountId: "",
+    partyId: "",
+    debit: "",
+    credit: "",
+    currencyId: localCurrencyId,
+    rate: "1",
+    narration: "",
+  });
   const [header, setHeader] = useState(() => ({
     voucherType: initial?.voucherType ?? ("Journal" as GeneralVoucherType),
     voucherDate: initial?.voucherDate || todayIso(),
@@ -74,7 +89,6 @@ export function VoucherEditor({
   );
   const { chosen, choose } = useSubmitIntent();
 
-  const headById = new Map(heads.map((head) => [String(head.id), head]));
   const totalDebit = round(lines.reduce((sum, line) => sum + amount(line.debit), 0), 2);
   const totalCredit = round(lines.reduce((sum, line) => sum + amount(line.credit), 0), 2);
   const difference = round(totalDebit - totalCredit, 2);
@@ -100,18 +114,15 @@ export function VoucherEditor({
       narration: header.narration.trim() || null,
       lines: lines
         .filter((line) => line.accountId || amount(line.debit) > 0 || amount(line.credit) > 0)
-        .map((line) => {
-          const partyType = headById.get(line.accountId)?.partyType;
-          const partyId = line.partyId ? Number(line.partyId) : null;
-          return {
-            accountId: Number(line.accountId) || 0,
-            supplierId: partyType === "Supplier" ? partyId : null,
-            customerId: partyType === "Customer" ? partyId : null,
-            debitAmount: round(amount(line.debit), 4),
-            creditAmount: round(amount(line.credit), 4),
-            lineNarration: line.narration.trim() || null,
-          };
-        }),
+        .map((line) => ({
+          accountId: Number(line.accountId) || 0,
+          partyId: line.partyId ? Number(line.partyId) : null,
+          debitAmount: round(amount(line.debit), 4),
+          creditAmount: round(amount(line.credit), 4),
+          currencyLookupDataId: line.currencyId ? Number(line.currencyId) : null,
+          localExchangeRate: parseDecimal(line.rate) ?? null,
+          lineNarration: line.narration.trim() || null,
+        })),
     };
   }
 
@@ -169,7 +180,7 @@ export function VoucherEditor({
       <Card>
         <CardHeader
           title={`Entries (${lines.length})`}
-          description="Each line debits or credits one ledger head. Debits must equal credits to post."
+          description="Each line debits or credits one ledger head, in BDT. Debits must equal credits to post."
           actions={
             <button type="button" onClick={addLine} className={buttonClasses("outline", "sm")}>
               <Plus className="size-4" aria-hidden /> Add line
@@ -182,6 +193,7 @@ export function VoucherEditor({
               <TH className="w-10">#</TH>
               <TH className="min-w-64">Ledger head</TH>
               <TH className="min-w-48">Supplier / customer</TH>
+              <TH className="min-w-60">Currency · rate</TH>
               <TH className="min-w-48">Line narration</TH>
               <TH className="w-36 text-right">Debit</TH>
               <TH className="w-36 text-right">Credit</TH>
@@ -192,8 +204,7 @@ export function VoucherEditor({
           </THead>
           <TBody>
             {lines.map((line, index) => {
-              const head = headById.get(line.accountId);
-              const parties = head?.partyType === "Supplier" ? suppliers : head?.partyType === "Customer" ? customers : null;
+              const isLocal = !line.currencyId || line.currencyId === localCurrencyId;
               return (
                 <TR key={line.key}>
                   <TD className="text-gray-500 tabular-nums">{index + 1}</TD>
@@ -203,25 +214,50 @@ export function VoucherEditor({
                       value={line.accountId}
                       aria-label={`Line ${index + 1} ledger head`}
                       className="h-10"
-                      onChange={(event) => {
-                        const next = headById.get(event.target.value);
-                        update(line.key, { accountId: event.target.value, ...(next?.partyType !== head?.partyType ? { partyId: "" } : {}) });
-                      }}
+                      onChange={(event) => update(line.key, { accountId: event.target.value })}
                     />
                   </TD>
                   <TD>
-                    {parties ? (
-                      <PartySelect
-                        parties={parties}
-                        placeholder={`Choose the ${head?.partyType?.toLowerCase()}…`}
-                        value={line.partyId}
-                        aria-label={`Line ${index + 1} ${head?.partyType?.toLowerCase()}`}
-                        className={cn("h-10", !line.partyId && "border-amber-300 dark:border-amber-500/40")}
-                        onChange={(event) => update(line.key, { partyId: event.target.value })}
+                    <PartySelect
+                      parties={parties}
+                      placeholder="None"
+                      value={line.partyId}
+                      aria-label={`Line ${index + 1} supplier or customer`}
+                      className="h-10"
+                      onChange={(event) => update(line.key, { partyId: event.target.value })}
+                    />
+                  </TD>
+                  <TD>
+                    {/* Select and Input are w-full, so the grid sizes them. */}
+                    <div className="grid grid-cols-[7rem_minmax(0,1fr)] gap-2">
+                      <Select
+                        value={line.currencyId}
+                        aria-label={`Line ${index + 1} currency`}
+                        className="h-10"
+                        onChange={(event) =>
+                          update(line.key, {
+                            currencyId: event.target.value,
+                            ...(event.target.value === localCurrencyId ? { rate: "1" } : {}),
+                          })
+                        }
+                      >
+                        {!localCurrencyId && <option value="">{LOCAL_CURRENCY}</option>}
+                        {currencies.map((currency) => (
+                          <option key={currency.id} value={currency.id}>
+                            {currency.name}
+                          </option>
+                        ))}
+                      </Select>
+                      <Input
+                        value={line.rate}
+                        inputMode="decimal"
+                        readOnly={isLocal}
+                        title={isLocal ? "BDT lines are at rate 1" : "BDT per unit of the currency"}
+                        aria-label={`Line ${index + 1} local exchange rate`}
+                        className={cn("h-10 text-right tabular-nums", isLocal && "text-gray-400")}
+                        onChange={(event) => update(line.key, { rate: event.target.value })}
                       />
-                    ) : (
-                      <span className="text-xs text-gray-400">—</span>
-                    )}
+                    </div>
                   </TD>
                   <TD>
                     <Input
@@ -272,7 +308,7 @@ export function VoucherEditor({
           </TBody>
           <tfoot className="border-t-2 border-gray-200 bg-gray-50/60 dark:border-gray-700 dark:bg-white/[0.02]">
             <tr className="[&>td]:font-semibold [&>td]:text-gray-800 dark:[&>td]:text-white/90">
-              <TD colSpan={4} className="text-right">
+              <TD colSpan={5} className="text-right">
                 Total
               </TD>
               <TD className="text-right tabular-nums">{formatAmount(totalDebit)}</TD>

@@ -2,26 +2,25 @@ import type { ComponentProps } from "react";
 import { Select } from "@/core/forms/fields";
 import type { LedgerHeadOption, PartyOption } from "../types";
 
-/** "110102001 — Bank Account"; an inactive head says so. */
-export function ledgerHeadLabel(head: Pick<LedgerHeadOption, "code" | "name" | "isActive">) {
-  return `${head.code} — ${head.name}${head.isActive ? "" : " (inactive)"}`;
+/** "102080001 — Dutch-Bangla Bank". */
+export function ledgerHeadLabel(head: Pick<LedgerHeadOption, "code" | "name">) {
+  return `${head.code} — ${head.name}`;
 }
 
+/** "Rahim Traders (S-00001)"; says when the party is on both sides or inactive. */
 export function partyLabel(party: PartyOption) {
-  return `${party.name} (${party.code})${party.isActive ? "" : " · inactive"}`;
+  const both = party.isSupplier && party.isCustomer ? " · supplier & customer" : "";
+  return `${party.name} (${party.code})${both}${party.isActive ? "" : " · inactive"}`;
 }
 
-/** Ledger heads grouped by "Main class › Map class"; inactive ones can be shown but not chosen. */
+/** Ledger heads (sub classes) grouped by "Main class › Map class". */
 export function LedgerHeadSelect({
   heads,
   placeholder = "Choose a ledger head…",
-  allowInactive = false,
   ...props
 }: Omit<ComponentProps<"select">, "children"> & {
   heads: LedgerHeadOption[];
   placeholder?: string;
-  /** Reports may look at heads that are no longer ticked. */
-  allowInactive?: boolean;
 }) {
   const groups = new Map<string, LedgerHeadOption[]>();
   for (const head of [...heads].sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }))) {
@@ -34,7 +33,7 @@ export function LedgerHeadSelect({
       {[...groups.entries()].map(([path, items]) => (
         <optgroup key={path} label={path || "Ledger heads"}>
           {items.map((head) => (
-            <option key={head.id} value={head.id} disabled={!head.isActive && !allowInactive}>
+            <option key={head.id} value={head.id}>
               {ledgerHeadLabel(head)}
             </option>
           ))}

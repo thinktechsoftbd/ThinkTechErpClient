@@ -44,6 +44,8 @@ export type Customer = {
   openingBalanceDate: string | null;
   remarks: string | null;
   isActive: boolean;
+  /** Also a supplier: the same party is listed on the purchase screens. */
+  isSupplier: boolean;
   /** Owed by the customer now (+) or paid in advance (-), base currency. */
   balance: number;
   createdAt: string;
@@ -74,6 +76,8 @@ export type CustomerUpsertRequest = {
   openingBalanceDate: string | null;
   remarks: string | null;
   isActive: boolean;
+  /** Also a supplier; their purchase terms are set on the purchase Suppliers screen. */
+  isSupplier: boolean;
 };
 
 /** A customer as the sales screen picks it, with what they owe and the credit left. */

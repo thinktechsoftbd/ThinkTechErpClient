@@ -73,8 +73,8 @@ async function EditVoucher({ params, searchParams }: Props) {
       <VoucherEditor
         action={saveVoucherAction.bind(null, id)}
         heads={options.data.heads}
-        suppliers={options.data.suppliers}
-        customers={options.data.customers}
+        parties={options.data.parties}
+        currencies={options.data.currencies}
         initial={editorInitialFrom(data)}
         cancelHref={`/accounting/vouchers/${id}`}
       />

@@ -56,7 +56,7 @@ async function NewVoucher({ searchParams }: Pick<Props, "searchParams">) {
   if (options.data.heads.length === 0) {
     return (
       <Alert tone="warning" title="No ledger heads yet">
-        <p>Vouchers post to sub classes (ledger heads). Set up the chart of accounts first.</p>
+        <p>Vouchers post to sub classes (ledger heads). Add one under a map class in the chart of accounts first.</p>
         <LinkButton href="/accounting/chart-of-accounts" variant="outline" size="sm" className="mt-3">
           Chart of accounts
         </LinkButton>
@@ -69,8 +69,8 @@ async function NewVoucher({ searchParams }: Pick<Props, "searchParams">) {
     <VoucherEditor
       action={saveVoucherAction.bind(null, null)}
       heads={options.data.heads}
-      suppliers={options.data.suppliers}
-      customers={options.data.customers}
+      parties={options.data.parties}
+      currencies={options.data.currencies}
       initial={{ voucherType, voucherDate: "", referenceNo: "", narration: "", lines: [] }}
       cancelHref="/accounting/vouchers"
     />

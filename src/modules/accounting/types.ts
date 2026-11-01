@@ -5,13 +5,14 @@
 export const ACCOUNTING_VIEW_PERMISSION = "ACCOUNTING.V";
 export const ACCOUNTING_MANAGE_PERMISSION = "ACCOUNTING.M";
 
-/** The chart's five levels; level 5 (Sub Class) holds the ledger heads vouchers post to. */
+/** The chart's five levels (the acc_* tables); level 5 (Sub Class) holds the ledger heads vouchers post to. */
 export const ACCOUNT_LEVELS = ["Parent Class", "Account Class", "Main Class", "Map Class", "Sub Class"] as const;
-export const LEDGER_LEVEL = 5;
 
 export const ACCOUNT_NATURES = ["Asset", "Liability", "Equity", "Income", "Expense"] as const;
-export const LEDGER_TYPES = ["General", "Cash", "Bank"] as const;
+/** Suppliers and customers are one list (purchase.supplier); a party can be either or both. */
 export const PARTY_TYPES = ["Supplier", "Customer"] as const;
+/** The currency a voucher line takes when none is chosen; line amounts are always in it. */
+export const LOCAL_CURRENCY = "BDT";
 /** Entered on the voucher screen; bill payments and collections have their own screens. */
 export const GENERAL_VOUCHER_TYPES = ["Journal", "Payment", "Receipt", "Contra"] as const;
 export const VOUCHER_TYPES = [...GENERAL_VOUCHER_TYPES, "BillPayment", "BillCollection"] as const;
@@ -19,7 +20,6 @@ export const VOUCHER_STATUSES = ["Draft", "Posted", "Cancelled"] as const;
 export const PAYMENT_METHODS = ["Cash", "Bank", "Cheque", "MobileWallet", "Card", "Other"] as const;
 
 export type AccountNature = (typeof ACCOUNT_NATURES)[number];
-export type LedgerType = (typeof LEDGER_TYPES)[number];
 export type PartyType = (typeof PARTY_TYPES)[number];
 export type VoucherType = (typeof VOUCHER_TYPES)[number];
 export type GeneralVoucherType = (typeof GENERAL_VOUCHER_TYPES)[number];
@@ -33,57 +33,26 @@ export function isDebitNature(nature: string) {
   return nature === "Asset" || nature === "Expense";
 }
 
-// ---- Chart of accounts
+// ---- Lookups
 
-export type ChartAccount = {
-  id: number;
-  parentId: number | null;
-  level: number;
-  code: string;
-  name: string;
-  nature: AccountNature;
-  ledgerType: LedgerType | null;
-  partyType: PartyType | null;
-  sortOrder: number;
-  description: string | null;
-  isActive: boolean;
-  childCount: number;
-  /** Voucher lines use the head, so it can't be deleted. */
-  hasEntries: boolean;
-  createdAt: string;
-  updatedAt: string | null;
-};
-
-export type ChartAccountUpsertRequest = {
-  parentId: number | null;
-  /** Empty takes the parent's code plus the next number. */
-  code: string | null;
-  name: string;
-  nature: AccountNature | null;
-  ledgerType: LedgerType | null;
-  partyType: PartyType | null;
-  sortOrder: number;
-  description: string | null;
-  isActive: boolean;
-};
-
+/** A sub class (accounting.acc_sub_class): a ledger head vouchers post to (GET /api/accounting/ledger-heads). */
 export type LedgerHeadOption = {
   id: number;
   code: string;
   name: string;
-  nature: AccountNature;
-  ledgerType: LedgerType;
-  partyType: PartyType | null;
+  nature: AccountNature | "";
   /** "Main class › Map class". */
   path: string | null;
-  isActive: boolean;
 };
 
+/** A supplier or customer (GET /api/accounting/parties). */
 export type PartyOption = {
   id: number;
   code: string;
   name: string;
   mobile: string | null;
+  isSupplier: boolean;
+  isCustomer: boolean;
   isActive: boolean;
 };
 
@@ -92,16 +61,20 @@ export type PartyOption = {
 export type VoucherLine = {
   id: number;
   lineNo: number;
+  /** The acc_sub_class id. */
   accountId: number;
   accountCode: string;
   accountName: string;
-  partyType: PartyType | null;
-  supplierId: number | null;
-  supplierName: string | null;
-  customerId: number | null;
-  customerName: string | null;
+  /** The supplier or customer the line is for, if any. */
+  partyId: number | null;
+  partyCode: string | null;
+  partyName: string | null;
+  /** In BDT, whatever the line's currency. */
   debitAmount: number;
   creditAmount: number;
+  currencyLookupDataId: number;
+  currency: string | null;
+  localExchangeRate: number;
   lineNarration: string | null;
 };
 
@@ -136,10 +109,13 @@ export type Voucher = {
 
 export type VoucherLineRequest = {
   accountId: number;
-  supplierId: number | null;
-  customerId: number | null;
+  partyId: number | null;
   debitAmount: number;
   creditAmount: number;
+  /** Null = BDT. */
+  currencyLookupDataId: number | null;
+  /** Null = 1. */
+  localExchangeRate: number | null;
   lineNarration: string | null;
 };
 
@@ -156,9 +132,9 @@ export type BillVoucherRequest = {
   voucherDate: string;
   /** The supplier paid, or the customer collected from. */
   partyId: number;
-  /** Their payable (or receivable) head. */
+  /** The sub class their balance is kept on (Accounts Payable, Accounts Receivable, ...). */
   partyAccountId: number;
-  /** The Cash or Bank head paid from (or deposited to). */
+  /** The cash or bank sub class paid from (or deposited to). */
   cashAccountId: number;
   amount: number;
   paymentMethod: string;
@@ -200,10 +176,8 @@ export type SubsidiaryLedger = {
   accountId: number;
   accountCode: string;
   accountName: string;
-  nature: AccountNature;
-  partyType: PartyType | null;
-  supplierId: number | null;
-  customerId: number | null;
+  nature: AccountNature | "";
+  partyId: number | null;
   partyCode: string | null;
   partyName: string | null;
   from: string;
@@ -260,7 +234,7 @@ export type BalanceSheet = {
   totalEquity: number;
 };
 
-export type PartyBalance = { accountId: number; balance: number };
+export type PartyBalance = { accountId: number; partyId: number; balance: number };
 
 const LABELS: Record<string, string> = {
   BillPayment: "Bill Payment",
@@ -281,3 +255,25 @@ export const VOUCHER_TYPE_HINTS: Record<GeneralVoucherType, string> = {
   Receipt: "Money received into cash or bank.",
   Contra: "Between cash and bank heads: deposits, withdrawals, transfers.",
 };
+
+/**
+ * The chart of accounts screen's tree, on the accounting.acc_* tables (as in MediDesk) and shared by every
+ * organization: parent class → account class → main class → map class → sub class.
+ */
+export type AccountClassKind = "parent" | "ac" | "main" | "map" | "sub";
+
+/** Parent and account classes are fixed; these are added, renamed and deleted from the tree. */
+export type EditableAccountClassKind = "main" | "map" | "sub";
+
+export const EDITABLE_ACCOUNT_CLASS_KINDS: readonly EditableAccountClassKind[] = ["main", "map", "sub"];
+
+/** The longest name each table holds (main_name and sub_name varchar(60), map_name varchar(100)). */
+export const ACCOUNT_CLASS_MAX_NAME: Record<EditableAccountClassKind, number> = { main: 60, map: 100, sub: 60 };
+
+export interface AccountClassNode {
+  kind: AccountClassKind;
+  id: number;
+  code: string | null;
+  name: string | null;
+  children: AccountClassNode[];
+}

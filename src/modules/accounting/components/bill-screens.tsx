@@ -208,14 +208,13 @@ async function NewBill({ kind, searchParams }: { kind: BillKind; searchParams: S
   }
   if (!options.ok) return <Card><ApiErrorState error={options.error} /></Card>;
 
-  const parties = kind === "payment" ? options.data.suppliers : options.data.customers;
+  const parties = options.data.parties.filter((party) => (kind === "payment" ? party.isSupplier : party.isCustomer));
   return (
     <BillForm
       kind={kind}
       action={kind === "payment" ? createBillPaymentAction : createBillCollectionAction}
       parties={parties}
-      partyHeads={options.data.heads.filter((head) => head.partyType === screen.party)}
-      cashHeads={options.data.heads.filter((head) => head.ledgerType === "Cash" || head.ledgerType === "Bank")}
+      heads={options.data.heads}
       initialPartyId={partyId && parties.some((party) => party.id === partyId) ? partyId : null}
       cancelHref={screen.basePath}
     />

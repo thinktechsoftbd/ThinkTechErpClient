@@ -128,6 +128,7 @@ function customerBody(formData: FormData, fieldErrors: FieldErrors): CustomerUps
     openingBalanceDate: openingBalance === 0 ? null : openingBalanceDate,
     remarks: text(formData, "remarks", 1000, fieldErrors),
     isActive: checked(formData, "isActive"),
+    isSupplier: checked(formData, "isSupplier"),
   };
 }
 

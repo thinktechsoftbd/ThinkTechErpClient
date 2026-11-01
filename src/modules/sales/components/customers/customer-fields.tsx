@@ -53,6 +53,12 @@ export function CustomerFields({
           label="Active (can be picked on new sales and receipts)"
           className={wide}
         />
+        <Checkbox
+          name="isSupplier"
+          defaultChecked={value?.isSupplier ?? false}
+          label="Also a supplier (listed under Purchase → Suppliers too)"
+          className={wide}
+        />
       </FormSection>
 
       <FormSection title="Contact & address">

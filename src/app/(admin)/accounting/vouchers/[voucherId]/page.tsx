@@ -23,7 +23,7 @@ import { canManageAccounting } from "@/modules/accounting/access";
 import { cancelVoucherAction, deleteVoucherAction, postVoucherAction } from "@/modules/accounting/actions/vouchers";
 import { accountingApi } from "@/modules/accounting/api";
 import { sideAmount } from "@/modules/accounting/components/balance";
-import { accountingLabel, type Voucher } from "@/modules/accounting/types";
+import { LOCAL_CURRENCY, accountingLabel, type Voucher } from "@/modules/accounting/types";
 import { PrintButton } from "@/modules/inventory/components/reports/print-button";
 import { NUM, ReportTable, TotalsFoot } from "@/modules/inventory/components/reports/report-parts";
 
@@ -64,7 +64,10 @@ async function VoucherDetail({ params, searchParams }: Props) {
   const party = voucher.supplierName ?? voucher.customerName;
   const totalDebit = voucher.lines.reduce((sum, line) => sum + line.debitAmount, 0);
   const totalCredit = voucher.lines.reduce((sum, line) => sum + line.creditAmount, 0);
-  const hasParties = voucher.lines.some((line) => line.supplierName || line.customerName);
+  const hasParties = voucher.lines.some((line) => line.partyName);
+  // Amounts are always in BDT; the currency column only shows when a line names another currency or rate.
+  const hasCurrency = voucher.lines.some((line) => (line.currency ?? LOCAL_CURRENCY) !== LOCAL_CURRENCY || line.localExchangeRate !== 1);
+  const leading = 3 + (hasParties ? 1 : 0) + (hasCurrency ? 1 : 0);
 
   return (
     <>
@@ -149,6 +152,7 @@ async function VoucherDetail({ params, searchParams }: Props) {
                 <TH>Code</TH>
                 <TH>Ledger head</TH>
                 {hasParties && <TH>Supplier / customer</TH>}
+                {hasCurrency && <TH>Currency · rate</TH>}
                 <TH>Narration</TH>
                 <TH className="text-right">Debit</TH>
                 <TH className="text-right">Credit</TH>
@@ -159,7 +163,12 @@ async function VoucherDetail({ params, searchParams }: Props) {
                 <TR key={line.id}>
                   <TD className="font-mono text-xs whitespace-nowrap text-gray-500">{line.accountCode}</TD>
                   <TD className="font-medium text-gray-800 dark:text-white/90">{line.accountName}</TD>
-                  {hasParties && <TD>{line.supplierName ?? line.customerName ?? "—"}</TD>}
+                  {hasParties && <TD>{line.partyName ?? "—"}</TD>}
+                  {hasCurrency && (
+                    <TD className="whitespace-nowrap tabular-nums">
+                      {line.currency ?? LOCAL_CURRENCY} · {line.localExchangeRate}
+                    </TD>
+                  )}
                   <TD className="text-gray-600 dark:text-gray-400">{line.lineNarration ?? ""}</TD>
                   <TD className={NUM}>{sideAmount(line.debitAmount)}</TD>
                   <TD className={NUM}>{sideAmount(line.creditAmount)}</TD>
@@ -167,7 +176,7 @@ async function VoucherDetail({ params, searchParams }: Props) {
               ))}
             </TBody>
             <TotalsFoot>
-              <TD colSpan={hasParties ? 4 : 3} className="text-right">
+              <TD colSpan={leading} className="text-right">
                 Total
               </TD>
               <TD className={NUM}>{formatAmount(totalDebit)}</TD>

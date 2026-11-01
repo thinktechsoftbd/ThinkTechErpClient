@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Suspense } from "react";
-import { tryApi } from "@/core/api/client";
 import { requireSession } from "@/core/auth/session";
 import { ApiErrorState } from "@/core/ui/api-error-state";
 import { Badge } from "@/core/ui/badge";
@@ -11,8 +10,8 @@ import { Skeleton, StatGridSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
 import { formatDateTime } from "@/core/utils/format";
 import { getAccessibleModules } from "@/modules/registry";
-import { smsApi } from "@/modules/sms/api";
-import { BalanceCards } from "@/modules/sms/components/balance-cards";
+import { SmsStatCards } from "@/modules/sms/components/sms-stat-cards";
+import { getSmsOverview } from "@/modules/sms/queries";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -62,12 +61,12 @@ async function DashboardContent() {
       {canSeeSms && (
         <section>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">SMS balance</h2>
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">SMS</h2>
             <Link href="/sms" className="text-sm font-medium text-brand-500 hover:underline">
               Open SMS
             </Link>
           </div>
-          <Suspense fallback={<StatGridSkeleton count={5} />}>
+          <Suspense fallback={<StatGridSkeleton count={3} />}>
             <SmsSnapshot />
           </Suspense>
         </section>
@@ -102,7 +101,7 @@ async function DashboardContent() {
 }
 
 async function SmsSnapshot() {
-  const result = await tryApi(() => smsApi.getPlatformBalance());
+  const result = await getSmsOverview();
   if (!result.ok) {
     return (
       <Card>
@@ -110,5 +109,5 @@ async function SmsSnapshot() {
       </Card>
     );
   }
-  return <BalanceCards balance={result.data} />;
+  return <SmsStatCards overview={result.data} show={["unallocated", "organizationAvailable", "used"]} />;
 }

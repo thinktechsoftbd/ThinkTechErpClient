@@ -359,7 +359,7 @@ export async function saveMenuAction(id: number | null, _previous: ActionState, 
   const title = requiredText(formData, "title", 100, fieldErrors);
   const path = requiredText(formData, "path", 300, fieldErrors);
   if (path && path !== MENU_GROUP_PATH && !/^\/[^\s]*$/.test(path)) {
-    fieldErrors.path = `Use a page route starting with "/" (e.g. /sms/clients), or "${MENU_GROUP_PATH}" for a group.`;
+    fieldErrors.path = `Use a page route starting with "/" (e.g. /sms/providers), or "${MENU_GROUP_PATH}" for a group.`;
   }
   const icon = text(formData, "icon", 100, fieldErrors);
   const sortOrderRaw = formString(formData, "sortOrder") || "0";

@@ -36,7 +36,7 @@ export function MenuForm({
           label="Path"
           name="path"
           required
-          hint={`Page route, e.g. /sms/clients. Use "${MENU_GROUP_PATH}" for a group that only holds submenus.`}
+          hint={`Page route, e.g. /sms/providers. Use "${MENU_GROUP_PATH}" for a group that only holds submenus.`}
         >
           <Input id="path" name="path" maxLength={300} defaultValue={menu?.path} className="font-mono" autoComplete="off" required />
         </Field>

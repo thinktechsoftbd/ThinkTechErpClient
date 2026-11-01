@@ -24,6 +24,7 @@ export function FormModalButton({
   action,
   submitLabel = "Save",
   size,
+  defaultOpen = false,
   children,
 }: {
   /** "create": primary toolbar button; "edit": compact row action. */
@@ -34,10 +35,12 @@ export function FormModalButton({
   action: FormAction;
   submitLabel?: string;
   size?: "sm" | "md" | "lg";
+  /** Open the modal when the button first renders, e.g. for a page linked with ?new=1. */
+  defaultOpen?: boolean;
   /** The form fields (rendered inside the modal's form). */
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [version, setVersion] = useState(0);
 
   return (

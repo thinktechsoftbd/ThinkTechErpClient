@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
+import { Building2, MessageSquarePlus, RadioTower, ShoppingCart } from "lucide-react";
 import { Suspense } from "react";
-import { tryApi } from "@/core/api/client";
+import { PermissionOnly } from "@/core/crud/permission-only";
 import { ApiErrorState } from "@/core/ui/api-error-state";
 import { LinkButton } from "@/core/ui/button";
 import { Card, CardHeader } from "@/core/ui/card";
 import { EmptyState, StatGridSkeleton, TableSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
-import { smsApi } from "@/modules/sms/api";
-import { BalanceCards } from "@/modules/sms/components/balance-cards";
-import { NewClientButton } from "@/modules/sms/components/client-dialogs";
-import { TransactionsTable } from "@/modules/sms/components/tables";
+import { formatNumber } from "@/core/utils/format";
+import { LowestBalancesTable, ProviderStockTable } from "@/modules/sms/components/overview-tables";
+import { SmsStatCards } from "@/modules/sms/components/sms-stat-cards";
+import { getSmsOverview } from "@/modules/sms/queries";
+import { SMS_MANAGE_PERMISSION } from "@/modules/sms/types";
 
 export const metadata: Metadata = { title: "SMS" };
 
@@ -17,40 +19,40 @@ export default function SmsOverviewPage() {
   return (
     <>
       <PageHeader
-        title="SMS overview"
-        description="Platform balance purchased from ADN and distributed to client accounts."
+        title="SMS"
+        description="SMS bought from providers, allocated to organizations, and what the organizations used and have left."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "SMS" }]}
         actions={
-          <>
-            <LinkButton href="/sms/purchases" variant="outline">
-              Record purchase
-            </LinkButton>
-            <NewClientButton />
-          </>
+          <Suspense>
+            <PermissionOnly code={SMS_MANAGE_PERMISSION}>
+              <LinkButton href="/sms/purchases?new=1" variant="outline">
+                <ShoppingCart className="size-4" aria-hidden /> Record purchase
+              </LinkButton>
+              <LinkButton href="/sms/allocations?new=1">
+                <MessageSquarePlus className="size-4" aria-hidden /> Allocate
+              </LinkButton>
+            </PermissionOnly>
+          </Suspense>
         }
       />
-      <Suspense fallback={<StatGridSkeleton count={5} />}>
-        <PlatformBalance />
+      <Suspense
+        fallback={
+          <div className="space-y-6">
+            <StatGridSkeleton count={6} />
+            <Card>
+              <TableSkeleton rows={3} columns={6} />
+            </Card>
+          </div>
+        }
+      >
+        <OverviewContent />
       </Suspense>
-      <Card className="mt-6">
-        <CardHeader
-          title="Recent transactions"
-          actions={
-            <LinkButton href="/sms/transactions" variant="outline" size="sm">
-              View all
-            </LinkButton>
-          }
-        />
-        <Suspense fallback={<TableSkeleton />}>
-          <RecentTransactions />
-        </Suspense>
-      </Card>
     </>
   );
 }
 
-async function PlatformBalance() {
-  const result = await tryApi(() => smsApi.getPlatformBalance());
+async function OverviewContent() {
+  const result = await getSmsOverview();
   if (!result.ok) {
     return (
       <Card>
@@ -58,14 +60,52 @@ async function PlatformBalance() {
       </Card>
     );
   }
-  return <BalanceCards balance={result.data} />;
-}
+  const overview = result.data;
 
-async function RecentTransactions() {
-  const result = await tryApi(() => smsApi.getTransactions(undefined, 10, 0));
-  if (!result.ok) return <ApiErrorState error={result.error} />;
-  if (result.data.length === 0) {
-    return <EmptyState title="No transactions yet" description="Record an ADN purchase to start the ledger." />;
-  }
-  return <TransactionsTable transactions={result.data} />;
+  return (
+    <div className="space-y-6">
+      <SmsStatCards
+        overview={overview}
+        show={["purchased", "allocated", "unallocated", "used", "organizationAvailable", "spend"]}
+      />
+
+      <Card>
+        <CardHeader
+          title="Providers"
+          description={`${formatNumber(overview.activeProviderCount)} of ${formatNumber(overview.providerCount)} active`}
+          actions={
+            <LinkButton href="/sms/providers" variant="outline" size="sm">
+              Manage providers
+            </LinkButton>
+          }
+        />
+        {overview.providers.length === 0 ? (
+          <EmptyState icon={RadioTower} title="No providers yet" description="Add the SMS gateways you buy SMS from in Providers." />
+        ) : (
+          <ProviderStockTable providers={overview.providers} />
+        )}
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="Lowest balances"
+          description="Organizations with the fewest SMS left."
+          actions={
+            <LinkButton href="/sms/organizations" variant="outline" size="sm">
+              All organizations
+            </LinkButton>
+          }
+        />
+        {overview.lowestBalances.length === 0 ? (
+          <EmptyState
+            icon={Building2}
+            title="No organization has SMS yet"
+            description="Allocate SMS to an organization to follow its balance here."
+          />
+        ) : (
+          <LowestBalancesTable rows={overview.lowestBalances} />
+        )}
+      </Card>
+    </div>
+  );
 }

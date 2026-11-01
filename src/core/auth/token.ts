@@ -93,7 +93,6 @@ export function userFromClaims(claims: TokenClaims) {
     roles: rolesFromClaims(claims),
     /** API permission codes from the token's `permission` claim, e.g. "SECURITY.M". */
     permissions: [...new Set([...toList(claims.permission), ...toList(claims.permissions)])],
-    clientId: firstString(claims.client_id),
     expiresAt: (claims.exp as number) * 1000,
   };
 }

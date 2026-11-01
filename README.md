@@ -7,7 +7,7 @@ in a TailAdmin-style layout (collapsible sidebar, dark mode, responsive).
 | Module | Status | API |
 | --- | --- | --- |
 | Security | Login/logout working; users & roles screens ready | `/api/security/*` — **not implemented in the API yet** (see contract below) |
-| SMS | Complete | `SmsAdminController`, `SmsClientController` |
+| SMS | Providers, purchases (with the BDT cost), allocations to organizations, organization usage | `Areas/SMS` (`/api/sms/*`) — needs `ThinkTechErpData/Sql/016_sms_management.sql` |
 | WebSite | Complete (generic editor for all 11 tables) | `WebsiteTablesController` |
 | Inventory, Purchase | Registered placeholders | — |
 | Accounting | Chart of accounts (5-level checkbox tree), vouchers, supplier bill payment, customer bill collection, subsidiary ledger, trial balance, balance sheet | `Areas/Accounting` — needs `ThinkTechErpData/Sql/015_accounting.sql` |
@@ -44,8 +44,8 @@ token's lifetime. Concurrent requests share one renewal, because the API rotates
 `AUTH_MODE=dev` remains available for local-only sign-in using `DEV_AUTH_USERNAME` /
 `DEV_AUTH_PASSWORD` (it needs the `AUTH_JWT_*` values); it is disabled in production builds.
 
-Roles: `admin` can open every module; otherwise each module lists its roles (SMS needs `sms_admin`,
-matching the API's `SmsAdmin` policy; Security needs `security_admin`).
+Roles: `admin` can open every module; otherwise each module lists its roles or API permission codes
+(SMS needs `SMS.V` or `SMS.M`, matching the API's `SmsView` policy; Security needs `security_admin`).
 
 ## Project structure
 

@@ -62,7 +62,6 @@ async function ProfileDetails() {
               {session.roles.length > 0 ? session.roles.map((role) => <Badge key={role} tone="brand">{role}</Badge>) : "—"}
             </span>
           </Row>
-          {session.clientId && <Row label="SMS client">{session.clientId}</Row>}
           <Row label="Session expires">{formatDateTime(new Date(session.expiresAt).toISOString())}</Row>
           <Row label="Sign-in mode">{serverEnv.authMode === "dev" ? "Development (local token)" : "ThinkTechErp API"}</Row>
         </dl>

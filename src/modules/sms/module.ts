@@ -1,30 +1,25 @@
 import { MessageSquareText } from "lucide-react";
 import { defineModule } from "@/core/modules/types";
+import { SMS_MANAGE_PERMISSION, SMS_VIEW_PERMISSION } from "./types";
 
 export const smsModule = defineModule({
   key: "sms",
   name: "SMS",
-  description: "Platform SMS balance, client accounts, purchases and allocations.",
+  description: "SMS bought from providers, allocated to organizations, and what each organization used and has left.",
   icon: MessageSquareText,
   basePath: "/sms",
   status: "active",
-  // Matches the API's SmsAdmin policy (RequireRole("sms_admin")).
-  roles: ["sms_admin"],
+  // The API's SmsView / SmsManage policies check these permission codes.
+  accessPermissions: [SMS_VIEW_PERMISSION, SMS_MANAGE_PERMISSION],
   nav: [
     { label: "Overview", href: "/sms", exact: true },
-    { label: "Clients", href: "/sms/clients" },
+    { label: "Providers", href: "/sms/providers" },
     { label: "Purchases", href: "/sms/purchases" },
     { label: "Allocations", href: "/sms/allocations" },
-    { label: "Usage", href: "/sms/usage" },
-    { label: "Transactions", href: "/sms/transactions" },
+    { label: "Organizations", href: "/sms/organizations" },
   ],
   permissions: [
-    { key: "sms.balance.view", label: "View platform balance" },
-    { key: "sms.clients.view", label: "View SMS clients" },
-    { key: "sms.clients.manage", label: "Create and edit SMS clients" },
-    { key: "sms.purchases.manage", label: "Record ADN purchases" },
-    { key: "sms.allocations.manage", label: "Allocate SMS to clients" },
-    { key: "sms.usage.manage", label: "View and record client SMS usage" },
-    { key: "sms.transactions.view", label: "View balance transactions" },
+    { key: SMS_VIEW_PERMISSION, label: "View SMS providers, purchases, allocations and organization balances" },
+    { key: SMS_MANAGE_PERMISSION, label: "Manage providers, purchases and allocations; record organization usage" },
   ],
 });

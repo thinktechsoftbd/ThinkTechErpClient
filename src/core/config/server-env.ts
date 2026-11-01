@@ -33,7 +33,7 @@ export const serverEnv = {
     return {
       userName: read("DEV_AUTH_USERNAME") ?? "admin",
       password: read("DEV_AUTH_PASSWORD"),
-      roles: (read("DEV_AUTH_ROLES") ?? "admin,sms_admin")
+      roles: (read("DEV_AUTH_ROLES") ?? "admin")
         .split(",")
         .map((role) => role.trim())
         .filter(Boolean),

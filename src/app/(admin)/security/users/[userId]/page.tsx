@@ -13,11 +13,12 @@ import { LinkTabs } from "@/core/ui/tabs";
 import { formatDateTime } from "@/core/utils/format";
 import { parseIdParam } from "@/core/utils/params";
 import { canManageSecurity } from "@/modules/security/access";
-import { setUserMenusAction } from "@/modules/security/actions";
+import { setUserMenusAction, setUserOrganizationsAction } from "@/modules/security/actions";
 import { securityApi } from "@/modules/security/api";
 import { UserMenuAccessForm } from "@/modules/security/components/user-menu-access-form";
 import { UserPasswordForm, UserPermissionsForm, UserProfileForm } from "@/modules/security/components/user-forms";
-import type { SecurityUser } from "@/modules/security/types";
+import { UserOrganizationsForm } from "@/modules/security/components/user-organizations-form";
+import { ORGANIZATION_MANAGE_PERMISSION, type SecurityUser } from "@/modules/security/types";
 
 export const metadata: Metadata = { title: "User" };
 
@@ -105,15 +106,78 @@ async function ProfileTab({ user, readOnly }: { user: SecurityUser; readOnly: bo
           )}
         </CardBody>
       </Card>
-      {!readOnly && (
-        <Card>
-          <CardHeader title="Password" description="Sets a new password for this user." />
-          <CardBody>
-            <UserPasswordForm userId={user.id} />
-          </CardBody>
-        </Card>
-      )}
+      <div className="space-y-6">
+        {!readOnly && (
+          <Card>
+            <CardHeader title="Password" description="Sets a new password for this user." />
+            <CardBody>
+              <UserPasswordForm userId={user.id} />
+            </CardBody>
+          </Card>
+        )}
+        <Suspense
+          fallback={
+            <Card>
+              <TableSkeleton rows={3} columns={2} />
+            </Card>
+          }
+        >
+          <OrganizationsCard userId={user.id} readOnly={readOnly} />
+        </Suspense>
+      </div>
     </div>
+  );
+}
+
+/** The organizations the user works in: Inventory and Purchase data belongs to one. */
+async function OrganizationsCard({ userId, readOnly }: { userId: number; readOnly: boolean }) {
+  const [organizations, linked, permissions] = await Promise.all([
+    tryApi(() => securityApi.getOrganizations()),
+    tryApi(() => securityApi.getUserOrganizations(userId)),
+    tryApi(() => securityApi.getUserPermissions(userId)),
+  ]);
+
+  let content: ReactNode;
+  if (!organizations.ok) content = <ApiErrorState error={organizations.error} />;
+  else if (!linked.ok) content = <ApiErrorState error={linked.error} />;
+  else {
+    const linkedIds = new Set(linked.data.map((item) => item.organizationId));
+    // Active organizations, plus inactive ones the user is still linked to.
+    const choices = organizations.data
+      .filter((organization) => organization.isActive || linkedIds.has(organization.id))
+      .map((organization) => ({
+        id: organization.id,
+        name: organization.nameEn,
+        code: organization.code,
+        isActive: organization.isActive,
+      }));
+    for (const item of linked.data) {
+      if (!choices.some((choice) => choice.id === item.organizationId)) {
+        choices.push({ id: item.organizationId, name: item.name, code: item.code, isActive: true });
+      }
+    }
+    choices.sort((a, b) => a.name.localeCompare(b.name));
+
+    content = (
+      <UserOrganizationsForm
+        action={setUserOrganizationsAction.bind(null, userId)}
+        organizations={choices}
+        linkedIds={[...linkedIds]}
+        defaultId={linked.data.find((item) => item.isDefault)?.organizationId ?? null}
+        hasAllOrganizations={permissions.ok && permissions.data.effective.includes(ORGANIZATION_MANAGE_PERMISSION)}
+        readOnly={readOnly}
+      />
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader
+        title="Organizations"
+        description="Where this user works: Inventory and Purchase data belongs to an organization. The default opens first."
+      />
+      <CardBody>{content}</CardBody>
+    </Card>
   );
 }
 

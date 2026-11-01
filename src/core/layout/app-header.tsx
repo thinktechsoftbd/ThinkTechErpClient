@@ -6,11 +6,11 @@ import { ThemeToggle } from "@/core/theme/theme-toggle";
 import { BrandMark } from "./app-sidebar";
 import { useSidebar } from "./sidebar-context";
 
-export function AppHeader({ userMenu }: { userMenu: ReactNode }) {
+export function AppHeader({ userMenu, organization }: { userMenu: ReactNode; organization?: ReactNode }) {
   const { toggleSidebar, toggleMobile, isMobileOpen } = useSidebar();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center gap-3 border-b border-gray-200 bg-white/95 px-4 backdrop-blur md:px-6 dark:border-gray-800 dark:bg-gray-900/95">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center gap-3 border-b border-gray-200 bg-white/95 px-4 backdrop-blur md:px-6 print:hidden dark:border-gray-800 dark:bg-gray-900/95">
       <button
         type="button"
         onClick={toggleSidebar}
@@ -29,6 +29,7 @@ export function AppHeader({ userMenu }: { userMenu: ReactNode }) {
       </button>
       <BrandMark className="xl:hidden" />
       <div className="ml-auto flex items-center gap-3">
+        {organization}
         <ThemeToggle />
         {userMenu}
       </div>

@@ -314,6 +314,37 @@ export async function setUserMenusAction(id: number, _previous: ActionState, for
   return actionSuccess("Menu access saved.");
 }
 
+/**
+ * Replaces the organizations a user works in (Inventory and Purchase data belongs to one).
+ * Without a default, the first ticked organization becomes it.
+ */
+export async function setUserOrganizationsAction(
+  id: number,
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const organizationIds = ids(formData, "organizationIds");
+  const defaultOrganizationId = optionalId(formData, "defaultOrganizationId") ?? organizationIds[0] ?? null;
+  if (defaultOrganizationId !== null && !organizationIds.includes(defaultOrganizationId)) {
+    return actionError("The default organization must be one of the ticked organizations.", {
+      defaultOrganizationId: "Tick this organization, or choose another default.",
+    });
+  }
+
+  try {
+    await requireModuleAccess(securityModule);
+    await securityApi.setUserOrganizations(id, { organizationIds, defaultOrganizationId });
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess(
+    organizationIds.length === 0
+      ? "Organization links removed."
+      : "Organizations saved. The user sees them in the organization switcher from their next page load.",
+  );
+}
+
 // ---- Menus
 
 /** Optional positive id from a select; null for "none". */

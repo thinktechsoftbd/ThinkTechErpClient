@@ -55,7 +55,8 @@ export function ActionForm({
       className={className}
       onSubmit={(event) => {
         event.preventDefault();
-        const formData = new FormData(event.currentTarget);
+        // The clicked button's name/value is included, as a native submit would (e.g. intent=post).
+        const formData = new FormData(event.currentTarget, event.nativeEvent.submitter);
         startTransition(() => formAction(formData));
       }}
     >

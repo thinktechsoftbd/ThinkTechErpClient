@@ -99,6 +99,22 @@ export type UserPermissionSet = {
   effective: string[];
 };
 
+/**
+ * An organization linked to a user (GET /api/security/users/{id}/organizations). Inventory and
+ * Purchase data belongs to an organization; users without ORGANIZATION.M work only in linked ones.
+ */
+export type UserOrganization = {
+  organizationId: number;
+  name: string;
+  code: string | null;
+  isDefault: boolean;
+  /** Always true here; false only for a Super Admin's unlinked organizations in my-organizations. */
+  isLinked: boolean;
+};
+
+/** Replaces the user's links; a null default makes the first organization the default. */
+export type UserOrganizationsUpdateRequest = { organizationIds: number[]; defaultOrganizationId: number | null };
+
 /** A per-user menu override; menus without one follow their role. */
 export type UserMenuAccess = {
   menuId: number;

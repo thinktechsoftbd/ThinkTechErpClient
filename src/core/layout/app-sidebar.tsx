@@ -30,6 +30,7 @@ export function AppSidebar({ nav }: { nav: ReactNode }) {
         isExpanded ? "xl:w-[290px]" : "xl:w-[90px]",
         "w-[290px] xl:translate-x-0",
         isMobileOpen ? "translate-x-0" : "-translate-x-full",
+        "print:hidden",
       )}
       data-expanded={showLabels}
       aria-label="Main navigation"
@@ -66,6 +67,7 @@ export function AdminMain({ children }: { children: ReactNode }) {
       className={cn(
         "flex min-h-screen min-w-0 flex-1 flex-col transition-all duration-300 ease-in-out",
         isExpanded ? "xl:ml-[290px]" : "xl:ml-[90px]",
+        "print:ml-0",
       )}
     >
       {children}

@@ -3,6 +3,7 @@ import type { ModuleDefinition } from "@/core/modules/types";
 import { accountingModule } from "./accounting/module";
 import { inventoryModule } from "./inventory/module";
 import { purchaseModule } from "./purchase/module";
+import { salesModule } from "./sales/module";
 import { securityModule } from "./security/module";
 import { settingsModule } from "./settings/module";
 import { smsModule } from "./sms/module";
@@ -16,6 +17,7 @@ export const modules: readonly ModuleDefinition[] = [
   settingsModule,
   inventoryModule,
   purchaseModule,
+  salesModule,
   accountingModule,
 ];
 

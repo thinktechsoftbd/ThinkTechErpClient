@@ -9,7 +9,8 @@ in a TailAdmin-style layout (collapsible sidebar, dark mode, responsive).
 | Security | Login/logout working; users & roles screens ready | `/api/security/*` — **not implemented in the API yet** (see contract below) |
 | SMS | Complete | `SmsAdminController`, `SmsClientController` |
 | WebSite | Complete (generic editor for all 11 tables) | `WebsiteTablesController` |
-| Inventory, Purchase, Accounting | Registered placeholders | — |
+| Inventory, Purchase | Registered placeholders | — |
+| Accounting | Chart of accounts (5-level checkbox tree), vouchers, supplier bill payment, customer bill collection, subsidiary ledger, trial balance, balance sheet | `Areas/Accounting` — needs `ThinkTechErpData/Sql/015_accounting.sql` |
 
 ## Getting started
 
@@ -56,7 +57,7 @@ src/
     (admin)/               Authenticated shell: sidebar + header
       dashboard/  profile/
       security/  sms/  website/          Module routes (thin pages)
-      inventory/ purchase/ accounting/   Placeholders
+      inventory/ purchase/ accounting/   Module routes
   core/                    Shared, module-agnostic code
     api/                   apiFetch (server-only, bearer token), ApiError, tryApi
     auth/                  session cookie, login/logout actions, JWT helpers, role checks

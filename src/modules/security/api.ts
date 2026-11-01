@@ -19,6 +19,8 @@ import type {
   UserCreateRequest,
   UserMenuAccess,
   UserMenuAccessItem,
+  UserOrganization,
+  UserOrganizationsUpdateRequest,
   UserPermissionSet,
   UserStatus,
   UserUpdateRequest,
@@ -68,6 +70,11 @@ export const securityApi = {
   getUserMenus: (id: number) => apiFetch<UserMenuAccess[]>(`${user(id)}/menus`),
   setUserMenus: (id: number, menus: UserMenuAccessItem[]) =>
     apiFetch<UserMenuAccess[]>(`${user(id)}/menus`, { method: "PUT", body: { menus } }),
+  /** The organizations linked to the user (default first). */
+  getUserOrganizations: (id: number) => apiFetch<UserOrganization[]>(`${user(id)}/organizations`),
+  /** Replaces the user's organization links (needs SECURITY.M); returns the new links. */
+  setUserOrganizations: (id: number, body: UserOrganizationsUpdateRequest) =>
+    apiFetch<UserOrganization[]>(`${user(id)}/organizations`, { method: "PUT", body }),
 
   /** Every menu (administration list), for menu settings and per-user menu access. */
   getMenus: () => apiFetch<SecurityMenu[]>(`${base}/menus`),

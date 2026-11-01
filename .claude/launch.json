@@ -6,6 +6,26 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "thinktecherp-api-test",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": [
+        "C:/Users/Dev/AppData/Local/Temp/claude/D--ThinkTech-Projects-ThinkTechErpClient/861f2f83-664c-489d-9416-1f86cf9e4773/scratchpad/apibuild/ThinkTechErpAPI.dll",
+        "--environment",
+        "Development",
+        "--urls",
+        "http://localhost:5391"
+      ],
+      "port": 5391
+    },
+    {
+      "name": "thinktecherp-web-test",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Users/Dev/AppData/Local/Temp/claude/D--ThinkTech-Projects-ThinkTechErpClient/861f2f83-664c-489d-9416-1f86cf9e4773/scratchpad/start-web-test.cjs"
+      ],
+      "port": 3002
     }
   ]
 }

@@ -1,8 +1,10 @@
 import "server-only";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAccessToken } from "@/core/auth/session";
 import { appConfig } from "@/core/config/app";
 import { serverEnv } from "@/core/config/server-env";
+import { ORGANIZATION_COOKIE, ORGANIZATION_HEADER } from "@/core/org/constants";
 import { ApiError, readApiError, type ApiErrorInfo } from "./errors";
 
 type QueryValue = string | number | boolean | null | undefined;
@@ -35,6 +37,10 @@ export async function apiFetch<T>(path: string, request: ApiRequest = {}): Promi
     const token = await getAccessToken();
     if (!token) redirect(expiredPath);
     headers.set("Authorization", `Bearer ${token}`);
+    // Inventory and Purchase data belongs to the organization chosen in the header's switcher;
+    // without it the API uses the user's default organization.
+    const organizationId = (await cookies()).get(ORGANIZATION_COOKIE)?.value;
+    if (organizationId && /^\d+$/.test(organizationId)) headers.set(ORGANIZATION_HEADER, organizationId);
   }
 
   let response: Response;

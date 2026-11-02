@@ -18,6 +18,7 @@ import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatDate, formatNumber } from "@/core/utils/format";
 import { formatAmount } from "@/core/utils/number";
 import { parseIdParam } from "@/core/utils/params";
+import { dateParam } from "@/modules/inventory/components/reports/report-parts";
 import { purchaseApi } from "@/modules/purchase/api";
 import { getSupplierOptions } from "@/modules/purchase/queries";
 import { PURCHASE_MANAGE_PERMISSION } from "@/modules/purchase/types";
@@ -65,8 +66,9 @@ async function ReceiptList({ searchParams }: Pick<Props, "searchParams">) {
   const status = firstParam(query.status);
   const supplierParam = firstParam(query.supplier);
   const supplierId = supplierParam ? (parseIdParam(supplierParam) ?? undefined) : undefined;
-  const from = firstParam(query.from);
-  const to = firstParam(query.to);
+  // A malformed date in the URL is ignored rather than sent to the API (which refuses it).
+  const from = dateParam(query.from);
+  const to = dateParam(query.to);
   const offset = parseOffset(query.offset);
 
   const [suppliers, result] = await Promise.all([

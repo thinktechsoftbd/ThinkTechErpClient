@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Info, LoaderCircle, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { computeLine } from "@/core/documents/line-math";
@@ -179,6 +180,7 @@ export function PurchaseDocumentEditor({
   canPost,
   cancelHref,
   postLabel,
+  returnTo,
 }: {
   mode: PurchaseEditorMode;
   action: FormAction;
@@ -189,7 +191,10 @@ export function PurchaseDocumentEditor({
   cancelHref: string;
   /** e.g. "Save & approve" for orders. */
   postLabel?: string;
+  /** In a popup over the list: saving returns to the list; Cancel closes the popup. */
+  returnTo?: string;
 }) {
+  const router = useRouter();
   const [header, setHeader] = useState(() => ({
     date: initial.date ?? todayIso(),
     supplierId: initial.supplierId ?? null,
@@ -393,6 +398,7 @@ export function PurchaseDocumentEditor({
   return (
     <ActionForm action={action} className="space-y-6">
       <input type="hidden" name="payload" value={JSON.stringify(payload())} />
+      {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
       <FormMessage />
 
       {(initial.purchaseOrderNo || initial.goodsReceiptNo || initial.purchaseInvoiceNo) && (
@@ -849,9 +855,15 @@ export function PurchaseDocumentEditor({
                 </SubmitIntent>
               )}
             </div>
-            <Link href={cancelHref} className={buttonClasses("ghost", "md", "w-full")}>
-              Cancel
-            </Link>
+            {returnTo ? (
+              <button type="button" onClick={() => router.back()} className={buttonClasses("ghost", "md", "w-full")}>
+                Cancel
+              </button>
+            ) : (
+              <Link href={cancelHref} className={buttonClasses("ghost", "md", "w-full")}>
+                Cancel
+              </Link>
+            )}
           </div>
         </div>
       </div>

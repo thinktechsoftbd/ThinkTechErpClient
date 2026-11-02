@@ -2,7 +2,7 @@
 
 import { actionError, type ActionState } from "@/core/forms/action-state";
 import { readIntent, readPayload } from "@/core/documents/payload";
-import { runDocumentAction, saveDocument } from "@/core/documents/run-action";
+import { popupReturn, runDocumentAction, saveDocument } from "@/core/documents/run-action";
 import { purchaseApi } from "../api";
 import { purchaseModule } from "../module";
 import type { PurchaseReturnUpsertRequest } from "../types";
@@ -25,11 +25,14 @@ export async function saveReturnAction(id: number | null, _previous: ActionState
     return actionError("Choose how the refund is received.", { refundMethod: "Required." });
   if (body.lines.length === 0) return actionError("Add at least one item.");
 
+  const target = popupReturn(formData, "/purchase/returns", paths);
   return saveDocument(
     purchaseModule,
     () => (id === null ? purchaseApi.returns.create(body) : purchaseApi.returns.update(id, body)),
     readIntent(formData) === "post" ? (savedId) => purchaseApi.returns.action(savedId, "post") : null,
-    paths,
+    target.paths,
+    "posted",
+    target.replace,
   );
 }
 

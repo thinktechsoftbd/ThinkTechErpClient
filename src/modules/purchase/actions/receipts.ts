@@ -2,7 +2,7 @@
 
 import { actionError, type ActionState } from "@/core/forms/action-state";
 import { readIntent, readPayload } from "@/core/documents/payload";
-import { runDocumentAction, saveDocument } from "@/core/documents/run-action";
+import { popupReturn, runDocumentAction, saveDocument } from "@/core/documents/run-action";
 import { purchaseApi } from "../api";
 import { purchaseModule } from "../module";
 import type { GoodsReceiptUpsertRequest } from "../types";
@@ -20,11 +20,14 @@ export async function saveReceiptAction(id: number | null, _previous: ActionStat
   if (!body.warehouseId) return actionError("Choose the warehouse the stock goes into.", { warehouseId: "Required." });
   if (body.lines.length === 0) return actionError("Add at least one item.");
 
+  const target = popupReturn(formData, "/purchase/goods-receipts", paths);
   return saveDocument(
     purchaseModule,
     () => (id === null ? purchaseApi.receipts.create(body) : purchaseApi.receipts.update(id, body)),
     readIntent(formData) === "post" ? (savedId) => purchaseApi.receipts.action(savedId, "post") : null,
-    paths,
+    target.paths,
+    "posted",
+    target.replace,
   );
 }
 

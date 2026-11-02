@@ -2,7 +2,7 @@
 
 import { actionError, type ActionState } from "@/core/forms/action-state";
 import { readIntent, readPayload } from "@/core/documents/payload";
-import { runDocumentAction, saveDocument } from "@/core/documents/run-action";
+import { popupReturn, runDocumentAction, saveDocument } from "@/core/documents/run-action";
 import { purchaseApi } from "../api";
 import { purchaseModule } from "../module";
 import type { PurchaseOrderUpsertRequest } from "../types";
@@ -20,12 +20,14 @@ export async function saveOrderAction(id: number | null, _previous: ActionState,
   if (!body.warehouseId) return actionError("Choose the warehouse the goods are delivered to.", { warehouseId: "Required." });
   if (body.lines.length === 0) return actionError("Add at least one item.");
 
+  const target = popupReturn(formData, "/purchase/orders", paths);
   return saveDocument(
     purchaseModule,
     () => (id === null ? purchaseApi.orders.create(body) : purchaseApi.orders.update(id, body)),
     readIntent(formData) === "post" ? (savedId) => purchaseApi.orders.action(savedId, "approve") : null,
-    paths,
+    target.paths,
     "approved",
+    target.replace,
   );
 }
 

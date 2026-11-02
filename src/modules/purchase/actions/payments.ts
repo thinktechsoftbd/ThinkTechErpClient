@@ -2,7 +2,7 @@
 
 import { actionError, type ActionState } from "@/core/forms/action-state";
 import { readPayload } from "@/core/documents/payload";
-import { runDocumentAction, saveDocument } from "@/core/documents/run-action";
+import { popupReturn, runDocumentAction, saveDocument } from "@/core/documents/run-action";
 import { round } from "@/core/utils/number";
 import { purchaseApi } from "../api";
 import { purchaseModule } from "../module";
@@ -48,7 +48,8 @@ export async function createPaymentAction(_previous: ActionState, formData: Form
     if (body.allocations.length > 0) body.autoAllocate = false;
   }
 
-  return saveDocument(purchaseModule, () => purchaseApi.payments.create(body), null, { view, edit: view });
+  const target = popupReturn(formData, "/purchase/payments", { view, edit: view });
+  return saveDocument(purchaseModule, () => purchaseApi.payments.create(body), null, target.paths, "posted", target.replace);
 }
 
 /** Takes the payment off its invoices (they are due again). */

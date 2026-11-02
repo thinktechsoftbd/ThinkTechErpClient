@@ -4,6 +4,8 @@
 
 export const ACCOUNTING_VIEW_PERMISSION = "ACCOUNTING.V";
 export const ACCOUNTING_MANAGE_PERMISSION = "ACCOUNTING.M";
+/** Post draft vouchers to the ledgers and unpost posted ones back to drafts (the API's AccountingPost policy). */
+export const ACCOUNTING_POST_PERMISSION = "ACCOUNTING.P";
 
 /** The chart's five levels (the acc_* tables); level 5 (Sub Class) holds the ledger heads vouchers post to. */
 export const ACCOUNT_LEVELS = ["Parent Class", "Account Class", "Main Class", "Map Class", "Sub Class"] as const;

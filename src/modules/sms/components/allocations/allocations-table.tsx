@@ -1,3 +1,4 @@
+import { Lock } from "lucide-react";
 import { ConfirmDeleteButton } from "@/core/crud/confirm-delete-button";
 import { FormModalButton } from "@/core/crud/form-modal-button";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
@@ -20,6 +21,8 @@ export function AllocationsTable({
   organizations: SmsOrganizationBalance[];
   canManage: boolean;
 }) {
+  // A finalized organization's allocations are locked: no Edit or Delete.
+  const finalized = new Set(organizations.filter((organization) => organization.isFinalized).map((organization) => organization.objectId));
   return (
     <Table>
       <THead>
@@ -54,7 +57,17 @@ export function AllocationsTable({
                 "—"
               )}
             </TD>
-            {canManage && (
+            {canManage && finalized.has(row.organizationObjectId) && (
+              <TD className="text-right">
+                <span
+                  className={`inline-flex items-center gap-1.5 text-sm ${muted}`}
+                  title={`${row.organizationName} is finalized. Clear Finalized in Security → Organizations to change its allocations.`}
+                >
+                  <Lock className="size-4" aria-hidden /> Locked
+                </span>
+              </TD>
+            )}
+            {canManage && !finalized.has(row.organizationObjectId) && (
               <TD className="text-right">
                 <span className="inline-flex items-center gap-1">
                   <FormModalButton

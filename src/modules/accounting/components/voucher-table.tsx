@@ -5,24 +5,51 @@ import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatDate } from "@/core/utils/format";
 import { formatAmount } from "@/core/utils/number";
 import type { Voucher } from "../types";
+import { VoucherBulkBar, VoucherCheckbox, VoucherRowActions, VoucherSelectAll, VoucherSelection, type VoucherRow } from "./voucher-list-actions";
 
-/** Vouchers in a list, with the parties on their lines and how the money moved. */
-export function VoucherTable({ vouchers, showType = true }: { vouchers: Voucher[]; showType?: boolean }) {
-  return (
+/**
+ * Vouchers in a list, with the parties on their lines and how the money moved. With `manage`, users who
+ * may post (ACCOUNTING.P) get checkboxes to post or unpost several at once, and each row gets its icons.
+ */
+export function VoucherTable({
+  vouchers,
+  showType = true,
+  manage,
+}: {
+  vouchers: Voucher[];
+  showType?: boolean;
+  manage?: { canManage: boolean; canPost: boolean };
+}) {
+  const selectable = !!manage?.canPost;
+  const withActions = !!manage && (manage.canManage || manage.canPost);
+  const rows: VoucherRow[] = vouchers.map(({ id, voucherRefNo, status }) => ({ id, voucherRefNo, status }));
+
+  const table = (
     <Table>
       <THead>
         <tr>
+          {selectable && (
+            <TH className="w-10 pr-0">
+              <VoucherSelectAll />
+            </TH>
+          )}
           <TH>Voucher Ref. Number</TH>
           <TH>Voucher Date</TH>
           {showType && <TH>Type</TH>}
           <TH>Particulars</TH>
           <TH className="text-right">Amount</TH>
           <TH>Status</TH>
+          {withActions && <TH className="text-right">Actions</TH>}
         </tr>
       </THead>
       <TBody>
-        {vouchers.map((voucher) => (
+        {vouchers.map((voucher, index) => (
           <TR key={voucher.id}>
+            {selectable && (
+              <TD className="w-10 pr-0">
+                <VoucherCheckbox row={rows[index]} />
+              </TD>
+            )}
             <TD>
               <Link
                 href={`/accounting/vouchers/${voucher.id}`}
@@ -48,9 +75,22 @@ export function VoucherTable({ vouchers, showType = true }: { vouchers: Voucher[
             <TD>
               <DocumentStatusBadge status={voucher.status} />
             </TD>
+            {withActions && manage && (
+              <TD className="py-2 text-right">
+                <VoucherRowActions row={rows[index]} canManage={manage.canManage} canPost={manage.canPost} />
+              </TD>
+            )}
           </TR>
         ))}
       </TBody>
     </Table>
+  );
+
+  if (!selectable) return table;
+  return (
+    <VoucherSelection rows={rows}>
+      <VoucherBulkBar />
+      {table}
+    </VoucherSelection>
   );
 }

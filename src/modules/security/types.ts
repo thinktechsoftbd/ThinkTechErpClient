@@ -31,6 +31,10 @@ export type Organization = {
   /** Outside this company (e.g. a customer) rather than one of its own organizations. */
   isExternal: boolean;
   isActive: boolean;
+  /** SMS the organization has used, recorded under SMS → Organizations; read-only here. */
+  smsUsage: number;
+  /** Finalized: its SMS allocations are locked (none can be added, changed or deleted). */
+  isFinalized: boolean;
   createdAt: string;
   createdBy: number | null;
   updatedAt: string | null;
@@ -39,7 +43,7 @@ export type Organization = {
 
 export type OrganizationUpsertRequest = Omit<
   Organization,
-  "id" | "objectId" | "createdAt" | "createdBy" | "updatedAt" | "updatedBy"
+  "id" | "objectId" | "smsUsage" | "createdAt" | "createdBy" | "updatedAt" | "updatedBy"
 > & {
   /** Null keeps the current Organization Id (or, on create, lets the API generate one). */
   objectId: string | null;

@@ -1,5 +1,6 @@
 import { ActionForm, FormMessage } from "@/core/forms/action-form";
 import { Checkbox, Field, Input, Textarea } from "@/core/forms/fields";
+import { formatQuantity } from "@/core/utils/number";
 import { saveOrganizationAction, savePermissionAction, saveRoleAction } from "../actions";
 import { ORGANIZATION_MANAGE_PERMISSION, type Organization, type SecurityPermission, type SecurityRole } from "../types";
 import { FormActions, PermissionPicker } from "./form-parts";
@@ -41,50 +42,11 @@ function OrganizationInput({
 }
 
 export function OrganizationForm({ organization, readOnly }: { organization?: Organization; readOnly?: boolean }) {
-  const field = { organization };
   return (
     <ActionForm action={saveOrganizationAction.bind(null, organization?.id ?? null)}>
       <fieldset disabled={readOnly} className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <FormMessage className="md:col-span-2" />
-        <h4 className={sectionTitle}>Identity</h4>
-        <Field
-          label="Organization Id"
-          name="objectId"
-          className="md:col-span-2"
-          hint={
-            organization
-              ? "Unique UUID that identifies this organization to other systems. Change it only if they use a different one."
-              : "Leave empty to generate one, or paste the UUID another system already uses."
-          }
-        >
-          <OrganizationIdField defaultValue={organization?.objectId} />
-        </Field>
-        <OrganizationInput {...field} name="nameEn" label="Name (English)" maxLength={200} required />
-        <OrganizationInput {...field} name="nameBn" label="Name (Bangla)" maxLength={200} />
-        <OrganizationInput {...field} name="code" label="Code" maxLength={50} />
-        <OrganizationInput {...field} name="slogan" label="Slogan" maxLength={500} />
-        <OrganizationInput {...field} name="logoUrl" label="Logo URL" type="url" maxLength={500} className="md:col-span-2" />
-
-        <h4 className={`${sectionTitle} pt-2`}>Contact</h4>
-        <OrganizationInput {...field} name="email" label="Email" type="email" maxLength={150} />
-        <OrganizationInput {...field} name="phone" label="Phone" type="tel" maxLength={50} />
-        <OrganizationInput {...field} name="website" label="Website" type="url" maxLength={255} className="md:col-span-2" />
-
-        <h4 className={`${sectionTitle} pt-2`}>Address</h4>
-        <OrganizationInput {...field} name="addressLine1" label="Address line 1" maxLength={255} className="md:col-span-2" />
-        <OrganizationInput {...field} name="addressLine2" label="Address line 2" maxLength={255} className="md:col-span-2" />
-        <OrganizationInput {...field} name="city" label="City" maxLength={100} />
-        <OrganizationInput {...field} name="state" label="State / division" maxLength={100} />
-        <OrganizationInput {...field} name="postalCode" label="Postal code" maxLength={20} />
-        <OrganizationInput {...field} name="country" label="Country" maxLength={100} />
-
-        <Checkbox
-          name="isExternal"
-          defaultChecked={organization?.isExternal ?? false}
-          label="External organization (outside this company, e.g. a customer)"
-          className="md:col-span-2"
-        />
-        <Checkbox name="isActive" defaultChecked={organization?.isActive ?? true} label="Active" className="md:col-span-2" />
+        <OrganizationFields organization={organization} />
         <FormActions
           readOnly={readOnly}
           submitLabel={organization ? "Save organization" : "Create organization"}
@@ -94,6 +56,75 @@ export function OrganizationForm({ organization, readOnly }: { organization?: Or
         />
       </fieldset>
     </ActionForm>
+  );
+}
+
+/**
+ * The organization's fields, as items of a two-column grid the caller provides: the page form above,
+ * and the New organization popup on the list.
+ */
+export function OrganizationFields({ organization }: { organization?: Organization }) {
+  const field = { organization };
+  return (
+    <>
+      <h4 className={sectionTitle}>Identity</h4>
+      <Field
+        label="Organization Id"
+        name="objectId"
+        className="md:col-span-2"
+        hint={
+          organization
+            ? "Unique UUID that identifies this organization to other systems. Change it only if they use a different one."
+            : "Leave empty to generate one, or paste the UUID another system already uses."
+        }
+      >
+        <OrganizationIdField defaultValue={organization?.objectId} />
+      </Field>
+      <OrganizationInput {...field} name="nameEn" label="Name (English)" maxLength={200} required />
+      <OrganizationInput {...field} name="nameBn" label="Name (Bangla)" maxLength={200} />
+      <OrganizationInput {...field} name="code" label="Code" maxLength={50} />
+      <OrganizationInput {...field} name="slogan" label="Slogan" maxLength={500} />
+      <OrganizationInput {...field} name="logoUrl" label="Logo URL" type="url" maxLength={500} className="md:col-span-2" />
+
+      <h4 className={`${sectionTitle} pt-2`}>Contact</h4>
+      <OrganizationInput {...field} name="email" label="Email" type="email" maxLength={150} />
+      <OrganizationInput {...field} name="phone" label="Phone" type="tel" maxLength={50} />
+      <OrganizationInput {...field} name="website" label="Website" type="url" maxLength={255} className="md:col-span-2" />
+
+      <h4 className={`${sectionTitle} pt-2`}>Address</h4>
+      <OrganizationInput {...field} name="addressLine1" label="Address line 1" maxLength={255} className="md:col-span-2" />
+      <OrganizationInput {...field} name="addressLine2" label="Address line 2" maxLength={255} className="md:col-span-2" />
+      <OrganizationInput {...field} name="city" label="City" maxLength={100} />
+      <OrganizationInput {...field} name="state" label="State / division" maxLength={100} />
+      <OrganizationInput {...field} name="postalCode" label="Postal code" maxLength={20} />
+      <OrganizationInput {...field} name="country" label="Country" maxLength={100} />
+
+      <Checkbox
+        name="isExternal"
+        defaultChecked={organization?.isExternal ?? false}
+        label="External organization (outside this company, e.g. a customer)"
+        className="md:col-span-2"
+      />
+      <Checkbox name="isActive" defaultChecked={organization?.isActive ?? true} label="Active" className="md:col-span-2" />
+
+      <h4 className={`${sectionTitle} pt-2`}>SMS</h4>
+      <Field label="SMS used" name="smsUsage" hint="Recorded under SMS → Organizations; it can't be changed here.">
+        <Input
+          id="smsUsage"
+          value={formatQuantity(organization?.smsUsage ?? 0)}
+          readOnly
+          tabIndex={-1}
+          className="bg-gray-50 tabular-nums dark:bg-white/[0.03]"
+        />
+      </Field>
+      <div className="flex items-end pb-3">
+        <Checkbox
+          name="isFinalized"
+          defaultChecked={organization?.isFinalized ?? false}
+          label="Finalized: lock its SMS allocations (none can be added, changed or deleted)"
+        />
+      </div>
+    </>
   );
 }
 

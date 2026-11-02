@@ -110,6 +110,11 @@ export function OrganizationsTable({ rows, canManage }: { rows: SmsOrganizationB
                   <Badge>Inactive</Badge>
                 </span>
               )}
+              {row.isFinalized && (
+                <span className="ml-2" title="Its allocations are locked. Clear Finalized in Security → Organizations to change them.">
+                  <Badge tone="brand">Finalized</Badge>
+                </span>
+              )}
               {row.code && <span className={`block text-xs ${muted}`}>{row.code}</span>}
             </TD>
             <TD className="text-right tabular-nums">{formatNumber(row.allocatedSms)}</TD>
@@ -121,7 +126,7 @@ export function OrganizationsTable({ rows, canManage }: { rows: SmsOrganizationB
             <TD className={row.lastAllocationDate ? "whitespace-nowrap" : muted}>{formatDate(row.lastAllocationDate)}</TD>
             <TD className="text-right">
               <span className="inline-flex items-center gap-1">
-                {canManage && row.isActive && (
+                {canManage && row.isActive && !row.isFinalized && (
                   <Link href={allocateToHref(row.objectId)} className={rowActionClass} title={`Allocate SMS to ${row.name}`}>
                     <MessageSquarePlus className="size-4" aria-hidden /> Allocate
                   </Link>

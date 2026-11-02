@@ -49,6 +49,8 @@ export function LedgerHeadPicker({
   const [error, setError] = useState<string | null>(null);
   const [active, setActive] = useState(0);
   const [placement, setPlacement] = useState<Placement | null>(null);
+  // Inside a modal <dialog> the list must render in the dialog: the page outside it is inert and below the top layer.
+  const [portalTarget, setPortalTarget] = useState<Element | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const requestRef = useRef(0);
@@ -102,6 +104,7 @@ export function LedgerHeadPicker({
   }, []);
   useLayoutEffect(() => {
     if (!open) return;
+    setPortalTarget(inputRef.current?.closest("dialog") ?? document.body);
     place();
     window.addEventListener("resize", place);
     window.addEventListener("scroll", place, true);
@@ -202,6 +205,7 @@ export function LedgerHeadPicker({
 
       {open &&
         placement &&
+        portalTarget &&
         createPortal(
           <ul
             ref={listRef}
@@ -246,7 +250,7 @@ export function LedgerHeadPicker({
               </li>
             )}
           </ul>,
-          document.body,
+          portalTarget,
         )}
     </div>
   );

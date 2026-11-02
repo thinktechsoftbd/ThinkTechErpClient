@@ -1,6 +1,6 @@
 import { Calculator } from "lucide-react";
 import { defineModule } from "@/core/modules/types";
-import { ACCOUNTING_MANAGE_PERMISSION, ACCOUNTING_VIEW_PERMISSION } from "./types";
+import { ACCOUNTING_MANAGE_PERMISSION, ACCOUNTING_POST_PERMISSION, ACCOUNTING_VIEW_PERMISSION } from "./types";
 
 export const accountingModule = defineModule({
   key: "accounting",
@@ -9,8 +9,8 @@ export const accountingModule = defineModule({
   icon: Calculator,
   basePath: "/accounting",
   status: "active",
-  // The API's AccountingView / AccountingManage policies check these permission codes.
-  accessPermissions: [ACCOUNTING_VIEW_PERMISSION, ACCOUNTING_MANAGE_PERMISSION],
+  // The API's AccountingView / AccountingManage / AccountingPost policies check these permission codes.
+  accessPermissions: [ACCOUNTING_VIEW_PERMISSION, ACCOUNTING_MANAGE_PERMISSION, ACCOUNTING_POST_PERMISSION],
   nav: [
     { label: "Overview", href: "/accounting", exact: true },
     { label: "Chart of Accounts", href: "/accounting/chart-of-accounts" },
@@ -23,6 +23,7 @@ export const accountingModule = defineModule({
   ],
   permissions: [
     { key: ACCOUNTING_VIEW_PERMISSION, label: "View the chart of accounts, vouchers and accounting reports" },
-    { key: ACCOUNTING_MANAGE_PERMISSION, label: "Change the chart of accounts; enter, post and cancel vouchers, bill payments and collections" },
+    { key: ACCOUNTING_MANAGE_PERMISSION, label: "Change the chart of accounts; enter, edit, delete and cancel vouchers; record bill payments and collections" },
+    { key: ACCOUNTING_POST_PERMISSION, label: "Post draft vouchers to the ledgers and unpost posted ones back to drafts" },
   ],
 });

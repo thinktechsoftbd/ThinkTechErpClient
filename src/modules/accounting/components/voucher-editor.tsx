@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Plus, Scale, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { ActionForm, FormMessage } from "@/core/forms/action-form";
@@ -85,8 +86,10 @@ export function VoucherEditor({
   paymentMethods,
   organizations,
   lockOrganization = false,
+  canPost,
   initial,
   cancelHref,
+  returnTo,
 }: {
   action: FormAction;
   /** The parties of the organization chosen in the header, when there are no organizations to choose from. */
@@ -98,9 +101,14 @@ export function VoucherEditor({
   organizations: VoucherOrganization[];
   /** A saved voucher stays in its organization. */
   lockOrganization?: boolean;
+  /** "Save & post" needs ACCOUNTING.P; without it the voucher is saved as a draft for someone else to post. */
+  canPost: boolean;
   initial: VoucherEditorInitial;
   cancelHref: string;
+  /** In a popup: the page saving returns to (the list, or the voucher it was opened from); Cancel closes the popup. */
+  returnTo?: string;
 }) {
+  const router = useRouter();
   const localCurrencyId = String(currencies.find((currency) => currency.name.toUpperCase() === LOCAL_CURRENCY)?.id ?? "");
   const emptyLine = (): Omit<EditorLine, "key"> => ({
     id: null,
@@ -191,6 +199,7 @@ export function VoucherEditor({
     <ActionForm action={action} className="space-y-6">
       <input type="hidden" name="payload" value={JSON.stringify(payload())} />
       <input type="hidden" name="organizationId" value={organizations.length > 0 ? header.organizationId : ""} />
+      {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
       <FormMessage />
 
       <Card>
@@ -463,26 +472,34 @@ export function VoucherEditor({
               : `Out of balance by ${formatAmount(Math.abs(difference))} (${difference > 0 ? "more debit" : "more credit"}).`}
         </p>
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
-          <Link href={cancelHref} className={buttonClasses("ghost")}>
-            Cancel
-          </Link>
+          {returnTo ? (
+            <button type="button" onClick={() => router.back()} className={buttonClasses("ghost")}>
+              Cancel
+            </button>
+          ) : (
+            <Link href={cancelHref} className={buttonClasses("ghost")}>
+              Cancel
+            </Link>
+          )}
           <div className="sm:w-40">
             <IntentSubmit intent="save" chosen={chosen} onChoose={choose} variant="outline" pendingLabel="Saving…">
               Save draft
             </IntentSubmit>
           </div>
-          <div className="sm:w-44">
-            <IntentSubmit
-              intent="post"
-              chosen={chosen}
-              onChoose={choose}
-              variant="primary"
-              pendingLabel="Posting…"
-              confirmMessage="Post this voucher? A posted voucher can't be edited, only cancelled."
-            >
-              Save &amp; post
-            </IntentSubmit>
-          </div>
+          {canPost && (
+            <div className="sm:w-44">
+              <IntentSubmit
+                intent="post"
+                chosen={chosen}
+                onChoose={choose}
+                variant="primary"
+                pendingLabel="Posting…"
+                confirmMessage="Post this voucher to the ledgers? To change it afterwards, unpost it first."
+              >
+                Save &amp; post
+              </IntentSubmit>
+            </div>
+          )}
         </div>
       </div>
     </ActionForm>

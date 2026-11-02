@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffectEvent, useLayoutEffect, useRef, type ReactNode } from "react";
 import { cn } from "@/core/utils/cn";
 
 const sizes = {
@@ -32,23 +32,36 @@ export function Modal({
   const ref = useRef<HTMLDialogElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const notifyClose = useEffectEvent(() => onClose());
+
+  // A layout effect with a cleanup, so it also works when Next.js keeps the page hidden (React <Activity>)
+  // instead of unmounting it: the cleanup closes the dialog before it is hidden, and showing the page again
+  // reopens it as a modal. Left open, it could come back as a plain box in the page: moving an open
+  // dialog's node (as React does with kept routes) drops its modal state.
+  useLayoutEffect(() => {
     const dialog = ref.current;
-    if (!dialog) return;
-    if (open && !dialog.open) {
-      dialog.showModal();
-      // Start in the first field rather than on the close button.
-      bodyRef.current
-        ?.querySelector<HTMLElement>("input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])")
-        ?.focus();
-    }
-    if (!open && dialog.open) dialog.close();
+    if (!dialog || !open) return;
+    if (dialog.open && !dialog.matches(":modal")) dialog.close();
+    if (!dialog.open) dialog.showModal();
+    // Start in the first field rather than on the close button.
+    bodyRef.current
+      ?.querySelector<HTMLElement>("input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])")
+      ?.focus();
+
+    // Escape closed it: tell the owner. Closing it from the cleanup (or just above) is not reported.
+    const closedByUser = () => {
+      if (!dialog.open) notifyClose();
+    };
+    dialog.addEventListener("close", closedByUser);
+    return () => {
+      dialog.removeEventListener("close", closedByUser);
+      if (dialog.open) dialog.close();
+    };
   }, [open]);
 
   return (
     <dialog
       ref={ref}
-      onClose={onClose}
       // A click whose target is the <dialog> itself landed on the backdrop, outside the panel.
       onClick={(event) => {
         if (event.target === ref.current) onClose();

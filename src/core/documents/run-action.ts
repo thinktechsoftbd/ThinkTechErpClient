@@ -1,6 +1,6 @@
 import "server-only";
 import { refresh } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, RedirectType } from "next/navigation";
 import { ApiError } from "@/core/api/errors";
 import { requireModuleAccess } from "@/core/auth/guards";
 import { toActionError } from "@/core/forms/action-errors";
@@ -41,6 +41,8 @@ export async function saveDocument<T extends { id: number }>(
   paths: { view: (id: number) => string; edit: (id: number) => string },
   /** What failed after saving, for the notice: "posted" or e.g. "approved". */
   postVerb = "posted",
+  /** Replace the history entry when opening the saved document, e.g. so Back doesn't reopen the popup it was saved from. */
+  replace = false,
 ): Promise<ActionState> {
   let saved: T;
   try {
@@ -57,5 +59,5 @@ export async function saveDocument<T extends { id: number }>(
       throw error;
     }
   }
-  redirect(paths.view(saved.id));
+  redirect(paths.view(saved.id), replace ? RedirectType.replace : RedirectType.push);
 }

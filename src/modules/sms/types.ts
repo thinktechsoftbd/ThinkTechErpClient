@@ -124,6 +124,8 @@ export type SmsOrganizationBalance = {
   name: string;
   code: string | null;
   isActive: boolean;
+  /** Finalized in Security → Organizations: its allocations are locked (no new, changed or deleted ones). */
+  isFinalized: boolean;
   allocatedSms: number;
   smsUsage: number;
   availableSms: number;

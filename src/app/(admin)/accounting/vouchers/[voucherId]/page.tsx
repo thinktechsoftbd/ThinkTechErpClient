@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
 import { requireSession } from "@/core/auth/session";
@@ -19,8 +19,8 @@ import { TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatDate, formatDateTime } from "@/core/utils/format";
 import { formatAmount } from "@/core/utils/number";
 import { parseIdParam } from "@/core/utils/params";
-import { canManageAccounting } from "@/modules/accounting/access";
-import { cancelVoucherAction, deleteVoucherAction, postVoucherAction } from "@/modules/accounting/actions/vouchers";
+import { canManageAccounting, canPostVouchers } from "@/modules/accounting/access";
+import { cancelVoucherAction, deleteVoucherAction, postVoucherAction, unpostVoucherAction } from "@/modules/accounting/actions/vouchers";
 import { accountingApi } from "@/modules/accounting/api";
 import { sideAmount } from "@/modules/accounting/components/balance";
 import { LOCAL_CURRENCY, payTypeLabel } from "@/modules/accounting/types";
@@ -51,6 +51,7 @@ async function VoucherDetail({ params, searchParams }: Props) {
 
   const voucher = result.data;
   const canManage = canManageAccounting(session);
+  const canPost = canPostVouchers(session);
   const isDraft = voucher.status === "Draft";
   const totalDebit = voucher.lines.reduce((sum, line) => sum + line.debitAmount, 0);
   const totalCredit = voucher.lines.reduce((sum, line) => sum + line.creditAmount, 0);
@@ -77,6 +78,9 @@ async function VoucherDetail({ params, searchParams }: Props) {
         ]}
         actions={
           <div className="flex flex-wrap items-start gap-2 print:hidden">
+            <LinkButton href="/accounting/vouchers" variant="outline" size="sm">
+              <ArrowLeft className="size-4" aria-hidden /> Back to list
+            </LinkButton>
             <PrintButton />
             {canManage && isDraft && (
               <>
@@ -86,14 +90,24 @@ async function VoucherDetail({ params, searchParams }: Props) {
                 <DocumentActionButton action={deleteVoucherAction.bind(null, id)} variant="ghost" confirmMessage="Delete this draft voucher?">
                   Delete
                 </DocumentActionButton>
-                <DocumentActionButton
-                  action={postVoucherAction.bind(null, id)}
-                  variant="primary"
-                  confirmMessage="Post this voucher? A posted voucher can't be edited, only cancelled."
-                >
-                  Post
-                </DocumentActionButton>
               </>
+            )}
+            {canPost && isDraft && (
+              <DocumentActionButton
+                action={postVoucherAction.bind(null, id)}
+                variant="primary"
+                confirmMessage="Post this voucher to the ledgers? To change it afterwards, unpost it first."
+              >
+                Post
+              </DocumentActionButton>
+            )}
+            {canPost && voucher.status === "Posted" && (
+              <DocumentActionButton
+                action={unpostVoucherAction.bind(null, id)}
+                confirmMessage="Unpost this voucher? Its entries leave the ledgers and it becomes a draft again."
+              >
+                Unpost
+              </DocumentActionButton>
             )}
             {canManage && voucher.status === "Posted" && (
               <DocumentActionButton

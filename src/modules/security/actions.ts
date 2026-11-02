@@ -100,6 +100,7 @@ function organizationBody(formData: FormData, fieldErrors: FieldErrors): Organiz
     objectId: organizationId(formData, fieldErrors),
     isExternal: formData.get("isExternal") === "on",
     isActive: formData.get("isActive") === "on",
+    isFinalized: formData.get("isFinalized") === "on",
   };
 }
 
@@ -135,6 +136,22 @@ export async function saveOrganizationAction(
     return toActionError(error);
   }
   redirect(`/security/organizations/${createdId}`);
+}
+
+/** Creates an organization from the New organization popup on the list: the list refreshes and the popup closes. */
+export async function createOrganizationFromListAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const fieldErrors: FieldErrors = {};
+  const body = organizationBody(formData, fieldErrors);
+  if (hasErrors(fieldErrors)) return invalid(fieldErrors);
+
+  try {
+    await requireModuleAccess(securityModule);
+    await securityApi.createOrganization(body);
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess("Organization created.");
 }
 
 // ---- Permissions

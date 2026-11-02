@@ -56,8 +56,8 @@ export const accountingApi = {
       apiFetch<Voucher>(`${base}/vouchers/${id}`, { method: "PUT", body, organizationId }),
     /** Flags a draft deleted. */
     remove: (id: number) => apiFetch<void>(`${base}/vouchers/${id}`, { method: "DELETE" }),
-    /** post or cancel */
-    action: (id: number, action: "post" | "cancel", organizationId?: number) =>
+    /** post, unpost (back to a draft) or cancel */
+    action: (id: number, action: "post" | "unpost" | "cancel", organizationId?: number) =>
       apiFetch<Voucher>(`${base}/vouchers/${id}/${action}`, { method: "POST", body: {}, organizationId }),
   },
   billPayments: {

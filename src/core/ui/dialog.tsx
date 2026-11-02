@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffectEvent, useId, useLayoutEffect, useRef, type ReactNode } from "react";
 import { cn } from "@/core/utils/cn";
 
 /**
@@ -14,6 +14,7 @@ export function Dialog({
   title,
   description,
   children,
+  size = "md",
   className,
 }: {
   open: boolean;
@@ -21,28 +22,44 @@ export function Dialog({
   title: ReactNode;
   description?: ReactNode;
   children: ReactNode;
+  /** md for short forms; xl for document editors with line tables. */
+  size?: "md" | "xl";
   className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const notifyClose = useEffectEvent(() => onClose());
 
-  useEffect(() => {
+  // A layout effect, so it also runs when Next.js keeps a route hidden (React <Activity>) instead of
+  // unmounting it: the cleanup closes the dialog before it is hidden, and showing the route again
+  // opens it as a modal again. Left open, the dialog can come back as a plain, non-modal box in the
+  // page: moving an open dialog's node (as React does when reordering kept routes) drops its modal state.
+  useLayoutEffect(() => {
     const dialog = ref.current;
-    if (!dialog) return;
-    if (open && !dialog.open) {
-      dialog.showModal();
-      dialog.querySelector<HTMLElement>("input:not([type=hidden]):not(:disabled), select, textarea")?.focus();
-    }
-    if (!open && dialog.open) dialog.close();
+    if (!dialog || !open) return;
+    if (dialog.open && !dialog.matches(":modal")) dialog.close();
+    if (!dialog.open) dialog.showModal();
+    dialog.querySelector<HTMLElement>("input:not([type=hidden]):not(:disabled), select, textarea")?.focus();
+
+    // Esc (or the browser) closed it: tell the owner. Closing it from the cleanup below is not reported,
+    // nor is the close just above (the dialog is open again by the time that event arrives).
+    const closedByUser = () => {
+      if (!dialog.open) notifyClose();
+    };
+    dialog.addEventListener("close", closedByUser);
+    return () => {
+      dialog.removeEventListener("close", closedByUser);
+      if (dialog.open) dialog.close();
+    };
   }, [open]);
 
   return (
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      onClose={onClose}
       className={cn(
-        "m-auto max-h-[calc(100dvh-2rem)] w-full max-w-[min(32rem,calc(100%-2rem))] overflow-y-auto rounded-2xl border border-gray-200 bg-white p-0 text-left text-sm font-normal text-gray-800 shadow-xl backdrop:bg-gray-900/50 backdrop:backdrop-blur-[2px] dark:border-gray-800 dark:bg-gray-900 dark:text-white/90",
+        "m-auto max-h-[calc(100dvh-2rem)] w-full overflow-y-auto rounded-2xl border border-gray-200 bg-white p-0 text-left text-sm font-normal text-gray-800 shadow-xl backdrop:bg-gray-900/50 backdrop:backdrop-blur-[2px] dark:border-gray-800 dark:bg-gray-900 dark:text-white/90",
+        size === "xl" ? "max-w-[min(80rem,calc(100%-2rem))]" : "max-w-[min(32rem,calc(100%-2rem))]",
         className,
       )}
     >

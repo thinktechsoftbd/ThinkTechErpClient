@@ -12,6 +12,7 @@ import { Card, CardHeader } from "@/core/ui/card";
 import { EmptyState, PageSkeleton, TableSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
 import { Pagination, firstParam, parseOffset } from "@/core/ui/pagination";
+import { RouteModal } from "@/core/ui/route-modal";
 import { formatNumber } from "@/core/utils/format";
 import { dateParam, idParam } from "@/modules/inventory/components/reports/report-parts";
 import { canManageAccounting } from "../access";
@@ -25,7 +26,7 @@ import { partyLabel } from "./pickers";
 import { VoucherTable } from "./voucher-table";
 
 // The Supplier Bill Payment and Customer Bill Collection screens: the same list and form,
-// one for each side.
+// one for each side. From the list, New opens the form in a popup; a refresh or link opens the full page.
 
 export type BillKind = "payment" | "collection";
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -194,8 +195,20 @@ export function NewBillScreen({ kind, searchParams }: { kind: BillKind; searchPa
   );
 }
 
+/** The same form in a popup over its list (@modal/(.)new); saving returns to the list. */
+export function NewBillModal({ kind, searchParams }: { kind: BillKind; searchParams: SearchParams }) {
+  const screen = screens[kind];
+  return (
+    <RouteModal title={kind === "payment" ? "New supplier bill payment" : "New customer bill collection"} description={screen.description}>
+      <Suspense fallback={<TableSkeleton rows={6} columns={4} />}>
+        <NewBill kind={kind} searchParams={searchParams} returnTo={screen.basePath} />
+      </Suspense>
+    </RouteModal>
+  );
+}
+
 /** ?supplier= (or ?customer=) preselects the party. */
-async function NewBill({ kind, searchParams }: { kind: BillKind; searchParams: SearchParams }) {
+async function NewBill({ kind, searchParams, returnTo }: { kind: BillKind; searchParams: SearchParams; returnTo?: string }) {
   const screen = screens[kind];
   const partyId = idParam((await searchParams)[screen.partyParam]);
   const [session, options] = await Promise.all([requireSession(), loadVoucherEditorOptions()]);
@@ -239,6 +252,7 @@ async function NewBill({ kind, searchParams }: { kind: BillKind; searchParams: S
       paymentMethods={options.data.paymentMethods.filter((method) => method.isActive)}
       initialPartyId={partyId && parties.some((party) => party.id === partyId) ? partyId : null}
       cancelHref={screen.basePath}
+      returnTo={returnTo}
     />
   );
 }

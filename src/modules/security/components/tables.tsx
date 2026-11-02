@@ -1,14 +1,37 @@
 import Link from "next/link";
+import { ListFilter } from "lucide-react";
+import { FormModalButton } from "@/core/crud/form-modal-button";
 import { Badge, StatusBadge } from "@/core/ui/badge";
+import { LinkButton } from "@/core/ui/button";
 import { CopyButton } from "@/core/ui/copy-button";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatDateTime, formatNumber } from "@/core/utils/format";
+import { saveOrganizationAction } from "../actions";
 import type { Organization, SecurityPermission, SecurityRole, SecurityUser } from "../types";
+import { OrganizationFields } from "./forms";
 
 const muted = "text-gray-500 dark:text-gray-400";
 const link = "font-medium text-brand-500 hover:underline";
 
-export function OrganizationsTable({ organizations }: { organizations: Organization[] }) {
+/** An organization's SMS allocations: the SMS → Allocations list filtered to it. */
+export function smsAllocationsHref(organization: Pick<Organization, "objectId">) {
+  return `/sms/allocations?organizationId=${organization.objectId}`;
+}
+
+/**
+ * With `canManage` (ORGANIZATION.M) each row has Edit, opening the form in a popup; with `smsLinks` (the
+ * user can open the SMS module) it links to the organization's allocations.
+ */
+export function OrganizationsTable({
+  organizations,
+  canManage = false,
+  smsLinks = false,
+}: {
+  organizations: Organization[];
+  canManage?: boolean;
+  smsLinks?: boolean;
+}) {
+  const withActions = canManage || smsLinks;
   return (
     <Table>
       <THead>
@@ -18,7 +41,9 @@ export function OrganizationsTable({ organizations }: { organizations: Organizat
           <TH>Code</TH>
           <TH>Contact</TH>
           <TH>Location</TH>
+          <TH className="text-right">SMS used</TH>
           <TH>Status</TH>
+          {withActions && <TH className="text-right">Actions</TH>}
         </tr>
       </THead>
       <TBody>
@@ -30,6 +55,7 @@ export function OrganizationsTable({ organizations }: { organizations: Organizat
                   {organization.nameEn}
                 </Link>
                 {organization.isExternal && <Badge tone="warning">External</Badge>}
+                {organization.isFinalized && <Badge tone="brand">Finalized</Badge>}
               </span>
               {organization.nameBn && <p className={`text-xs ${muted}`}>{organization.nameBn}</p>}
             </TD>
@@ -47,9 +73,42 @@ export function OrganizationsTable({ organizations }: { organizations: Organizat
               {organization.phone && <p className="text-xs">{organization.phone}</p>}
             </TD>
             <TD className={muted}>{[organization.city, organization.country].filter(Boolean).join(", ") || "—"}</TD>
+            <TD className="text-right tabular-nums">{formatNumber(organization.smsUsage)}</TD>
             <TD>
               <StatusBadge active={organization.isActive} />
             </TD>
+            {withActions && (
+              <TD className="text-right">
+                <span className="inline-flex items-center gap-1">
+                  {canManage && (
+                    <FormModalButton
+                      mode="edit"
+                      label="Edit"
+                      title="Edit organization"
+                      description={organization.code ? `${organization.nameEn} · ${organization.code}` : organization.nameEn}
+                      action={saveOrganizationAction.bind(null, organization.id)}
+                      submitLabel="Save organization"
+                      size="lg"
+                    >
+                      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                        <OrganizationFields organization={organization} />
+                      </div>
+                    </FormModalButton>
+                  )}
+                  {smsLinks && (
+                    <LinkButton
+                      href={smsAllocationsHref(organization)}
+                      variant="ghost"
+                      size="sm"
+                      className="whitespace-nowrap"
+                      title={`SMS allocations of ${organization.nameEn}`}
+                    >
+                      <ListFilter className="size-4" aria-hidden /> Allocations
+                    </LinkButton>
+                  )}
+                </span>
+              </TD>
+            )}
           </TR>
         ))}
       </TBody>

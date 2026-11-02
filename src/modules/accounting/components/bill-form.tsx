@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Info, LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ActionForm, FormMessage, SubmitButton } from "@/core/forms/action-form";
@@ -38,6 +39,7 @@ export function BillForm({
   paymentMethods,
   initialPartyId,
   cancelHref,
+  returnTo,
 }: {
   kind: "payment" | "collection";
   action: FormAction;
@@ -48,7 +50,10 @@ export function BillForm({
   paymentMethods: LookupValueOption[];
   initialPartyId: number | null;
   cancelHref: string;
+  /** In a popup over the list: saving returns to the list; Cancel closes the popup. */
+  returnTo?: string;
 }) {
+  const router = useRouter();
   const isPayment = kind === "payment";
   const partyWord = isPayment ? "supplier" : "customer";
 
@@ -114,6 +119,7 @@ export function BillForm({
   return (
     <ActionForm action={action} className="space-y-6">
       <input type="hidden" name="payload" value={JSON.stringify(payload)} />
+      {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
       <FormMessage />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -274,9 +280,15 @@ export function BillForm({
             <SubmitButton pendingLabel="Posting…" className="w-full">
               {isPayment ? "Post payment" : "Post collection"}
             </SubmitButton>
-            <Link href={cancelHref} className={buttonClasses("ghost", "md", "w-full")}>
-              Cancel
-            </Link>
+            {returnTo ? (
+              <button type="button" onClick={() => router.back()} className={buttonClasses("ghost", "md", "w-full")}>
+                Cancel
+              </button>
+            ) : (
+              <Link href={cancelHref} className={buttonClasses("ghost", "md", "w-full")}>
+                Cancel
+              </Link>
+            )}
           </div>
         </div>
       </div>

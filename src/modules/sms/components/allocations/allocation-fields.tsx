@@ -13,7 +13,7 @@ import {
 
 const wide = "sm:col-span-2";
 
-type OrganizationOption = { objectId: string; label: string; balance?: SmsOrganizationBalance };
+type OrganizationOption = { objectId: string; label: string; balance?: SmsOrganizationBalance; locked?: boolean };
 
 function organizationOptions(
   organizations: SmsOrganizationBalance[],
@@ -25,8 +25,10 @@ function organizationOptions(
     .filter((organization) => organization.isActive || keep.has(organization.objectId))
     .map((organization) => ({
       objectId: organization.objectId,
-      label: `${organizationLabel(organization)}${organization.isActive ? "" : " (inactive)"}`,
+      label: `${organizationLabel(organization)}${organization.isActive ? "" : " (inactive)"}${organization.isFinalized ? " (finalized)" : ""}`,
       balance: organization,
+      // Finalized organizations' allocations are locked: shown, but they can't be chosen.
+      locked: organization.isFinalized,
     }));
   // Beyond the picker's first 500 organizations: still show the one being edited.
   if (value && !options.some((option) => option.objectId === value.organizationObjectId)) {
@@ -62,7 +64,12 @@ export function AllocationFields({
   const [providerId, setProviderId] = useState(
     String(value?.providerId ?? (providerOptions.length === 1 ? providerOptions[0].id : "")),
   );
-  const [organizationId, setOrganizationId] = useState(value?.organizationObjectId ?? organizationObjectId ?? "");
+  // A finalized organization from ?organizationId= isn't preselected: it can't be allocated to.
+  const [organizationId, setOrganizationId] = useState(
+    value?.organizationObjectId ??
+      (orgOptions.some((option) => option.objectId === organizationObjectId && !option.locked) ? organizationObjectId : undefined) ??
+      "",
+  );
 
   // This allocation's own SMS go back to its provider's stock when it is changed.
   const leftToAllocate = (provider: SmsProvider) =>
@@ -112,7 +119,7 @@ export function AllocationFields({
             Choose an organization
           </option>
           {orgOptions.map((option) => (
-            <option key={option.objectId} value={option.objectId}>
+            <option key={option.objectId} value={option.objectId} disabled={option.locked}>
               {option.label}
             </option>
           ))}

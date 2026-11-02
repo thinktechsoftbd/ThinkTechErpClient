@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
-import { NotebookPen, Plus } from "lucide-react";
+import { Building2, NotebookPen, Plus } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
 import { CRUD_PAGE_SIZE, FilterSelect, ListToolbar } from "@/core/crud/list-toolbar";
 import { PermissionOnly } from "@/core/crud/permission-only";
 import { Input } from "@/core/forms/fields";
+import { requireSession } from "@/core/auth/session";
+import { getCurrentOrganization } from "@/core/org/organization";
 import { ApiErrorState } from "@/core/ui/api-error-state";
 import { LinkButton } from "@/core/ui/button";
 import { Card, CardHeader } from "@/core/ui/card";
@@ -12,6 +14,7 @@ import { EmptyState, TableSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
 import { Pagination, firstParam, parseOffset } from "@/core/ui/pagination";
 import { formatNumber } from "@/core/utils/format";
+import { canManageAccounting, canPostVouchers } from "@/modules/accounting/access";
 import { accountingApi } from "@/modules/accounting/api";
 import { VoucherTable } from "@/modules/accounting/components/voucher-table";
 import { getVoucherTypes } from "@/modules/accounting/queries";
@@ -61,17 +64,28 @@ async function VoucherList({ searchParams }: Pick<Props, "searchParams">) {
   const to = dateParam(query.to);
   const offset = parseOffset(query.offset);
 
-  const [types, result] = await Promise.all([
+  const [types, result, organization, session] = await Promise.all([
     getVoucherTypes(),
     tryApi(() => accountingApi.vouchers.list({ search, voucherTypeId, status, from, to, limit: CRUD_PAGE_SIZE, offset })),
+    getCurrentOrganization(),
+    requireSession(),
   ]);
   const typeOptions = (types.ok ? types.data : []).map((type) => ({ value: String(type.id), label: type.name }));
   const filtered = Boolean(search || voucherTypeId || status || from || to);
+  // The list is the header's organization only; naming it explains an empty list when the vouchers are in another.
+  const inOrganization = organization ? ` in ${organization.name}` : "";
 
   return (
     <>
       <CardHeader
         title={result.ok ? `${formatNumber(result.data.totalCount)} voucher(s)` : "Vouchers"}
+        description={
+          organization && (
+            <span className="inline-flex items-center gap-1.5">
+              <Building2 className="size-4" aria-hidden /> {organization.name}
+            </span>
+          )
+        }
         actions={
           <ListToolbar basePath={basePath} search={search} placeholder="Ref. no, cheque no, party, narration" filtered={filtered}>
             <FilterSelect
@@ -97,12 +111,19 @@ async function VoucherList({ searchParams }: Pick<Props, "searchParams">) {
       ) : result.data.items.length === 0 ? (
         <EmptyState
           icon={NotebookPen}
-          title={filtered ? "No vouchers match these filters" : "No vouchers yet"}
-          description={filtered ? undefined : "Enter a voucher to post debits and credits to the ledger heads."}
+          title={filtered ? `No vouchers${inOrganization} match these filters` : `No vouchers${inOrganization} yet`}
+          description={
+            filtered
+              ? undefined
+              : `Enter a voucher to post debits and credits to the ledger heads.${organization ? " Vouchers of another organization show when you switch to it at the top of the page." : ""}`
+          }
         />
       ) : (
         <>
-          <VoucherTable vouchers={result.data.items} />
+          <VoucherTable
+            vouchers={result.data.items}
+            manage={{ canManage: canManageAccounting(session), canPost: canPostVouchers(session) }}
+          />
           <Pagination
             basePath={basePath}
             query={{ q: search, type: voucherTypeId, status, from, to }}

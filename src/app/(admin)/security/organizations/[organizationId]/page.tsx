@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { ListFilter } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
+import { canAccessModule } from "@/core/auth/roles";
 import { requireSession } from "@/core/auth/session";
 import { ApiErrorState } from "@/core/ui/api-error-state";
 import { Badge, StatusBadge } from "@/core/ui/badge";
+import { LinkButton } from "@/core/ui/button";
 import { Card, CardBody, CardHeader } from "@/core/ui/card";
 import { CopyButton } from "@/core/ui/copy-button";
 import { PageSkeleton } from "@/core/ui/feedback";
@@ -14,6 +17,8 @@ import { parseIdParam } from "@/core/utils/params";
 import { canManageOrganizations } from "@/modules/security/access";
 import { securityApi } from "@/modules/security/api";
 import { OrganizationForm } from "@/modules/security/components/forms";
+import { smsAllocationsHref } from "@/modules/security/components/tables";
+import { smsModule } from "@/modules/sms/module";
 
 export const metadata: Metadata = { title: "Organization" };
 
@@ -49,7 +54,15 @@ async function OrganizationDetail({ params }: Pick<Props, "params">) {
           <span className="flex items-center gap-3">
             {organization.nameEn} <StatusBadge active={organization.isActive} />
             {organization.isExternal && <Badge tone="warning">External</Badge>}
+            {organization.isFinalized && <Badge tone="brand">Finalized</Badge>}
           </span>
+        }
+        actions={
+          canAccessModule(session, smsModule) && (
+            <LinkButton href={smsAllocationsHref(organization)} variant="outline">
+              <ListFilter className="size-4" aria-hidden /> SMS allocations
+            </LinkButton>
+          )
         }
         description={
           <span className="flex flex-col gap-1">

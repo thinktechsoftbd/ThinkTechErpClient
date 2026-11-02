@@ -85,7 +85,9 @@ export function AccountClassTree({ tree, canManage }: { tree: AccountClassNode[]
 
   function select(key: string) {
     setSelectedKey(key);
-    setName("");
+    // A sub class can only be renamed, so its name loads for editing; the others start empty for a new child's name.
+    const node = entries.get(key)?.node;
+    setName(node?.kind === "sub" ? (node.name ?? "") : "");
     setMessage(null);
   }
 

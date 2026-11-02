@@ -7,6 +7,7 @@ import type {
   BillVoucherRequest,
   EditableAccountClassKind,
   LedgerHeadOption,
+  LookupValueOption,
   PartyBalance,
   PartyOption,
   PartyType,
@@ -23,6 +24,9 @@ export const accountingApi = {
   /** Sub classes of the chart for the voucher and report pickers. */
   ledgerHeads: (query: { search?: string; ids?: string; limit?: number }) =>
     apiFetch<LedgerHeadOption[]>(`${base}/ledger-heads`, { query }),
+  /** A page of sub classes for the search-as-you-type pickers (by code, name, map or main class). */
+  ledgerHeadSearch: (query: { search?: string; limit?: number; offset?: number }) =>
+    apiFetch<PagedResult<LedgerHeadOption>>(`${base}/ledger-heads/search`, { query }),
   /** The chart of accounts screen's tree on the acc_* tables (one chart for every organization). */
   accountClasses: {
     tree: () => apiFetch<AccountClassNode[]>(`${base}/account-classes`),
@@ -34,20 +38,27 @@ export const accountingApi = {
     remove: (kind: EditableAccountClassKind, id: number) =>
       apiFetch<void>(`${base}/account-classes/${kind}/${id}`, { method: "DELETE" }),
   },
-  /** Suppliers, customers, or both when no type is given. */
-  parties: (type: PartyType | undefined, query: { search?: string; ids?: string; limit?: number } = {}) =>
-    apiFetch<PartyOption[]>(`${base}/parties`, { query: { type, ...query } }),
+  /** Suppliers, customers, or both when no type is given; of another of the user's organizations with organizationId. */
+  parties: (type: PartyType | undefined, query: { search?: string; ids?: string; limit?: number } = {}, organizationId?: number) =>
+    apiFetch<PartyOption[]>(`${base}/parties`, { query: { type, ...query }, organizationId }),
 
+  /** Without organizationId, a voucher is in the organization chosen in the header. */
   vouchers: {
+    /** The "Voucher Type" lookup list, inactive values included. */
+    types: () => apiFetch<LookupValueOption[]>(`${base}/vouchers/types`),
+    /** The "Payment Method" lookup list, inactive values included. */
+    paymentMethods: () => apiFetch<LookupValueOption[]>(`${base}/vouchers/payment-methods`),
     list: (query: VoucherListQuery) => apiFetch<PagedResult<Voucher>>(`${base}/vouchers`, { query }),
     get: (id: number) => apiFetch<Voucher>(`${base}/vouchers/${id}`),
-    create: (body: VoucherUpsertRequest, post = false) =>
-      apiFetch<Voucher>(`${base}/vouchers`, { method: "POST", body, query: { post: post || undefined } }),
-    update: (id: number, body: VoucherUpsertRequest, post = false) =>
-      apiFetch<Voucher>(`${base}/vouchers/${id}`, { method: "PUT", body, query: { post: post || undefined } }),
+    create: (body: VoucherUpsertRequest, organizationId?: number) =>
+      apiFetch<Voucher>(`${base}/vouchers`, { method: "POST", body, organizationId }),
+    update: (id: number, body: VoucherUpsertRequest, organizationId?: number) =>
+      apiFetch<Voucher>(`${base}/vouchers/${id}`, { method: "PUT", body, organizationId }),
+    /** Flags a draft deleted. */
     remove: (id: number) => apiFetch<void>(`${base}/vouchers/${id}`, { method: "DELETE" }),
     /** post or cancel */
-    action: (id: number, action: "post" | "cancel") => apiFetch<Voucher>(`${base}/vouchers/${id}/${action}`, { method: "POST", body: {} }),
+    action: (id: number, action: "post" | "cancel", organizationId?: number) =>
+      apiFetch<Voucher>(`${base}/vouchers/${id}/${action}`, { method: "POST", body: {}, organizationId }),
   },
   billPayments: {
     list: (query: VoucherListQuery) => apiFetch<PagedResult<Voucher>>(`${base}/bill-payments`, { query }),

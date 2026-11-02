@@ -25,3 +25,17 @@ export async function getCurrentOrganization(): Promise<UserOrganization | undef
     result.data[0]
   );
 }
+
+/**
+ * Makes this the organization the user works in, as the header's switcher does. Server Actions only;
+ * check first that it is one of the user's organizations.
+ */
+export async function rememberOrganization(organizationId: number) {
+  (await cookies()).set(ORGANIZATION_COOKIE, String(organizationId), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+}

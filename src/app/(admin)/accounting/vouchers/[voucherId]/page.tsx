@@ -23,20 +23,13 @@ import { canManageAccounting } from "@/modules/accounting/access";
 import { cancelVoucherAction, deleteVoucherAction, postVoucherAction } from "@/modules/accounting/actions/vouchers";
 import { accountingApi } from "@/modules/accounting/api";
 import { sideAmount } from "@/modules/accounting/components/balance";
-import { LOCAL_CURRENCY, accountingLabel, type Voucher } from "@/modules/accounting/types";
+import { LOCAL_CURRENCY, payTypeLabel } from "@/modules/accounting/types";
 import { PrintButton } from "@/modules/inventory/components/reports/print-button";
 import { NUM, ReportTable, TotalsFoot } from "@/modules/inventory/components/reports/report-parts";
 
 export const metadata: Metadata = { title: "Voucher" };
 
 type Props = PageProps<"/accounting/vouchers/[voucherId]">;
-
-/** The list a voucher belongs to, for the breadcrumb. */
-function listOf(voucher: Voucher) {
-  if (voucher.voucherType === "BillPayment") return { label: "Bill Payment", href: "/accounting/bill-payments" };
-  if (voucher.voucherType === "BillCollection") return { label: "Bill Collection", href: "/accounting/bill-collections" };
-  return { label: "Vouchers", href: "/accounting/vouchers" };
-}
 
 export default function VoucherPage({ params, searchParams }: Props) {
   return (
@@ -58,10 +51,7 @@ async function VoucherDetail({ params, searchParams }: Props) {
 
   const voucher = result.data;
   const canManage = canManageAccounting(session);
-  const list = listOf(voucher);
   const isDraft = voucher.status === "Draft";
-  const isBill = voucher.voucherType === "BillPayment" || voucher.voucherType === "BillCollection";
-  const party = voucher.supplierName ?? voucher.customerName;
   const totalDebit = voucher.lines.reduce((sum, line) => sum + line.debitAmount, 0);
   const totalCredit = voucher.lines.reduce((sum, line) => sum + line.creditAmount, 0);
   const hasParties = voucher.lines.some((line) => line.partyName);
@@ -74,16 +64,16 @@ async function VoucherDetail({ params, searchParams }: Props) {
       <PageHeader
         title={
           <span className="inline-flex flex-wrap items-center gap-3">
-            {voucher.voucherNo} <DocumentStatusBadge status={voucher.status} />
-            <Badge tone={isBill ? "brand" : "gray"}>{accountingLabel(voucher.voucherType)}</Badge>
+            {voucher.voucherRefNo} <DocumentStatusBadge status={voucher.status} />
+            <Badge tone="gray">{voucher.voucherType}</Badge>
           </span>
         }
-        description={`${party ? `${party} · ` : ""}${formatDate(voucher.voucherDate)}`}
+        description={`${voucher.partyNames ? `${voucher.partyNames} · ` : ""}${formatDate(voucher.voucherDate)}`}
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
           { label: "Accounting", href: "/accounting" },
-          list,
-          { label: voucher.voucherNo },
+          { label: "Vouchers", href: "/accounting/vouchers" },
+          { label: voucher.voucherRefNo },
         ]}
         actions={
           <div className="flex flex-wrap items-start gap-2 print:hidden">
@@ -129,12 +119,13 @@ async function VoucherDetail({ params, searchParams }: Props) {
           <CardBody>
             <Facts
               items={[
-                { label: "Voucher type", value: `${accountingLabel(voucher.voucherType)} voucher` },
-                { label: "Date", value: formatDate(voucher.voucherDate) },
-                { label: voucher.supplierName ? "Supplier" : "Customer", value: party },
-                { label: "Method", value: voucher.paymentMethod ? accountingLabel(voucher.paymentMethod) : null },
-                { label: voucher.paymentMethod === "Cheque" ? "Cheque no" : "Reference no", value: voucher.referenceNo },
+                { label: "Voucher Ref. Number", value: voucher.voucherRefNo },
+                { label: "Voucher type", value: voucher.voucherType },
+                { label: "Voucher Date", value: formatDate(voucher.voucherDate) },
+                { label: "Payment method", value: voucher.paymentMethod },
+                { label: "Cheque no", value: voucher.chequeNo },
                 { label: "Cheque date", value: voucher.chequeDate ? formatDate(voucher.chequeDate) : null },
+                { label: "Pay type", value: payTypeLabel(voucher.payType) },
                 { label: "Amount", value: formatAmount(voucher.totalAmount) },
                 { label: "Posted", value: voucher.postedAt ? formatDateTime(voucher.postedAt) : null },
                 { label: "Cancelled", value: voucher.cancelledAt ? formatDateTime(voucher.cancelledAt) : null },

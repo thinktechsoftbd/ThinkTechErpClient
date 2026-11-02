@@ -14,8 +14,7 @@ import { canManageAccounting } from "@/modules/accounting/access";
 import { saveVoucherAction } from "@/modules/accounting/actions/vouchers";
 import { accountingApi } from "@/modules/accounting/api";
 import { VoucherEditor } from "@/modules/accounting/components/voucher-editor";
-import { editorInitialFrom, loadVoucherEditorOptions } from "@/modules/accounting/editor-data";
-import { GENERAL_VOUCHER_TYPES } from "@/modules/accounting/types";
+import { editorInitialFrom, loadVoucherEditorOptions, loadVoucherOrganizations } from "@/modules/accounting/editor-data";
 
 export const metadata: Metadata = { title: "Edit Voucher" };
 
@@ -42,26 +41,22 @@ async function EditVoucher({ params, searchParams }: Props) {
     if (voucher.error.status === 404) notFound();
     return <Card><ApiErrorState error={voucher.error} /></Card>;
   }
-  // Posted, cancelled and bill vouchers aren't edited.
-  if (
-    voucher.data.status !== "Draft" ||
-    !(GENERAL_VOUCHER_TYPES as readonly string[]).includes(voucher.data.voucherType) ||
-    !canManageAccounting(session)
-  )
-    redirect(`/accounting/vouchers/${id}`);
+  // Posted and cancelled vouchers aren't edited (bill payments and collections are posted at once).
+  if (voucher.data.status !== "Draft" || !canManageAccounting(session)) redirect(`/accounting/vouchers/${id}`);
   if (!options.ok) return <Card><ApiErrorState error={options.error} /></Card>;
 
   const data = voucher.data;
+  const { organizations } = await loadVoucherOrganizations(options.data.parties);
   return (
     <>
       <PageHeader
-        title={`Edit ${data.voucherNo}`}
+        title={`Edit ${data.voucherRefNo}`}
         description="A draft: nothing is in the ledgers yet. Post it once debits equal credits."
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
           { label: "Accounting", href: "/accounting" },
           { label: "Vouchers", href: "/accounting/vouchers" },
-          { label: data.voucherNo, href: `/accounting/vouchers/${id}` },
+          { label: data.voucherRefNo, href: `/accounting/vouchers/${id}` },
           { label: "Edit" },
         ]}
       />
@@ -72,9 +67,12 @@ async function EditVoucher({ params, searchParams }: Props) {
       )}
       <VoucherEditor
         action={saveVoucherAction.bind(null, id)}
-        heads={options.data.heads}
         parties={options.data.parties}
         currencies={options.data.currencies}
+        voucherTypes={options.data.voucherTypes}
+        paymentMethods={options.data.paymentMethods}
+        organizations={organizations}
+        lockOrganization
         initial={editorInitialFrom(data)}
         cancelHref={`/accounting/vouchers/${id}`}
       />

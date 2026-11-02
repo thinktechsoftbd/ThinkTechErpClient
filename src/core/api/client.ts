@@ -15,6 +15,8 @@ export type ApiRequest = {
   body?: unknown;
   /** Attach the session's bearer token (default true). */
   auth?: boolean;
+  /** Work in this organization instead of the one chosen in the header; the API checks the user may. */
+  organizationId?: number;
 };
 
 const expiredPath = `${appConfig.loginPath}?expired=1`;
@@ -24,7 +26,7 @@ const expiredPath = `${appConfig.loginPath}?expired=1`;
  * httpOnly session cookie, so it never reaches the browser.
  */
 export async function apiFetch<T>(path: string, request: ApiRequest = {}): Promise<T> {
-  const { method = "GET", query, body, auth = true } = request;
+  const { method = "GET", query, body, auth = true, organizationId: organizationOverride } = request;
 
   const url = new URL(path.replace(/^\/+/, ""), `${serverEnv.apiBaseUrl}/`);
   for (const [key, value] of Object.entries(query ?? {})) {
@@ -39,7 +41,7 @@ export async function apiFetch<T>(path: string, request: ApiRequest = {}): Promi
     headers.set("Authorization", `Bearer ${token}`);
     // Inventory and Purchase data belongs to the organization chosen in the header's switcher;
     // without it the API uses the user's default organization.
-    const organizationId = (await cookies()).get(ORGANIZATION_COOKIE)?.value;
+    const organizationId = organizationOverride ? String(organizationOverride) : (await cookies()).get(ORGANIZATION_COOKIE)?.value;
     if (organizationId && /^\d+$/.test(organizationId)) headers.set(ORGANIZATION_HEADER, organizationId);
   }
 

@@ -11,8 +11,7 @@ import { firstParam } from "@/core/ui/pagination";
 import { canManageAccounting } from "@/modules/accounting/access";
 import { saveVoucherAction } from "@/modules/accounting/actions/vouchers";
 import { VoucherEditor } from "@/modules/accounting/components/voucher-editor";
-import { loadVoucherEditorOptions } from "@/modules/accounting/editor-data";
-import { GENERAL_VOUCHER_TYPES, type GeneralVoucherType } from "@/modules/accounting/types";
+import { loadVoucherEditorOptions, loadVoucherOrganizations } from "@/modules/accounting/editor-data";
 
 export const metadata: Metadata = { title: "New Voucher" };
 
@@ -23,7 +22,7 @@ export default function NewVoucherPage({ searchParams }: Props) {
     <>
       <PageHeader
         title="New voucher"
-        description="Debit and credit ledger heads. Save it as a draft, or post it to the ledgers once debits equal credits."
+        description="Choose the organization and voucher type, then debit and credit ledger heads. Save it as a draft, or post it to the ledgers once debits equal credits."
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
           { label: "Accounting", href: "/accounting" },
@@ -38,7 +37,7 @@ export default function NewVoucherPage({ searchParams }: Props) {
   );
 }
 
-/** ?type=Payment starts a payment voucher (Journal by default). */
+/** ?type= (a Voucher Type lookup id) starts a voucher of that type; Journal Voucher by default. */
 async function NewVoucher({ searchParams }: Pick<Props, "searchParams">) {
   const type = firstParam((await searchParams).type);
   const [session, options] = await Promise.all([requireSession(), loadVoucherEditorOptions()]);
@@ -53,7 +52,7 @@ async function NewVoucher({ searchParams }: Pick<Props, "searchParams">) {
     );
   }
   if (!options.ok) return <Card><ApiErrorState error={options.error} /></Card>;
-  if (options.data.heads.length === 0) {
+  if (options.data.headCount === 0) {
     return (
       <Alert tone="warning" title="No ledger heads yet">
         <p>Vouchers post to sub classes (ledger heads). Add one under a map class in the chart of accounts first.</p>
@@ -64,14 +63,39 @@ async function NewVoucher({ searchParams }: Pick<Props, "searchParams">) {
     );
   }
 
-  const voucherType = (GENERAL_VOUCHER_TYPES as readonly string[]).includes(type ?? "") ? (type as GeneralVoucherType) : "Journal";
+  if (!options.data.voucherTypes.some((voucherType) => voucherType.isActive)) {
+    return (
+      <Alert tone="warning" title="No voucher types yet">
+        <p>Vouchers take their type from the Voucher Type lookup list. Add the types under Settings → Lookup Data first.</p>
+        <LinkButton href="/settings/lookup-data" variant="outline" size="sm" className="mt-3">
+          Lookup data
+        </LinkButton>
+      </Alert>
+    );
+  }
+
+  const { organizations, currentId } = await loadVoucherOrganizations(options.data.parties);
+  const voucherTypeId = options.data.voucherTypes.find((voucherType) => voucherType.isActive && String(voucherType.id) === type)?.id;
   return (
     <VoucherEditor
       action={saveVoucherAction.bind(null, null)}
-      heads={options.data.heads}
       parties={options.data.parties}
       currencies={options.data.currencies}
-      initial={{ voucherType, voucherDate: "", referenceNo: "", narration: "", lines: [] }}
+      voucherTypes={options.data.voucherTypes}
+      paymentMethods={options.data.paymentMethods}
+      organizations={organizations}
+      initial={{
+        organizationId: currentId,
+        voucherRefNo: "",
+        voucherTypeId: voucherTypeId ? String(voucherTypeId) : "",
+        voucherDate: "",
+        paymentMethodId: "",
+        chequeNo: "",
+        chequeDate: "",
+        payType: "",
+        narration: "",
+        lines: [],
+      }}
       cancelHref="/accounting/vouchers"
     />
   );

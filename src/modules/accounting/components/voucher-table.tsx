@@ -4,16 +4,16 @@ import { Badge } from "@/core/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatDate } from "@/core/utils/format";
 import { formatAmount } from "@/core/utils/number";
-import { accountingLabel, type Voucher } from "../types";
+import type { Voucher } from "../types";
 
-/** Vouchers in a list: bill payments and collections show the party and how the money moved. */
+/** Vouchers in a list, with the parties on their lines and how the money moved. */
 export function VoucherTable({ vouchers, showType = true }: { vouchers: Voucher[]; showType?: boolean }) {
   return (
     <Table>
       <THead>
         <tr>
-          <TH>Voucher</TH>
-          <TH>Date</TH>
+          <TH>Voucher Ref. Number</TH>
+          <TH>Voucher Date</TH>
           {showType && <TH>Type</TH>}
           <TH>Particulars</TH>
           <TH className="text-right">Amount</TH>
@@ -21,37 +21,35 @@ export function VoucherTable({ vouchers, showType = true }: { vouchers: Voucher[
         </tr>
       </THead>
       <TBody>
-        {vouchers.map((voucher) => {
-          const party = voucher.supplierName ?? voucher.customerName;
-          return (
-            <TR key={voucher.id}>
+        {vouchers.map((voucher) => (
+          <TR key={voucher.id}>
+            <TD>
+              <Link
+                href={`/accounting/vouchers/${voucher.id}`}
+                className="font-medium whitespace-nowrap text-brand-500 tabular-nums hover:underline"
+              >
+                {voucher.voucherRefNo}
+              </Link>
+            </TD>
+            <TD className="whitespace-nowrap">{formatDate(voucher.voucherDate)}</TD>
+            {showType && (
               <TD>
-                <Link href={`/accounting/vouchers/${voucher.id}`} className="font-medium whitespace-nowrap text-brand-500 hover:underline">
-                  {voucher.voucherNo}
-                </Link>
+                <Badge tone="gray">{voucher.voucherType}</Badge>
               </TD>
-              <TD className="whitespace-nowrap">{formatDate(voucher.voucherDate)}</TD>
-              {showType && (
-                <TD>
-                  <Badge tone={voucher.voucherType.startsWith("Bill") ? "brand" : "gray"}>{accountingLabel(voucher.voucherType)}</Badge>
-                </TD>
+            )}
+            <TD className="max-w-md">
+              {voucher.partyNames && <span className="block font-medium text-gray-800 dark:text-white/90">{voucher.partyNames}</span>}
+              <span className="block truncate text-gray-600 dark:text-gray-400">{voucher.narration ?? "—"}</span>
+              {(voucher.paymentMethod || voucher.chequeNo) && (
+                <span className="block text-xs text-gray-500">{voucher.chequeNo ? `Cheque no ${voucher.chequeNo}` : voucher.paymentMethod}</span>
               )}
-              <TD className="max-w-md">
-                {party && <span className="block font-medium text-gray-800 dark:text-white/90">{party}</span>}
-                <span className="block truncate text-gray-600 dark:text-gray-400">{voucher.narration ?? "—"}</span>
-                {(voucher.paymentMethod || voucher.referenceNo) && (
-                  <span className="block text-xs text-gray-500">
-                    {[voucher.paymentMethod && accountingLabel(voucher.paymentMethod), voucher.referenceNo].filter(Boolean).join(" · ")}
-                  </span>
-                )}
-              </TD>
-              <TD className="text-right whitespace-nowrap tabular-nums">{formatAmount(voucher.totalAmount)}</TD>
-              <TD>
-                <DocumentStatusBadge status={voucher.status} />
-              </TD>
-            </TR>
-          );
-        })}
+            </TD>
+            <TD className="text-right whitespace-nowrap tabular-nums">{formatAmount(voucher.totalAmount)}</TD>
+            <TD>
+              <DocumentStatusBadge status={voucher.status} />
+            </TD>
+          </TR>
+        ))}
       </TBody>
     </Table>
   );

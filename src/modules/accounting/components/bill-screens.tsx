@@ -19,7 +19,7 @@ import { createBillCollectionAction, createBillPaymentAction } from "../actions/
 import { accountingApi } from "../api";
 import { loadVoucherEditorOptions } from "../editor-data";
 import { getParties } from "../queries";
-import { ACCOUNTING_MANAGE_PERMISSION } from "../types";
+import { ACCOUNTING_MANAGE_PERMISSION, BILL_COLLECTION_TYPES, BILL_PAYMENT_TYPES } from "../types";
 import { BillForm } from "./bill-form";
 import { partyLabel } from "./pickers";
 import { VoucherTable } from "./voucher-table";
@@ -35,8 +35,10 @@ const screens = {
     title: "Supplier Bill Payment",
     crumb: "Bill Payment",
     basePath: "/accounting/bill-payments",
-    description: "Money paid to suppliers: debits the supplier's payable head, credits the cash or bank head, posted at once.",
+    description:
+      "Money paid to suppliers, as a Cash or Bank Payment Voucher: debits the supplier's payable head, credits the cash or bank head, posted at once.",
     party: "Supplier" as const,
+    voucherTypes: BILL_PAYMENT_TYPES,
     partyParam: "supplier",
     icon: BanknoteArrowUp,
     newLabel: "New payment",
@@ -45,8 +47,10 @@ const screens = {
     title: "Customer Bill Collection",
     crumb: "Bill Collection",
     basePath: "/accounting/bill-collections",
-    description: "Money collected from customers: debits the cash or bank head, credits the customer's receivable head, posted at once.",
+    description:
+      "Money collected from customers, as a Cash or Bank Receive Voucher: debits the cash or bank head, credits the customer's receivable head, posted at once.",
     party: "Customer" as const,
+    voucherTypes: BILL_COLLECTION_TYPES,
     partyParam: "customer",
     icon: HandCoins,
     newLabel: "New collection",
@@ -105,8 +109,7 @@ async function BillList({ kind, searchParams }: { kind: BillKind; searchParams: 
         status,
         from,
         to,
-        supplierId: kind === "payment" ? partyId : undefined,
-        customerId: kind === "collection" ? partyId : undefined,
+        partyId,
         limit: CRUD_PAGE_SIZE,
         offset,
       }),
@@ -120,7 +123,7 @@ async function BillList({ kind, searchParams }: { kind: BillKind; searchParams: 
       <CardHeader
         title={result.ok ? `${formatNumber(result.data.totalCount)} ${word}(s)` : screen.crumb}
         actions={
-          <ListToolbar basePath={screen.basePath} search={search} placeholder="No, narration, reference" filtered={filtered}>
+          <ListToolbar basePath={screen.basePath} search={search} placeholder="Ref. no, cheque no, narration" filtered={filtered}>
             <FilterSelect
               name={screen.partyParam}
               label={screen.party}
@@ -208,13 +211,32 @@ async function NewBill({ kind, searchParams }: { kind: BillKind; searchParams: S
   }
   if (!options.ok) return <Card><ApiErrorState error={options.error} /></Card>;
 
+  // In the order of screen.voucherTypes: the cash one first.
+  const voucherTypes = screen.voucherTypes.flatMap((name) =>
+    options.data.voucherTypes.filter((type) => type.isActive && type.name.toLowerCase() === name.toLowerCase()),
+  );
+  if (voucherTypes.length === 0) {
+    return (
+      <Alert tone="warning" title="The voucher types are missing">
+        <p>
+          A bill {kind === "payment" ? "payment" : "collection"} is entered as a {screen.voucherTypes.join(" or a ")}. Add them to
+          the Voucher Type lookup list under Settings → Lookup Data, or make them active again.
+        </p>
+        <LinkButton href="/settings/lookup-data" variant="outline" size="sm" className="mt-3">
+          Lookup data
+        </LinkButton>
+      </Alert>
+    );
+  }
+
   const parties = options.data.parties.filter((party) => (kind === "payment" ? party.isSupplier : party.isCustomer));
   return (
     <BillForm
       kind={kind}
       action={kind === "payment" ? createBillPaymentAction : createBillCollectionAction}
       parties={parties}
-      heads={options.data.heads}
+      voucherTypes={voucherTypes}
+      paymentMethods={options.data.paymentMethods.filter((method) => method.isActive)}
       initialPartyId={partyId && parties.some((party) => party.id === partyId) ? partyId : null}
       cancelHref={screen.basePath}
     />

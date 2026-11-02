@@ -13,8 +13,8 @@ import { formatAmount } from "@/core/utils/number";
 import { accountingApi } from "@/modules/accounting/api";
 import { DrCr, sideAmount } from "@/modules/accounting/components/balance";
 import { LedgerHeadPartyFilter } from "@/modules/accounting/components/ledger-filter";
-import { loadVoucherEditorOptions } from "@/modules/accounting/editor-data";
-import { accountingLabel, type SubsidiaryLedger } from "@/modules/accounting/types";
+import { getLedgerHead, getParties } from "@/modules/accounting/queries";
+import type { SubsidiaryLedger } from "@/modules/accounting/types";
 import { PrintButton } from "@/modules/inventory/components/reports/print-button";
 import { ReportDate, ReportFilters } from "@/modules/inventory/components/reports/report-filters";
 import {
@@ -57,23 +57,19 @@ async function SubsidiaryLedgerReport({ searchParams }: Pick<Props, "searchParam
   const from = dateParam(query.from);
   const to = dateParam(query.to);
 
-  const [options, result] = await Promise.all([
-    loadVoucherEditorOptions(),
+  const [parties, head, result] = await Promise.all([
+    getParties(),
+    accountId ? getLedgerHead(accountId) : Promise.resolve(null),
     accountId
       ? tryApi(() => accountingApi.reports.subsidiaryLedger({ accountId, partyId, from, to }))
       : Promise.resolve(null),
   ]);
-  if (!options.ok) return <Card><ApiErrorState error={options.error} /></Card>;
+  if (!parties.ok) return <Card><ApiErrorState error={parties.error} /></Card>;
 
   return (
     <div className="space-y-6">
       <ReportFilters basePath={basePath} query={{ account: accountId, party: partyId, from, to }}>
-        <LedgerHeadPartyFilter
-          heads={options.data.heads}
-          parties={options.data.parties}
-          accountId={accountId}
-          partyId={partyId}
-        />
+        <LedgerHeadPartyFilter head={head?.ok ? head.data : null} parties={parties.data} partyId={partyId} />
         <ReportDate name="from" label="From" value={from} />
         <ReportDate name="to" label="To" value={to} />
       </ReportFilters>
@@ -157,15 +153,15 @@ function LedgerView({ ledger }: { ledger: SubsidiaryLedger }) {
                   <TD className="whitespace-nowrap">{formatDate(entry.voucherDate)}</TD>
                   <TD className="whitespace-nowrap">
                     <Link href={`/accounting/vouchers/${entry.voucherId}`} className="font-medium text-brand-500 hover:underline">
-                      {entry.voucherNo}
+                      {entry.voucherRefNo}
                     </Link>
-                    <span className="block text-xs text-gray-500">{accountingLabel(entry.voucherType)}</span>
+                    <span className="block text-xs text-gray-500">{entry.voucherType}</span>
                   </TD>
                   <TD className="max-w-56">{entry.particulars ?? "—"}</TD>
                   {showParty && <TD>{entry.partyName ?? "—"}</TD>}
                   <TD className="max-w-72 text-gray-600 dark:text-gray-400">
                     {entry.narration}
-                    {entry.referenceNo && <span className="block text-xs text-gray-500">Ref: {entry.referenceNo}</span>}
+                    {entry.chequeNo && <span className="block text-xs text-gray-500">Cheque: {entry.chequeNo}</span>}
                   </TD>
                   <TD className={NUM}>{sideAmount(entry.debitAmount)}</TD>
                   <TD className={NUM}>{sideAmount(entry.creditAmount)}</TD>

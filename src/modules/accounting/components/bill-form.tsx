@@ -9,38 +9,43 @@ import { Field, Input, Select, Textarea } from "@/core/forms/fields";
 import { buttonClasses } from "@/core/ui/button";
 import { Card, CardBody, CardHeader } from "@/core/ui/card";
 import { formatAmount, parseDecimal, round, todayIso } from "@/core/utils/number";
-import { PAYMENT_METHODS, accountingLabel, type BillVoucherRequest, type LedgerHeadOption, type PartyOption } from "../types";
-import { LedgerHeadSelect, PartySelect } from "./pickers";
-
-const referenceLabel: Record<string, string> = {
-  Cash: "Money receipt / voucher no",
-  Bank: "Transfer reference",
-  Cheque: "Cheque no",
-  MobileWallet: "Transaction ID",
-  Card: "Approval / transaction no",
-  Other: "Reference no",
-};
+import {
+  PAY_TYPES,
+  isBankVoucherType,
+  isChequeMethod,
+  type BillVoucherRequest,
+  type LedgerHeadOption,
+  type LookupValueOption,
+  type PartyOption,
+  type PayType,
+} from "../types";
+import { LedgerHeadPicker } from "./ledger-head-picker";
+import { PartySelect } from "./pickers";
 
 type BalanceState = { key: string; balance: number | null; error?: string };
 
 /**
- * A supplier bill payment (Dr the supplier's payable head, Cr cash or bank) or a customer bill
- * collection (Dr cash or bank, Cr the customer's receivable head), posted in one step. Shows the
- * party's balance on the chosen head. Submits JSON in the hidden "payload" field.
+ * A supplier bill payment (a Cash or Bank Payment Voucher: Dr the supplier's payable head, Cr cash or
+ * bank) or a customer bill collection (a Cash or Bank Receive Voucher: Dr cash or bank, Cr the customer's
+ * receivable head), posted in one step. A bank one paid by cheque needs the cheque no, date and pay type.
+ * Shows the party's balance on the chosen head. Submits JSON in the hidden "payload" field.
  */
 export function BillForm({
   kind,
   action,
   parties,
-  heads,
+  voucherTypes,
+  paymentMethods,
   initialPartyId,
   cancelHref,
 }: {
   kind: "payment" | "collection";
   action: FormAction;
   parties: PartyOption[];
-  /** Every sub class: the party's head and the cash or bank head are both chosen from them. */
-  heads: LedgerHeadOption[];
+  /** The types this kind is entered as: the cash one first, then the bank one. */
+  voucherTypes: LookupValueOption[];
+  /** The active payment methods. */
+  paymentMethods: LookupValueOption[];
   initialPartyId: number | null;
   cancelHref: string;
 }) {
@@ -52,13 +57,18 @@ export function BillForm({
     partyId: initialPartyId ? String(initialPartyId) : "",
     partyAccountId: "",
     cashAccountId: "",
-    paymentMethod: "Cash",
-    referenceNo: "",
+    voucherTypeId: voucherTypes[0] ? String(voucherTypes[0].id) : "",
+    paymentMethodId: "",
+    chequeNo: "",
     chequeDate: "",
+    payType: "",
     amount: "",
     narration: "",
   }));
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm((current) => ({ ...current, [key]: value }));
+  // The party's head and the cash or bank head, searched on the server; the form keeps their ids.
+  const [partyHead, setPartyHead] = useState<LedgerHeadOption | null>(null);
+  const [cashHead, setCashHead] = useState<LedgerHeadOption | null>(null);
 
   // The party's balance on the chosen head, from the posted vouchers.
   const balanceKey = form.partyId && form.partyAccountId ? `${form.partyAccountId}:${form.partyId}` : "";
@@ -84,16 +94,20 @@ export function BillForm({
   // A payable head carries a credit (−) balance for what is owed; a receivable head a debit (+) one.
   const due = balance?.balance === null || balance?.balance === undefined ? null : round(isPayment ? -balance.balance : balance.balance, 2);
 
-  const isCheque = form.paymentMethod === "Cheque";
+  const voucherType = voucherTypes.find((type) => String(type.id) === form.voucherTypeId);
+  const isCheque = isChequeMethod(paymentMethods.find((method) => String(method.id) === form.paymentMethodId)?.name);
+  const chequeRequired = isCheque && isBankVoucherType(voucherType?.name);
   const payload: BillVoucherRequest = {
+    voucherTypeId: Number(form.voucherTypeId) || 0,
     voucherDate: form.voucherDate,
     partyId: Number(form.partyId) || 0,
     partyAccountId: Number(form.partyAccountId) || 0,
     cashAccountId: Number(form.cashAccountId) || 0,
     amount: round(parseDecimal(form.amount) ?? 0, 4),
-    paymentMethod: form.paymentMethod,
-    referenceNo: form.referenceNo.trim() || null,
+    paymentMethodId: form.paymentMethodId ? Number(form.paymentMethodId) : null,
+    chequeNo: isCheque ? form.chequeNo.trim() || null : null,
     chequeDate: isCheque && form.chequeDate ? form.chequeDate : null,
+    payType: isCheque ? ((form.payType || null) as PayType | null) : null,
     narration: form.narration.trim() || null,
   };
 
@@ -122,11 +136,13 @@ export function BillForm({
               required
               hint={`The sub class the ${partyWord}'s balance is kept on, such as ${isPayment ? "Accounts Payable" : "Accounts Receivable"}.`}
             >
-              <LedgerHeadSelect
+              <LedgerHeadPicker
                 id="partyAccountId"
-                heads={heads}
-                value={form.partyAccountId}
-                onChange={(event) => set("partyAccountId", event.target.value)}
+                value={partyHead}
+                onChange={(head) => {
+                  setPartyHead(head);
+                  set("partyAccountId", head ? String(head.id) : "");
+                }}
                 required
               />
             </Field>
@@ -136,33 +152,69 @@ export function BillForm({
               required
               hint="The cash-in-hand or bank sub class."
             >
-              <LedgerHeadSelect
+              <LedgerHeadPicker
                 id="cashAccountId"
-                heads={heads}
-                value={form.cashAccountId}
-                onChange={(event) => set("cashAccountId", event.target.value)}
+                value={cashHead}
+                onChange={(head) => {
+                  setCashHead(head);
+                  set("cashAccountId", head ? String(head.id) : "");
+                }}
                 required
               />
             </Field>
-            <Field label="Date" name="voucherDate" required>
-              <Input id="voucherDate" type="date" value={form.voucherDate} onChange={(event) => set("voucherDate", event.target.value)} required />
-            </Field>
-            <Field label={isPayment ? "Paid by" : "Received by"} name="paymentMethod" required>
-              <Select id="paymentMethod" value={form.paymentMethod} onChange={(event) => set("paymentMethod", event.target.value)}>
-                {PAYMENT_METHODS.map((method) => (
-                  <option key={method} value={method}>
-                    {accountingLabel(method)}
+            <Field label="Voucher type" name="voucherTypeId" required>
+              <Select id="voucherTypeId" value={form.voucherTypeId} onChange={(event) => set("voucherTypeId", event.target.value)} required>
+                {voucherTypes.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.name}
                   </option>
                 ))}
               </Select>
             </Field>
-            <Field label={referenceLabel[form.paymentMethod] ?? "Reference no"} name="referenceNo">
-              <Input id="referenceNo" value={form.referenceNo} maxLength={100} onChange={(event) => set("referenceNo", event.target.value)} />
+            <Field label="Voucher Date" name="voucherDate" required>
+              <Input id="voucherDate" type="date" value={form.voucherDate} onChange={(event) => set("voucherDate", event.target.value)} required />
+            </Field>
+            <Field label="Payment method" name="paymentMethodId" className="sm:col-span-2">
+              <Select id="paymentMethodId" value={form.paymentMethodId} onChange={(event) => set("paymentMethodId", event.target.value)}>
+                <option value="">None</option>
+                {paymentMethods.map((method) => (
+                  <option key={method.id} value={method.id}>
+                    {method.name}
+                  </option>
+                ))}
+              </Select>
             </Field>
             {isCheque && (
-              <Field label="Cheque date" name="chequeDate" required>
-                <Input id="chequeDate" type="date" value={form.chequeDate} onChange={(event) => set("chequeDate", event.target.value)} required />
-              </Field>
+              <>
+                <Field label="Cheque no" name="chequeNo" required={chequeRequired}>
+                  <Input
+                    id="chequeNo"
+                    value={form.chequeNo}
+                    maxLength={50}
+                    onChange={(event) => set("chequeNo", event.target.value)}
+                    required={chequeRequired}
+                  />
+                </Field>
+                <Field label="Cheque date" name="chequeDate" required={chequeRequired}>
+                  <Input
+                    id="chequeDate"
+                    type="date"
+                    value={form.chequeDate}
+                    onChange={(event) => set("chequeDate", event.target.value)}
+                    required={chequeRequired}
+                  />
+                </Field>
+                <Field label="Pay type" name="payType" required={chequeRequired}>
+                  <Select id="payType" value={form.payType} onChange={(event) => set("payType", event.target.value)} required={chequeRequired}>
+                    <option value="">Choose…</option>
+                    {PAY_TYPES.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </>
             )}
             <Field label="Narration" name="narration" className="sm:col-span-2" hint={`Leave empty for “Bill ${isPayment ? "payment to" : "collection from"} …”.`}>
               <Textarea id="narration" rows={2} maxLength={500} value={form.narration} onChange={(event) => set("narration", event.target.value)} />

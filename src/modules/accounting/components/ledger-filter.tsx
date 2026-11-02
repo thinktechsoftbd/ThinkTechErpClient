@@ -1,27 +1,29 @@
 import { ReportField } from "@/modules/inventory/components/reports/report-filters";
 import type { LedgerHeadOption, PartyOption } from "../types";
-import { LedgerHeadSelect, PartySelect } from "./pickers";
+import { LedgerHeadField } from "./ledger-head-picker";
+import { PartySelect } from "./pickers";
 
 /** The subsidiary ledger's head filter (?account=) and optional supplier or customer filter (?party=). */
 export function LedgerHeadPartyFilter({
-  heads,
+  head,
   parties,
-  accountId,
   partyId,
 }: {
-  heads: LedgerHeadOption[];
+  /** The head in the URL, if it still exists. */
+  head: LedgerHeadOption | null;
   parties: PartyOption[];
-  accountId?: number;
   partyId?: number;
 }) {
   return (
     <>
       <ReportField label="Ledger head" className="w-full sm:w-80">
-        <LedgerHeadSelect
+        {/* Keyed by the head in the URL, so clearing the filters clears the field too. */}
+        <LedgerHeadField
+          key={head?.id ?? "none"}
           name="account"
-          heads={heads}
-          defaultValue={accountId ? String(accountId) : ""}
-          placeholder="Choose a ledger head"
+          defaultValue={head}
+          aria-label="Ledger head"
+          placeholder="Search a ledger head…"
           className="h-9"
         />
       </ReportField>

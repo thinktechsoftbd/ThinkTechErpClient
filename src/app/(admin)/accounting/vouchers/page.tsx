@@ -14,15 +14,15 @@ import { Pagination, firstParam, parseOffset } from "@/core/ui/pagination";
 import { formatNumber } from "@/core/utils/format";
 import { accountingApi } from "@/modules/accounting/api";
 import { VoucherTable } from "@/modules/accounting/components/voucher-table";
-import { ACCOUNTING_MANAGE_PERMISSION, VOUCHER_STATUSES, VOUCHER_TYPES, accountingLabel } from "@/modules/accounting/types";
-import { dateParam } from "@/modules/inventory/components/reports/report-parts";
+import { getVoucherTypes } from "@/modules/accounting/queries";
+import { ACCOUNTING_MANAGE_PERMISSION, VOUCHER_STATUSES } from "@/modules/accounting/types";
+import { dateParam, idParam } from "@/modules/inventory/components/reports/report-parts";
 
 export const metadata: Metadata = { title: "Vouchers" };
 
 const basePath = "/accounting/vouchers";
 type Props = PageProps<"/accounting/vouchers">;
 
-const TYPE_OPTIONS = VOUCHER_TYPES.map((type) => ({ value: type, label: accountingLabel(type) }));
 const STATUS_OPTIONS = VOUCHER_STATUSES.map((status) => ({ value: status, label: status }));
 
 export default function VouchersPage({ searchParams }: Props) {
@@ -30,7 +30,7 @@ export default function VouchersPage({ searchParams }: Props) {
     <>
       <PageHeader
         title="Vouchers"
-        description="Journal, payment, receipt and contra vouchers, with the bill payments and collections. Drafts can be edited; posted vouchers are in the ledgers."
+        description="Vouchers of every type, the bill payments and collections included. Drafts can be edited; posted vouchers are in the ledgers."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Accounting", href: "/accounting" }, { label: "Vouchers" }]}
         actions={
           <Suspense>
@@ -54,26 +54,34 @@ export default function VouchersPage({ searchParams }: Props) {
 async function VoucherList({ searchParams }: Pick<Props, "searchParams">) {
   const query = await searchParams;
   const search = firstParam(query.q);
-  const typeParam = firstParam(query.type);
-  const voucherType = TYPE_OPTIONS.some((option) => option.value === typeParam) ? typeParam : undefined;
+  const voucherTypeId = idParam(query.type);
   const statusParam = firstParam(query.status);
   const status = STATUS_OPTIONS.some((option) => option.value === statusParam) ? statusParam : undefined;
   const from = dateParam(query.from);
   const to = dateParam(query.to);
   const offset = parseOffset(query.offset);
 
-  const result = await tryApi(() =>
-    accountingApi.vouchers.list({ search, voucherType, status, from, to, limit: CRUD_PAGE_SIZE, offset }),
-  );
-  const filtered = Boolean(search || voucherType || status || from || to);
+  const [types, result] = await Promise.all([
+    getVoucherTypes(),
+    tryApi(() => accountingApi.vouchers.list({ search, voucherTypeId, status, from, to, limit: CRUD_PAGE_SIZE, offset })),
+  ]);
+  const typeOptions = (types.ok ? types.data : []).map((type) => ({ value: String(type.id), label: type.name }));
+  const filtered = Boolean(search || voucherTypeId || status || from || to);
 
   return (
     <>
       <CardHeader
         title={result.ok ? `${formatNumber(result.data.totalCount)} voucher(s)` : "Vouchers"}
         actions={
-          <ListToolbar basePath={basePath} search={search} placeholder="No, narration, reference" filtered={filtered}>
-            <FilterSelect name="type" label="Type" value={voucherType} options={TYPE_OPTIONS} allLabel="All types" className="w-40" />
+          <ListToolbar basePath={basePath} search={search} placeholder="Ref. no, cheque no, party, narration" filtered={filtered}>
+            <FilterSelect
+              name="type"
+              label="Type"
+              value={voucherTypeId ? String(voucherTypeId) : undefined}
+              options={typeOptions}
+              allLabel="All types"
+              className="w-52"
+            />
             <FilterSelect name="status" label="Status" value={status} options={STATUS_OPTIONS} allLabel="All statuses" className="w-32" />
             <div className="w-36">
               <Input type="date" name="from" defaultValue={from} aria-label="From date" title="From date" className="h-9 px-3" />
@@ -97,7 +105,7 @@ async function VoucherList({ searchParams }: Pick<Props, "searchParams">) {
           <VoucherTable vouchers={result.data.items} />
           <Pagination
             basePath={basePath}
-            query={{ q: search, type: voucherType, status, from, to }}
+            query={{ q: search, type: voucherTypeId, status, from, to }}
             offset={offset}
             limit={CRUD_PAGE_SIZE}
             count={result.data.items.length}

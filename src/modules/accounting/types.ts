@@ -13,16 +13,26 @@ export const ACCOUNT_NATURES = ["Asset", "Liability", "Equity", "Income", "Expen
 export const PARTY_TYPES = ["Supplier", "Customer"] as const;
 /** The currency a voucher line takes when none is chosen; line amounts are always in it. */
 export const LOCAL_CURRENCY = "BDT";
-/** Entered on the voucher screen; bill payments and collections have their own screens. */
-export const GENERAL_VOUCHER_TYPES = ["Journal", "Payment", "Receipt", "Contra"] as const;
-export const VOUCHER_TYPES = [...GENERAL_VOUCHER_TYPES, "BillPayment", "BillCollection"] as const;
 export const VOUCHER_STATUSES = ["Draft", "Posted", "Cancelled"] as const;
-export const PAYMENT_METHODS = ["Cash", "Bank", "Cheque", "MobileWallet", "Card", "Other"] as const;
+
+/**
+ * Vouchers take their type and payment method from the "Voucher Type" and "Payment Method" lookup lists
+ * (Settings → Lookup Data). A new voucher starts as a Journal Voucher.
+ */
+export const DEFAULT_VOUCHER_TYPE = "Journal Voucher";
+/** Supplier bill payments are entered as one of these voucher types, customer bill collections as one of the others. */
+export const BILL_PAYMENT_TYPES = ["Cash Payment Voucher", "Bank Payment Voucher"] as const;
+export const BILL_COLLECTION_TYPES = ["Cash Receive Voucher", "Bank Receive Voucher"] as const;
+
+/** How a cheque is crossed. */
+export const PAY_TYPES = [
+  { value: "AcPay", label: "A/C Pay" },
+  { value: "Cash", label: "Cash" },
+] as const;
 
 export type AccountNature = (typeof ACCOUNT_NATURES)[number];
 export type PartyType = (typeof PARTY_TYPES)[number];
-export type VoucherType = (typeof VOUCHER_TYPES)[number];
-export type GeneralVoucherType = (typeof GENERAL_VOUCHER_TYPES)[number];
+export type PayType = (typeof PAY_TYPES)[number]["value"];
 
 export function levelName(level: number) {
   return ACCOUNT_LEVELS[level - 1] ?? "Account";
@@ -34,6 +44,22 @@ export function isDebitNature(nature: string) {
 }
 
 // ---- Lookups
+
+/** A value of a lookup list (GET /api/accounting/vouchers/types and /payment-methods). */
+export type LookupValueOption = { id: number; name: string; isActive: boolean };
+
+/** A voucher type named "Bank ..." is a bank voucher: paid by cheque, it needs the cheque no, date and pay type. */
+export function isBankVoucherType(name: string | null | undefined) {
+  return /^\s*bank/i.test(name ?? "");
+}
+
+export function isChequeMethod(name: string | null | undefined) {
+  return (name ?? "").trim().toLowerCase() === "cheque";
+}
+
+export function payTypeLabel(value: string | null | undefined) {
+  return PAY_TYPES.find((type) => type.value === value)?.label ?? value ?? null;
+}
 
 /** A sub class (accounting.acc_sub_class): a ledger head vouchers post to (GET /api/accounting/ledger-heads). */
 export type LedgerHeadOption = {
@@ -59,6 +85,7 @@ export type PartyOption = {
 // ---- Vouchers
 
 export type VoucherLine = {
+  /** Sent back when editing a draft, so the line keeps its row and created stamp. */
   id: number;
   lineNo: number;
   /** The acc_sub_class id. */
@@ -76,24 +103,31 @@ export type VoucherLine = {
   currency: string | null;
   localExchangeRate: number;
   lineNarration: string | null;
+  createdAt: string;
+  createdBy: number | null;
+  updatedAt: string | null;
+  updatedBy: number | null;
 };
 
 export type Voucher = {
   id: number;
   objectId: string;
-  voucherNo: string;
-  voucherType: VoucherType;
+  organizationId: number;
+  /** Voucher Ref. Number: 00000000001, 00000000002, ... per organization. */
+  voucherRefNo: string;
+  /** A "Voucher Type" lookup value. */
+  voucherTypeId: number;
+  voucherType: string;
   voucherDate: string;
-  supplierId: number | null;
-  supplierCode: string | null;
-  supplierName: string | null;
-  customerId: number | null;
-  customerCode: string | null;
-  customerName: string | null;
+  /** A "Payment Method" lookup value. */
+  paymentMethodId: number | null;
   paymentMethod: string | null;
-  referenceNo: string | null;
+  chequeNo: string | null;
   chequeDate: string | null;
+  payType: PayType | null;
   narration: string | null;
+  /** The suppliers and customers named on the lines. */
+  partyNames: string | null;
   totalAmount: number;
   status: "Draft" | "Posted" | "Cancelled";
   postedAt: string | null;
@@ -103,11 +137,14 @@ export type Voucher = {
   createdAt: string;
   createdBy: number | null;
   updatedAt: string | null;
+  updatedBy: number | null;
   /** Empty in lists. */
   lines: VoucherLine[];
 };
 
 export type VoucherLineRequest = {
+  /** The saved line, when editing a draft; null for a new line. */
+  id: number | null;
   accountId: number;
   partyId: number | null;
   debitAmount: number;
@@ -119,16 +156,24 @@ export type VoucherLineRequest = {
   lineNarration: string | null;
 };
 
-export type VoucherUpsertRequest = {
-  voucherType: GeneralVoucherType;
+/** The cheque details; a bank voucher paid by cheque must have all three. */
+type ChequeDetails = {
+  chequeNo: string | null;
+  chequeDate: string | null;
+  payType: PayType | null;
+};
+
+export type VoucherUpsertRequest = ChequeDetails & {
+  voucherTypeId: number;
   voucherDate: string;
-  referenceNo: string | null;
+  paymentMethodId: number | null;
   narration: string | null;
   lines: VoucherLineRequest[];
 };
 
-/** A supplier bill payment or a customer bill collection. */
-export type BillVoucherRequest = {
+/** A supplier bill payment (Cash/Bank Payment Voucher) or a customer bill collection (Cash/Bank Receive Voucher). */
+export type BillVoucherRequest = ChequeDetails & {
+  voucherTypeId: number;
   voucherDate: string;
   /** The supplier paid, or the customer collected from. */
   partyId: number;
@@ -137,18 +182,16 @@ export type BillVoucherRequest = {
   /** The cash or bank sub class paid from (or deposited to). */
   cashAccountId: number;
   amount: number;
-  paymentMethod: string;
-  referenceNo: string | null;
-  chequeDate: string | null;
+  paymentMethodId: number | null;
   narration: string | null;
 };
 
 export type VoucherListQuery = {
   search?: string;
-  voucherType?: string;
+  voucherTypeId?: number;
   status?: string;
-  supplierId?: number;
-  customerId?: number;
+  /** A supplier or customer named on any line. */
+  partyId?: number;
   from?: string;
   to?: string;
   limit: number;
@@ -159,10 +202,10 @@ export type VoucherListQuery = {
 
 export type LedgerEntryRow = {
   voucherId: number;
-  voucherNo: string;
-  voucherType: VoucherType;
+  voucherRefNo: string;
+  voucherType: string;
   voucherDate: string;
-  referenceNo: string | null;
+  chequeNo: string | null;
   narration: string | null;
   partyName: string | null;
   /** The heads on the other side of the voucher. */
@@ -235,26 +278,6 @@ export type BalanceSheet = {
 };
 
 export type PartyBalance = { accountId: number; partyId: number; balance: number };
-
-const LABELS: Record<string, string> = {
-  BillPayment: "Bill Payment",
-  BillCollection: "Bill Collection",
-  MobileWallet: "Mobile wallet",
-  Journal: "Journal",
-  Payment: "Payment",
-  Receipt: "Receipt",
-  Contra: "Contra",
-};
-
-export const accountingLabel = (value: string | null | undefined) => (value ? (LABELS[value] ?? value) : "—");
-
-/** What each voucher type is for, shown under the type picker. */
-export const VOUCHER_TYPE_HINTS: Record<GeneralVoucherType, string> = {
-  Journal: "Adjustments and transfers between heads, with no cash or bank.",
-  Payment: "Money paid out of cash or bank (expenses, advances, ...).",
-  Receipt: "Money received into cash or bank.",
-  Contra: "Between cash and bank heads: deposits, withdrawals, transfers.",
-};
 
 /**
  * The chart of accounts screen's tree, on the accounting.acc_* tables (as in MediDesk) and shared by every

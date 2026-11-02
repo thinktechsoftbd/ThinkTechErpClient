@@ -19,8 +19,10 @@ export async function OrganizationSwitcher() {
     );
   }
 
+  // The select is uncontrolled: a new key shows the organization a Server Action switched to.
   return (
     <OrganizationSelect
+      key={current.organizationId}
       currentId={current.organizationId}
       options={organizations.data.map((o) => ({ id: o.organizationId, name: o.name }))}
     />

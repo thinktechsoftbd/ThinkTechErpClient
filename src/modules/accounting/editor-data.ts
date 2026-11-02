@@ -80,7 +80,7 @@ export function editorInitialFrom(voucher: Voucher): VoucherEditorInitial {
     narration: voucher.narration ?? "",
     lines: voucher.lines.map((line) => ({
       id: line.id,
-      account: { id: line.accountId, code: line.accountCode, name: line.accountName, nature: "", path: null },
+      account: { id: line.accountId, code: line.accountCode, name: line.accountName, nature: "", path: line.accountPath },
       partyId: line.partyId ? String(line.partyId) : "",
       debit: line.debitAmount ? String(line.debitAmount) : "",
       credit: line.creditAmount ? String(line.creditAmount) : "",

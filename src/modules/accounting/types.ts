@@ -67,7 +67,7 @@ export type LedgerHeadOption = {
   code: string;
   name: string;
   nature: AccountNature | "";
-  /** "Main class › Map class". */
+  /** "Map class/Main class/Account class/Parent class". */
   path: string | null;
 };
 
@@ -92,6 +92,8 @@ export type VoucherLine = {
   accountId: number;
   accountCode: string;
   accountName: string;
+  /** "Map class/Main class/Account class/Parent class". */
+  accountPath: string | null;
   /** The supplier or customer the line is for, if any. */
   partyId: number | null;
   partyCode: string | null;

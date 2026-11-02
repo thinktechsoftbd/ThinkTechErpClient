@@ -320,7 +320,7 @@ export function VoucherEditor({
           <THead>
             <tr>
               <TH className="w-10">#</TH>
-              <TH className="min-w-64">Ledger head</TH>
+              <TH className="min-w-96">Ledger head</TH>
               <TH className="min-w-48">Supplier / customer</TH>
               <TH className="min-w-60">Currency · rate</TH>
               <TH className="min-w-48">Line narration</TH>

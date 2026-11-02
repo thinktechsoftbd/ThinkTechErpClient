@@ -16,8 +16,9 @@ const LIST_HEIGHT = 320;
 type Placement = { left: number; width: number; top?: number; bottom?: number };
 
 /**
- * Picks a ledger head (a sub class of the chart) by searching the server as the user types: by code, name,
- * or the map or main class name, 20 at a time, with more loaded on scrolling. The list sits in a portal
+ * Picks a ledger head (a sub class of the chart) by searching the server as the user types, by sub code or
+ * sub name, 20 at a time, with more loaded on scrolling. Each head shows as
+ * {sub code}-{sub name}/{map class}/{main class}/{account class}/{parent class}. The list sits in a portal
  * so tables that scroll sideways don't clip it. With `name`, the chosen id is also posted in a hidden input.
  */
 export function LedgerHeadPicker({
@@ -91,7 +92,7 @@ export function LedgerHeadPicker({
   const place = useCallback(() => {
     const rect = inputRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const width = Math.max(rect.width, 320);
+    const width = Math.min(Math.max(rect.width, 480), window.innerWidth - 16);
     const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
     setPlacement(
       window.innerHeight - rect.bottom < LIST_HEIGHT + 8 && rect.top > window.innerHeight - rect.bottom
@@ -157,7 +158,7 @@ export function LedgerHeadPicker({
         required={required}
         value={open ? query : value ? ledgerHeadLabel(value) : ""}
         placeholder={open && value ? ledgerHeadLabel(value) : placeholder}
-        title={value ? `${ledgerHeadLabel(value)}${value.path ? `\n${value.path}` : ""}` : undefined}
+        title={value ? ledgerHeadLabel(value) : undefined}
         onFocus={openList}
         onClick={openList}
         onBlur={close}
@@ -226,11 +227,10 @@ export function LedgerHeadPicker({
                   head.id === value?.id && "font-medium",
                 )}
               >
-                <span className="flex items-baseline gap-2">
-                  <span className="shrink-0 font-mono text-xs text-gray-500 dark:text-gray-400">{head.code}</span>
-                  <span className="truncate text-gray-800 dark:text-white/90">{head.name}</span>
-                </span>
-                {head.path && <span className="block truncate text-xs text-gray-500 dark:text-gray-400">{head.path}</span>}
+                {/* {sub code}-{sub name}/{map class}/{main class}/{account class}/{parent class} */}
+                <span className="font-mono text-xs text-gray-600 dark:text-gray-300">{head.code}</span>
+                <span className="text-gray-800 dark:text-white/90">-{head.name}</span>
+                {head.path && <span className="text-gray-500 dark:text-gray-400">/{head.path}</span>}
               </li>
             ))}
             {error && <li className="px-3 py-2 text-red-600 dark:text-red-400">{error}</li>}

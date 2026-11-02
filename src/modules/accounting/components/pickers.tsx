@@ -2,9 +2,9 @@ import type { ComponentProps } from "react";
 import { Select } from "@/core/forms/fields";
 import type { LedgerHeadOption, PartyOption } from "../types";
 
-/** "102080001 — Dutch-Bangla Bank". */
-export function ledgerHeadLabel(head: Pick<LedgerHeadOption, "code" | "name">) {
-  return `${head.code} — ${head.name}`;
+/** "102080001-Dutch-Bangla Bank/Cash at Bank/Cash & Bank/CURRENT ASSET/ASSETS": sub class, then the classes above it. */
+export function ledgerHeadLabel(head: Pick<LedgerHeadOption, "code" | "name" | "path">) {
+  return `${head.code}-${head.name}${head.path ? `/${head.path}` : ""}`;
 }
 
 /** "Rahim Traders (S-00001)"; says when the party is on both sides or inactive. */

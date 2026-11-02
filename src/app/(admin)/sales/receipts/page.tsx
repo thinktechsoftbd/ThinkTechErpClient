@@ -18,6 +18,7 @@ import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatDate, formatNumber } from "@/core/utils/format";
 import { formatAmount } from "@/core/utils/number";
 import { parseIdParam } from "@/core/utils/params";
+import { dateParam } from "@/modules/inventory/components/reports/report-parts";
 import { salesApi } from "@/modules/sales/api";
 import { ChequeStatusBadge } from "@/modules/sales/components/receipts/cheque-status-badge";
 import { getCustomerOptions } from "@/modules/sales/queries";
@@ -65,8 +66,9 @@ async function ReceiptList({ searchParams }: Pick<Props, "searchParams">) {
   const status = firstParam(query.status);
   const customerParam = firstParam(query.customer);
   const customerId = customerParam ? (parseIdParam(customerParam) ?? undefined) : undefined;
-  const from = firstParam(query.from);
-  const to = firstParam(query.to);
+  // A malformed date in the URL is ignored rather than sent to the API (which refuses it).
+  const from = dateParam(query.from);
+  const to = dateParam(query.to);
   const offset = parseOffset(query.offset);
 
   const [customers, result] = await Promise.all([
@@ -91,10 +93,10 @@ async function ReceiptList({ searchParams }: Pick<Props, "searchParams">) {
             />
             <FilterSelect name="status" label="Status" value={status} options={STATUS_OPTIONS} allLabel="All statuses" className="w-32" />
             <div className="w-36">
-              <Input type="date" name="from" defaultValue={from} aria-label="From date" title="From date" className="h-9 px-3" />
+              <Input key={from ?? ""} type="date" name="from" defaultValue={from} aria-label="From date" title="From date" className="h-9 px-3" />
             </div>
             <div className="w-36">
-              <Input type="date" name="to" defaultValue={to} aria-label="To date" title="To date" className="h-9 px-3" />
+              <Input key={to ?? ""} type="date" name="to" defaultValue={to} aria-label="To date" title="To date" className="h-9 px-3" />
             </div>
           </ListToolbar>
         }

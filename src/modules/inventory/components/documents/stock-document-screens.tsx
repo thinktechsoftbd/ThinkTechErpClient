@@ -27,6 +27,7 @@ import {
   postAdjustmentAction,
   saveAdjustmentAction,
   saveOpeningStockAction,
+  saveTransferAction,
 } from "../../actions/documents";
 import { inventoryApi } from "../../api";
 import { getInventoryOptions, getInventorySettings } from "../../queries";
@@ -335,7 +336,8 @@ export async function AdjustmentDetail({ kind, params }: { kind: AdjustmentKind;
 
 // ---- New / edit
 
-export async function NewAdjustment({ kind }: { kind: AdjustmentKind }) {
+/** On its page, or (with `returnTo`, the list) in the popup over the list, which saving returns to. */
+export async function NewAdjustment({ kind, returnTo }: { kind: AdjustmentKind; returnTo?: string }) {
   const [session, options] = await Promise.all([requireSession(), loadStockEditorOptions()]);
   if (!options.ok)
     return (
@@ -350,6 +352,28 @@ export async function NewAdjustment({ kind }: { kind: AdjustmentKind }) {
       options={options.data}
       canPost={canManageInventory(session)}
       cancelHref={adjustmentBasePath(kind)}
+      returnTo={returnTo}
+    />
+  );
+}
+
+/** A new stock transfer, on its page or (with `returnTo`) in the popup over the transfers list. */
+export async function NewTransfer({ returnTo }: { returnTo?: string }) {
+  const [session, options] = await Promise.all([requireSession(), loadStockEditorOptions()]);
+  if (!options.ok)
+    return (
+      <Card>
+        <ApiErrorState error={options.error} />
+      </Card>
+    );
+  return (
+    <StockDocumentEditor
+      mode="transfer"
+      action={saveTransferAction.bind(null, null)}
+      options={options.data}
+      canPost={canManageInventory(session)}
+      cancelHref="/inventory/transfers"
+      returnTo={returnTo}
     />
   );
 }

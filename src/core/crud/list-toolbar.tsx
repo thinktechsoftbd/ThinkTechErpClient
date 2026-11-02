@@ -4,9 +4,15 @@ import type { ReactNode } from "react";
 import { Input, Select } from "@/core/forms/fields";
 import { Button, LinkButton } from "@/core/ui/button";
 
+/** The longest search the API accepts ([StringLength(100)] on its list queries). */
+const MAX_SEARCH_LENGTH = 100;
+
 /**
  * Search box plus optional filters for a server-paginated list. Submitting navigates to
  * `basePath?q=…&…` (dropping `offset`, so results start from the first page).
+ *
+ * The controls are uncontrolled and the page stays mounted when only the query changes, so each is
+ * keyed by its value: after Clear, Back or a link they show what the list is filtered by, not stale text.
  */
 export function ListToolbar({
   basePath,
@@ -28,7 +34,15 @@ export function ListToolbar({
       {/* Widths live on wrappers: the shared controls are w-full. */}
       <div className="relative w-full sm:w-56">
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" aria-hidden />
-        <Input name="q" defaultValue={search} placeholder={placeholder} className="h-9 pl-9" aria-label={placeholder} />
+        <Input
+          key={search ?? ""}
+          name="q"
+          defaultValue={search}
+          maxLength={MAX_SEARCH_LENGTH}
+          placeholder={placeholder}
+          className="h-9 pl-9"
+          aria-label={placeholder}
+        />
       </div>
       {children}
       <Button type="submit" variant="outline" size="sm">
@@ -60,7 +74,7 @@ export function FilterSelect({
 }) {
   return (
     <div className={className}>
-      <Select name={name} defaultValue={value ?? ""} aria-label={label} className="h-9">
+      <Select key={value ?? ""} name={name} defaultValue={value ?? ""} aria-label={label} className="h-9">
         <option value="">{allLabel}</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>

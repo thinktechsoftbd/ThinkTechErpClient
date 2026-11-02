@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { ApiError } from "@/core/api/errors";
 import { requireModuleAccess } from "@/core/auth/guards";
 import { readIntent, readPayload } from "@/core/documents/payload";
-import { runDocumentAction, saveDocument } from "@/core/documents/run-action";
+import { popupReturn, runDocumentAction, saveDocument } from "@/core/documents/run-action";
 import { formString, optionalString, positiveInteger, toActionError } from "@/core/forms/action-errors";
 import { actionError, actionSuccess, type ActionState } from "@/core/forms/action-state";
 import { inventoryApi } from "../api";
@@ -85,11 +85,14 @@ export async function saveAdjustmentAction(id: number | null, _previous: ActionS
   const invalid = checkLines(body.lines, false);
   if (invalid) return invalid;
 
+  const target = popupReturn(formData, "/inventory/adjustments", adjustmentPaths);
   return saveDocument(
     inventoryModule,
     () => (id === null ? inventoryApi.adjustments.create(body) : inventoryApi.adjustments.update(id, body)),
     readIntent(formData) === "post" ? (savedId) => inventoryApi.adjustments.action(savedId, "post") : null,
-    adjustmentPaths,
+    target.paths,
+    "posted",
+    target.replace,
   );
 }
 
@@ -125,11 +128,14 @@ export async function saveTransferAction(id: number | null, _previous: ActionSta
   const invalid = checkLines(body.lines, true);
   if (invalid) return invalid;
 
+  const target = popupReturn(formData, "/inventory/transfers", transferPaths);
   return saveDocument(
     inventoryModule,
     () => (id === null ? inventoryApi.transfers.create(body) : inventoryApi.transfers.update(id, body)),
     readIntent(formData) === "post" ? (savedId) => inventoryApi.transfers.action(savedId, "dispatch") : null,
-    transferPaths,
+    target.paths,
+    "posted",
+    target.replace,
   );
 }
 

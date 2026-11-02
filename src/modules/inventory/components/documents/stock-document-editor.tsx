@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Check, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { ProductSearch } from "@/core/documents/product-search";
@@ -263,6 +264,7 @@ export function StockDocumentEditor({
   initial = {},
   canPost,
   cancelHref,
+  returnTo,
 }: {
   mode: StockEditorMode;
   action: FormAction;
@@ -271,7 +273,10 @@ export function StockDocumentEditor({
   /** Show "Save & post" / "Save & dispatch" (the user may post). */
   canPost: boolean;
   cancelHref: string;
+  /** In a popup over the list: saving returns to the list; Cancel closes the popup. */
+  returnTo?: string;
 }) {
+  const router = useRouter();
   const firstWarehouse = options.defaultWarehouseId ?? options.warehouses.find((w) => w.isActive)?.id ?? null;
   const [header, setHeader] = useState(() => ({
     date: initial.date ?? todayIso(),
@@ -388,6 +393,7 @@ export function StockDocumentEditor({
   return (
     <ActionForm action={submit} className="space-y-6">
       <input type="hidden" name="payload" value={JSON.stringify(payload())} />
+      {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
       <input type="hidden" name="problems" value={problems.join("\n")} />
       <FormMessage />
 
@@ -572,9 +578,15 @@ export function StockDocumentEditor({
                 </IntentSubmit>
               )}
             </div>
-            <Link href={cancelHref} className={buttonClasses("ghost", "md", "w-full")}>
-              Cancel
-            </Link>
+            {returnTo ? (
+              <button type="button" onClick={() => router.back()} className={buttonClasses("ghost", "md", "w-full")}>
+                Cancel
+              </button>
+            ) : (
+              <Link href={cancelHref} className={buttonClasses("ghost", "md", "w-full")}>
+                Cancel
+              </Link>
+            )}
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {mode === "transfer"
                 ? "A draft moves nothing. Dispatching takes the stock out of the source warehouse."

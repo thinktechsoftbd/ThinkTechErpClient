@@ -16,6 +16,8 @@ import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatDate, formatNumber } from "@/core/utils/format";
 import { formatAmount } from "@/core/utils/number";
 import { parseIdParam } from "@/core/utils/params";
+import { DateRangeFilter } from "@/modules/inventory/components/documents/list-filters";
+import { dateParam } from "@/modules/inventory/components/reports/report-parts";
 import { salesApi } from "@/modules/sales/api";
 import { getCustomerOptions } from "@/modules/sales/queries";
 import { SALES_MANAGE_PERMISSION, customerLabel } from "@/modules/sales/types";
@@ -74,8 +76,9 @@ async function InvoiceList({ searchParams }: Pick<Props, "searchParams">) {
   const paymentStatus = firstParam(query.payment);
   const customerParam = firstParam(query.customer);
   const customerId = customerParam ? (parseIdParam(customerParam) ?? undefined) : undefined;
-  const from = firstParam(query.from);
-  const to = firstParam(query.to);
+  // A malformed date in the URL is ignored rather than sent to the API (which refuses it).
+  const from = dateParam(query.from);
+  const to = dateParam(query.to);
   const offset = parseOffset(query.offset);
 
   const [customers, result] = await Promise.all([
@@ -101,6 +104,7 @@ async function InvoiceList({ searchParams }: Pick<Props, "searchParams">) {
             <FilterSelect name="type" label="Type" value={saleType} options={TYPE_OPTIONS} allLabel="Cash & credit" className="w-32" />
             <FilterSelect name="payment" label="Payment" value={paymentStatus} options={PAYMENT_OPTIONS} allLabel="Any payment" className="w-36" />
             <FilterSelect name="status" label="Status" value={status} options={STATUS_OPTIONS} allLabel="All statuses" className="w-32" />
+            <DateRangeFilter from={from} to={to} />
           </ListToolbar>
         }
       />

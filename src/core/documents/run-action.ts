@@ -30,6 +30,18 @@ export async function runDocumentAction(
   return actionSuccess(successMessage);
 }
 
+type DocumentPaths = { view: (id: number) => string; edit: (id: number) => string };
+
+/**
+ * Where a document saved from the popup over its list goes: back to `list` (its form sends returnTo =
+ * the list), replacing the popup's history entry so Back doesn't reopen it. Otherwise the usual paths.
+ */
+export function popupReturn(formData: FormData, list: string, paths: DocumentPaths) {
+  return formData.get("returnTo") === list
+    ? { paths: { ...paths, view: () => list }, replace: true }
+    : { paths, replace: false };
+}
+
 /**
  * Saves a document (create or update), optionally posts it, then opens it. A post that fails after
  * the save lands on the saved draft's edit page with the reason, so nothing is entered twice.
@@ -38,7 +50,7 @@ export async function saveDocument<T extends { id: number }>(
   module: ModuleDefinition,
   save: () => Promise<T>,
   post: ((id: number) => Promise<unknown>) | null,
-  paths: { view: (id: number) => string; edit: (id: number) => string },
+  paths: DocumentPaths,
   /** What failed after saving, for the notice: "posted" or e.g. "approved". */
   postVerb = "posted",
   /** Replace the history entry when opening the saved document, e.g. so Back doesn't reopen the popup it was saved from. */

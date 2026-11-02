@@ -2,7 +2,7 @@
 
 import { actionError, type ActionState } from "@/core/forms/action-state";
 import { readIntent, readPayload } from "@/core/documents/payload";
-import { runDocumentAction, saveDocument } from "@/core/documents/run-action";
+import { popupReturn, runDocumentAction, saveDocument } from "@/core/documents/run-action";
 import { salesApi } from "../api";
 import { salesModule } from "../module";
 import type { SalesInvoiceUpsertRequest } from "../types";
@@ -23,11 +23,14 @@ export async function saveSaleAction(id: number | null, _previous: ActionState, 
     });
   if (!body.warehouseId) return actionError("Choose the warehouse the goods are sold from.", { warehouseId: "Required." });
 
+  const target = popupReturn(formData, "/sales/invoices", paths);
   return saveDocument(
     salesModule,
     () => (id === null ? salesApi.invoices.create(body) : salesApi.invoices.update(id, body)),
     readIntent(formData) === "post" ? (savedId) => salesApi.invoices.action(savedId, "post") : null,
-    paths,
+    target.paths,
+    "posted",
+    target.replace,
   );
 }
 

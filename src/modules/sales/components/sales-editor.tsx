@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { computeLine } from "@/core/documents/line-math";
@@ -127,6 +128,7 @@ export function SalesEditor({
   canPost,
   canAddCustomer,
   cancelHref,
+  returnTo,
 }: {
   action: FormAction;
   options: SalesEditorOptions;
@@ -135,7 +137,10 @@ export function SalesEditor({
   canPost: boolean;
   canAddCustomer: boolean;
   cancelHref: string;
+  /** In a popup over the list: saving returns to the list; Cancel closes the popup. */
+  returnTo?: string;
 }) {
+  const router = useRouter();
   const [header, setHeader] = useState(() => ({
     date: initial.date ?? todayIso(),
     saleType: initial.saleType ?? ("Cash" as SaleType),
@@ -301,6 +306,7 @@ export function SalesEditor({
   return (
     <ActionForm action={submit} className="space-y-6">
       <input type="hidden" name="payload" value={JSON.stringify(payload())} />
+      {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
       <FormMessage />
 
       {/* Enter in a box must not submit: a scanner sends Enter after every barcode. */}
@@ -575,9 +581,15 @@ export function SalesEditor({
                 </IntentSubmit>
               )}
             </div>
-            <Link href={cancelHref} className={buttonClasses("ghost", "md", "w-full")}>
-              Cancel
-            </Link>
+            {returnTo ? (
+              <button type="button" onClick={() => router.back()} className={buttonClasses("ghost", "md", "w-full")}>
+                Cancel
+              </button>
+            ) : (
+              <Link href={cancelHref} className={buttonClasses("ghost", "md", "w-full")}>
+                Cancel
+              </Link>
+            )}
             {canPost && <p className="text-center text-xs text-gray-500 dark:text-gray-400">F9 or Ctrl+Enter completes the sale.</p>}
           </div>
         </div>

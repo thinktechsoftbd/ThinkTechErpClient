@@ -2,7 +2,7 @@
 
 import { actionError, type ActionState } from "@/core/forms/action-state";
 import { readPayload } from "@/core/documents/payload";
-import { runDocumentAction, saveDocument } from "@/core/documents/run-action";
+import { popupReturn, runDocumentAction, saveDocument } from "@/core/documents/run-action";
 import { round } from "@/core/utils/number";
 import { salesApi } from "../api";
 import { salesModule } from "../module";
@@ -48,7 +48,8 @@ export async function createReceiptAction(_previous: ActionState, formData: Form
     if (body.allocations.length > 0) body.autoAllocate = false;
   }
 
-  return saveDocument(salesModule, () => salesApi.receipts.create(body), null, { view, edit: view });
+  const target = popupReturn(formData, "/sales/receipts", { view, edit: view });
+  return saveDocument(salesModule, () => salesApi.receipts.create(body), null, target.paths, "posted", target.replace);
 }
 
 /** Takes the receipt off its invoices (they are due again). */

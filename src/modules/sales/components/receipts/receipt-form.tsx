@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Info, LoaderCircle } from "lucide-react";
 import { useRef, useState } from "react";
 import { ActionForm, FieldError, FormMessage, SubmitButton } from "@/core/forms/action-form";
@@ -78,6 +79,7 @@ export function ReceiptForm({
   baseCurrencyId,
   initial,
   cancelHref,
+  returnTo,
 }: {
   action: FormAction;
   currencies: { id: number; name: string }[];
@@ -91,7 +93,10 @@ export function ReceiptForm({
     invoiceId: number | null;
   };
   cancelHref: string;
+  /** In a popup over the list: saving returns to the list; Cancel closes the popup. */
+  returnTo?: string;
 }) {
+  const router = useRouter();
   const preselected = initial.invoiceId ? initial.invoices.find((invoice) => invoice.id === initial.invoiceId) : undefined;
 
   const [customer, setCustomer] = useState<CustomerOption | null>(initial.customer);
@@ -216,6 +221,7 @@ export function ReceiptForm({
   return (
     <ActionForm action={action} className="space-y-6">
       <input type="hidden" name="payload" value={JSON.stringify(body)} />
+      {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
       <FormMessage />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
@@ -504,9 +510,15 @@ export function ReceiptForm({
             <SubmitButton pendingLabel="Saving…" className="w-full">
               {isRefund ? "Record refund" : "Record receipt"}
             </SubmitButton>
-            <Link href={cancelHref} className={buttonClasses("ghost", "md", "w-full")}>
-              Cancel
-            </Link>
+            {returnTo ? (
+              <button type="button" onClick={() => router.back()} className={buttonClasses("ghost", "md", "w-full")}>
+                Cancel
+              </button>
+            ) : (
+              <Link href={cancelHref} className={buttonClasses("ghost", "md", "w-full")}>
+                Cancel
+              </Link>
+            )}
           </div>
         </div>
       </div>

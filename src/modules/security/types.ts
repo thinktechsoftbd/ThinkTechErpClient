@@ -114,6 +114,8 @@ export type UserOrganization = {
   isDefault: boolean;
   /** Always true here; false only for a Super Admin's unlinked organizations in my-organizations. */
   isLinked: boolean;
+  /** Outside this company (e.g. a customer): left out of the header's switcher and the "current" organization. */
+  isExternal: boolean;
 };
 
 /** Replaces the user's links; a null default makes the first organization the default. */

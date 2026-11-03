@@ -357,7 +357,7 @@ export async function saveProductAction(id: number | null, _previous: ActionStat
   const attributes = readAttributes(attributeRows, fieldErrors);
 
   const body: ProductUpsertRequest = {
-    code: requiredText(formData, "code", 50, fieldErrors),
+    code: optionalText(formData, "code", 50, fieldErrors),
     name: requiredText(formData, "name", 250, fieldErrors),
     nameLocal: optionalText(formData, "nameLocal", 250, fieldErrors),
     productType: productType as ProductType,

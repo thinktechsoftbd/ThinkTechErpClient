@@ -11,8 +11,9 @@ const sizes = {
 };
 
 /**
- * Accessible modal built on the native <dialog>: focus is trapped, Escape and a click on the
- * backdrop close it, and the page behind is inert while it's open.
+ * Accessible modal built on the native <dialog>: focus is trapped, Escape or the close button closes
+ * it, and the page behind is inert while it's open. A click outside it does nothing, so a half-filled
+ * form isn't lost to a stray click.
  */
 export function Modal({
   open,
@@ -62,10 +63,6 @@ export function Modal({
   return (
     <dialog
       ref={ref}
-      // A click whose target is the <dialog> itself landed on the backdrop, outside the panel.
-      onClick={(event) => {
-        if (event.target === ref.current) onClose();
-      }}
       className={cn(
         "m-auto w-[calc(100%-2rem)] overflow-visible rounded-2xl border border-gray-200 bg-white p-0 text-left text-gray-800 shadow-theme-lg",
         "backdrop:bg-gray-900/50 backdrop:backdrop-blur-[2px] dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100",

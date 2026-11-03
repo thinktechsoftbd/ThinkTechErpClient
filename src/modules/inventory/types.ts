@@ -180,7 +180,8 @@ export type Product = {
 };
 
 export type ProductUpsertRequest = {
-  code: string;
+  /** Optional: a new product without one is numbered P-00001, ...; an edit without one keeps its code. */
+  code: string | null;
   name: string;
   nameLocal: string | null;
   productType: ProductType;

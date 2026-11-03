@@ -202,31 +202,6 @@ export function ProductForm({ value, options }: { value?: Product; options: Prod
     <div className="space-y-5">
       <Section title="Basics">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Code" name="code" required hint="Unique, e.g. FERT-UREA-50.">
-            <Input id="code" name="code" maxLength={50} defaultValue={value?.code} required />
-          </Field>
-          <Field label="Type" name="productType" required>
-            <Select
-              id="productType"
-              name="productType"
-              value={productType}
-              onChange={(event) => {
-                const next = event.target.value as ProductType;
-                setProductType(next);
-                if (next !== "Stock") {
-                  setTrackingType("None");
-                  setHasExpiry(false);
-                }
-              }}
-              required
-            >
-              {PRODUCT_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type === "Stock" ? "Stock item" : label(type)}
-                </option>
-              ))}
-            </Select>
-          </Field>
           <Field label="Name" name="name" required className="sm:col-span-2">
             <Input id="name" name="name" maxLength={250} defaultValue={value?.name} required />
           </Field>
@@ -257,6 +232,35 @@ export function ProductForm({ value, options }: { value?: Product; options: Prod
                     {brand.isActive ? "" : " (inactive)"}
                   </option>
                 ))}
+            </Select>
+          </Field>
+          <Field
+            label="Code"
+            name="code"
+            hint={value ? "Unique, e.g. FERT-UREA-50. Leave empty to keep the current code." : "Optional: leave empty to number it P-00001, P-00002, …"}
+          >
+            <Input id="code" name="code" maxLength={50} defaultValue={value?.code} />
+          </Field>
+          <Field label="Type" name="productType" required>
+            <Select
+              id="productType"
+              name="productType"
+              value={productType}
+              onChange={(event) => {
+                const next = event.target.value as ProductType;
+                setProductType(next);
+                if (next !== "Stock") {
+                  setTrackingType("None");
+                  setHasExpiry(false);
+                }
+              }}
+              required
+            >
+              {PRODUCT_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type === "Stock" ? "Stock item" : label(type)}
+                </option>
+              ))}
             </Select>
           </Field>
           <Field label="Image URL" name="imageUrl" className="sm:col-span-2">

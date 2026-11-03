@@ -325,16 +325,18 @@ export function VoucherEditor({
             </button>
           }
         />
-        <Table>
+        {/* Tighter cells and modest minimum widths, so the entries fit the popup (about 1200px) without a
+            sideways scrollbar; wider screens give the extra room to the columns. */}
+        <Table className="[&_td]:px-2.5 [&_th]:px-2.5 [&_td:first-child]:pl-5 [&_th:first-child]:pl-5">
           <THead>
             <tr>
-              <TH className="w-10">#</TH>
-              <TH className="min-w-96">Ledger head</TH>
-              <TH className="min-w-48">Supplier / customer</TH>
-              <TH className="min-w-60">Currency · rate</TH>
-              <TH className="min-w-48">Line narration</TH>
-              <TH className="w-36 text-right">Debit</TH>
-              <TH className="w-36 text-right">Credit</TH>
+              <TH className="w-8">#</TH>
+              <TH className="min-w-56">Ledger head</TH>
+              <TH className="min-w-36">Supplier / customer</TH>
+              <TH className="min-w-44">Currency · rate</TH>
+              <TH className="min-w-32">Line narration</TH>
+              <TH className="min-w-24 text-right">Debit</TH>
+              <TH className="min-w-24 text-right">Credit</TH>
               <TH className="w-10">
                 <span className="sr-only">Remove</span>
               </TH>

@@ -58,7 +58,8 @@ export function Dialog({
       ref={ref}
       aria-labelledby={titleId}
       className={cn(
-        "m-auto max-h-[calc(100dvh-2rem)] w-full overflow-y-auto rounded-2xl border border-gray-200 bg-white p-0 text-left text-sm font-normal text-gray-800 shadow-xl backdrop:bg-gray-900/50 backdrop:backdrop-blur-[2px] dark:border-gray-800 dark:bg-gray-900 dark:text-white/90",
+        // Only vertical scrolling: wide content (tables) scrolls in its own box, never the whole popup sideways.
+        "m-auto max-h-[calc(100dvh-2rem)] w-full overflow-x-hidden overflow-y-auto rounded-2xl border border-gray-200 bg-white p-0 text-left text-sm font-normal text-gray-800 shadow-xl backdrop:bg-gray-900/50 backdrop:backdrop-blur-[2px] dark:border-gray-800 dark:bg-gray-900 dark:text-white/90",
         size === "xl" ? "max-w-[min(80rem,calc(100%-2rem))]" : "max-w-[min(32rem,calc(100%-2rem))]",
         className,
       )}

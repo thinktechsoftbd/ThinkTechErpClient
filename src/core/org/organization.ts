@@ -8,13 +8,22 @@ import { ORGANIZATION_COOKIE } from "./constants";
 
 export type { UserOrganization };
 
-/** The user's organizations, loaded once per request; empty in dev sign-in mode. */
+/**
+ * The internal organizations the user works in, loaded once per request; empty in dev sign-in mode.
+ * External ones (customers) are left out: they aren't offered in the header's switcher and are never
+ * the organization the ERP works in.
+ */
 export const getMyOrganizations = cache(async () => {
   if (serverEnv.authMode === "dev") return { ok: true as const, data: [] as UserOrganization[] };
-  return tryApi(() => apiFetch<UserOrganization[]>("/api/security/my-organizations"));
+  // Not organization-scoped: asking it must not depend on the current organization (which comes from it).
+  const result = await tryApi(() => apiFetch<UserOrganization[]>("/api/security/my-organizations", { organizationHeader: false }));
+  return result.ok ? { ...result, data: result.data.filter((organization) => !organization.isExternal) } : result;
 });
 
-/** The organization chosen in the switcher (cookie), when it is still one of the user's. */
+/**
+ * The organization chosen in the switcher (cookie) when it is still one of the user's internal ones;
+ * otherwise their default, or the first. Every API call works in this one (see apiFetch).
+ */
 export async function getCurrentOrganization(): Promise<UserOrganization | undefined> {
   const result = await getMyOrganizations();
   if (!result.ok || result.data.length === 0) return undefined;

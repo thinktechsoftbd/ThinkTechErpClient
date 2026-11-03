@@ -1,10 +1,11 @@
 import "server-only";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAccessToken } from "@/core/auth/session";
 import { appConfig } from "@/core/config/app";
 import { serverEnv } from "@/core/config/server-env";
-import { ORGANIZATION_COOKIE, ORGANIZATION_HEADER } from "@/core/org/constants";
+import { ORGANIZATION_HEADER } from "@/core/org/constants";
+// A cycle (organization.ts calls apiFetch), but only inside functions, so either module can load first.
+import { getCurrentOrganization } from "@/core/org/organization";
 import { ApiError, readApiError, type ApiErrorInfo } from "./errors";
 
 type QueryValue = string | number | boolean | null | undefined;
@@ -17,6 +18,8 @@ export type ApiRequest = {
   auth?: boolean;
   /** Work in this organization instead of the one chosen in the header; the API checks the user may. */
   organizationId?: number;
+  /** Send the current organization (default true); false for calls that aren't organization-scoped. */
+  organizationHeader?: boolean;
 };
 
 const expiredPath = `${appConfig.loginPath}?expired=1`;
@@ -26,7 +29,7 @@ const expiredPath = `${appConfig.loginPath}?expired=1`;
  * httpOnly session cookie, so it never reaches the browser.
  */
 export async function apiFetch<T>(path: string, request: ApiRequest = {}): Promise<T> {
-  const { method = "GET", query, body, auth = true, organizationId: organizationOverride } = request;
+  const { method = "GET", query, body, auth = true, organizationId: organizationOverride, organizationHeader = true } = request;
 
   const url = new URL(path.replace(/^\/+/, ""), `${serverEnv.apiBaseUrl}/`);
   for (const [key, value] of Object.entries(query ?? {})) {
@@ -39,10 +42,12 @@ export async function apiFetch<T>(path: string, request: ApiRequest = {}): Promi
     const token = await getAccessToken();
     if (!token) redirect(expiredPath);
     headers.set("Authorization", `Bearer ${token}`);
-    // Inventory and Purchase data belongs to the organization chosen in the header's switcher;
-    // without it the API uses the user's default organization.
-    const organizationId = organizationOverride ? String(organizationOverride) : (await cookies()).get(ORGANIZATION_COOKIE)?.value;
-    if (organizationId && /^\d+$/.test(organizationId)) headers.set(ORGANIZATION_HEADER, organizationId);
+    // ERP data belongs to the organization shown in the header's switcher: the chosen one while it is
+    // still one of the user's internal organizations, else their default. Without it the API uses the
+    // user's default organization.
+    const organizationId =
+      organizationOverride ?? (organizationHeader ? (await getCurrentOrganization())?.organizationId : undefined);
+    if (organizationId) headers.set(ORGANIZATION_HEADER, String(organizationId));
   }
 
   let response: Response;

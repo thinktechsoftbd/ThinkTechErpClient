@@ -73,8 +73,10 @@ export type SalesEditorInitial = {
   lines?: SaleEditorLine[];
 };
 
-/** A line box label: shown on phones, read out only in the desktop table (which has column headings). */
-const rowLabel = "mb-1 block text-xs text-gray-500 md:sr-only dark:text-gray-400";
+/** A line box label: shown while the items box is narrow, read out only once it has the column headings. */
+const rowLabel = "mb-1 block text-xs text-gray-500 @2xl:sr-only dark:text-gray-400";
+/** Unit, Qty, Price, Disc %, Tax, Total, remove: the column headings and each line's boxes (its item is the row above). */
+const lineColumns = "@2xl:grid-cols-[5.5rem_4.5rem_6rem_4rem_minmax(6rem,11rem)_minmax(5.5rem,1fr)_1.5rem]";
 
 let keySeed = 0;
 const newKey = () => `s${Date.now().toString(36)}${(keySeed++).toString(36)}`;
@@ -322,8 +324,9 @@ export function SalesEditor({
               title="Items"
               description={options.pricesIncludeTax ? "Prices include tax (Inventory Settings)." : "Prices exclude tax; the tax is added on top."}
             />
-            <CardBody className="space-y-4">
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_12rem_10.5rem]">
+            {/* Laid out by the box's own width: in the popup it is beside the totals, so narrower than the screen. */}
+            <CardBody className="@container space-y-4">
+              <div className="grid gap-3 @xl:grid-cols-[minmax(0,1fr)_11rem_9.5rem]">
                 <ProductSearch onPick={addProduct} warehouseId={header.warehouseId} />
                 <div>
                   <label htmlFor="warehouseId" className="sr-only">
@@ -362,8 +365,12 @@ export function SalesEditor({
                 </p>
               ) : (
                 <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
-                  <div className="hidden grid-cols-[minmax(0,1fr)_6.5rem_5.5rem_7rem_4.5rem_7.5rem_7rem_2rem] gap-2 px-3 py-2 text-xs font-medium tracking-wide text-gray-500 uppercase md:grid dark:text-gray-400">
-                    <span>Item</span>
+                  <div
+                    className={cn(
+                      "hidden gap-2 rounded-t-xl bg-gray-50 px-3 py-2 text-xs font-medium tracking-wide text-gray-500 uppercase @2xl:grid dark:bg-white/[0.03] dark:text-gray-400",
+                      lineColumns,
+                    )}
+                  >
                     <span>Unit</span>
                     <span className="text-right">Qty</span>
                     <span className="text-right">Price</span>
@@ -411,7 +418,7 @@ export function SalesEditor({
                     aria-checked={header.saleType === type}
                     onClick={() => set("saleType", type)}
                     className={cn(
-                      "rounded-md px-3 py-2 text-sm font-medium",
+                      "rounded-md px-3 py-1.5 text-sm font-medium",
                       header.saleType === type ? "bg-brand-500 text-white" : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5",
                     )}
                   >
@@ -427,11 +434,11 @@ export function SalesEditor({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="customerName">Walk-in name</Label>
-                    <Input id="customerName" className="h-10" value={header.customerName} maxLength={250} placeholder="Optional" onChange={(e) => set("customerName", e.target.value)} />
+                    <Input id="customerName" value={header.customerName} maxLength={250} placeholder="Optional" onChange={(e) => set("customerName", e.target.value)} />
                   </div>
                   <div>
                     <Label htmlFor="customerMobile">Mobile</Label>
-                    <Input id="customerMobile" className="h-10" value={header.customerMobile} maxLength={30} inputMode="tel" placeholder="Optional" onChange={(e) => set("customerMobile", e.target.value)} />
+                    <Input id="customerMobile" value={header.customerMobile} maxLength={30} inputMode="tel" placeholder="Optional" onChange={(e) => set("customerMobile", e.target.value)} />
                   </div>
                 </div>
               )}
@@ -458,7 +465,7 @@ export function SalesEditor({
                     Round
                   </button>
                   <div className="w-24">
-                    <Input id="roundOff" className="h-9 text-right" inputMode="decimal" value={header.roundOff} placeholder="0" onChange={(e) => set("roundOff", e.target.value)} />
+                    <Input id="roundOff" className="text-right" inputMode="decimal" value={header.roundOff} placeholder="0" onChange={(e) => set("roundOff", e.target.value)} />
                   </div>
                 </div>
               </div>
@@ -476,18 +483,18 @@ export function SalesEditor({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="paidAmount">Paid now</Label>
-                    <Input id="paidAmount" className="h-10" inputMode="decimal" value={header.paidAmount} placeholder="0" onChange={(e) => set("paidAmount", e.target.value)} />
+                    <Input id="paidAmount" inputMode="decimal" value={header.paidAmount} placeholder="0" onChange={(e) => set("paidAmount", e.target.value)} />
                   </div>
                   <div>
                     <Label htmlFor="dueDate">Due date</Label>
-                    <Input id="dueDate" className="h-10" type="date" value={header.dueDate} title={dueHint} onChange={(e) => set("dueDate", e.target.value)} />
+                    <Input id="dueDate" type="date" value={header.dueDate} title={dueHint} onChange={(e) => set("dueDate", e.target.value)} />
                   </div>
                 </div>
               )}
               {(!credit || paid > 0) && (
                 <div>
                   <Label htmlFor="paymentMethod">Paid by</Label>
-                  <Select id="paymentMethod" className="h-10" value={header.paymentMethod} onChange={(e) => set("paymentMethod", e.target.value)}>
+                  <Select id="paymentMethod" value={header.paymentMethod} onChange={(e) => set("paymentMethod", e.target.value)}>
                     {COUNTER_METHODS.map((m) => (
                       <option key={m} value={m}>
                         {salesLabel(m)}
@@ -502,7 +509,6 @@ export function SalesEditor({
                     <Label htmlFor="paymentProvider">{header.paymentMethod === "MobileWallet" ? "Wallet" : "Bank / card"}</Label>
                     <Input
                       id="paymentProvider"
-                      className="h-10"
                       value={header.paymentProvider}
                       maxLength={100}
                       placeholder={header.paymentMethod === "MobileWallet" ? "bKash, Nagad" : "e.g. DBBL"}
@@ -511,7 +517,7 @@ export function SalesEditor({
                   </div>
                   <div>
                     <Label htmlFor="paymentReferenceNo">Transaction ID</Label>
-                    <Input id="paymentReferenceNo" className="h-10" value={header.paymentReferenceNo} maxLength={100} onChange={(e) => set("paymentReferenceNo", e.target.value)} />
+                    <Input id="paymentReferenceNo" value={header.paymentReferenceNo} maxLength={100} onChange={(e) => set("paymentReferenceNo", e.target.value)} />
                   </div>
                 </div>
               )}
@@ -519,7 +525,7 @@ export function SalesEditor({
                 <div className="grid grid-cols-2 items-end gap-3">
                   <div>
                     <Label htmlFor="tendered">Cash received</Label>
-                    <Input id="tendered" className="h-10" inputMode="decimal" value={header.tendered} placeholder={formatAmount(total)} onChange={(e) => set("tendered", e.target.value)} />
+                    <Input id="tendered" inputMode="decimal" value={header.tendered} placeholder={formatAmount(total)} onChange={(e) => set("tendered", e.target.value)} />
                   </div>
                   <div className="pb-2 text-right">
                     <span className="block text-xs text-gray-500 dark:text-gray-400">Change</span>
@@ -614,7 +620,7 @@ function InlineAmount({ id, label, value, onChange }: { id: string; label: strin
         {label}
       </label>
       <div className="w-24 shrink-0">
-        <Input id={id} className="h-9 text-right" inputMode="decimal" value={value} placeholder="0" onChange={(e) => onChange(e.target.value)} />
+        <Input id={id} className="text-right" inputMode="decimal" value={value} placeholder="0" onChange={(e) => onChange(e.target.value)} />
       </div>
     </div>
   );
@@ -653,24 +659,34 @@ function SaleLineRow({
   if (factor !== 1 && baseQuantity > 0) hints.push({ text: `${formatQuantity(baseQuantity)} ${line.baseUnitCode}` });
   if (line.mrp !== null && pricePerBase > line.mrp + 0.0001) hints.push({ text: `above MRP ${formatAmount(line.mrp * factor)}`, warn: true });
   if (line.lastPurchaseCost > 0 && pricePerBase > 0 && pricePerBase < line.lastPurchaseCost) hints.push({ text: "below cost", warn: true });
+  const removeButton = (
+    <button type="button" aria-label={`Remove ${line.productName}`} onClick={onRemove} className="text-gray-400 hover:text-red-500">
+      <Trash2 className="size-4" aria-hidden />
+    </button>
+  );
 
   return (
-    <div className="space-y-2 px-3 py-3">
-      <div className="grid grid-cols-2 items-center gap-2 md:grid-cols-[minmax(0,1fr)_6.5rem_5.5rem_7rem_4.5rem_7.5rem_7rem_2rem]">
-        <div className="col-span-2 min-w-0 md:col-span-1">
-          <p className="truncate text-sm font-medium text-gray-800 dark:text-white/90">
-            <span className="mr-1.5 text-gray-400">{index + 1}.</span>
-            {line.productName}
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {line.productCode}
-            {hints.map((hint) => (
-              <span key={hint.text} className={hint.warn ? "text-amber-700 dark:text-amber-400" : undefined}>
-                {" · "}
-                {hint.text}
-              </span>
-            ))}
-          </p>
+    <div className="space-y-2 px-3 py-2.5">
+      <div className={cn("grid grid-cols-2 items-end gap-x-2 gap-y-2", lineColumns)}>
+        {/* The item gets the whole width, so its name and stock notes aren't squeezed beside the boxes. */}
+        <div className="col-span-full flex min-w-0 gap-2">
+          <span className="text-sm text-gray-400 tabular-nums">{index + 1}.</span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-gray-800 dark:text-white/90" title={line.productName}>
+              {line.productName}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {line.productCode}
+              {hints.map((hint) => (
+                <span key={hint.text} className={hint.warn ? "text-amber-700 dark:text-amber-400" : undefined}>
+                  {" · "}
+                  {hint.text}
+                </span>
+              ))}
+            </p>
+          </div>
+          {/* Narrow: here, so it doesn't take a row of its own; wide: at the end of the boxes. */}
+          <div className="@2xl:hidden">{removeButton}</div>
         </div>
         <div>
           <label htmlFor={id("unit")} className={rowLabel}>
@@ -678,7 +694,6 @@ function SaleLineRow({
           </label>
           <Select
             id={id("unit")}
-            className="h-10"
             value={line.unitId}
             disabled={serial}
             onChange={(e) => {
@@ -699,7 +714,7 @@ function SaleLineRow({
           </label>
           <Input
             id={id("qty")}
-            className="h-10 text-right"
+            className="text-right"
             inputMode="decimal"
             value={line.quantity}
             readOnly={serial}
@@ -712,19 +727,19 @@ function SaleLineRow({
           <label htmlFor={id("price")} className={rowLabel}>
             Price
           </label>
-          <Input id={id("price")} className="h-10 text-right" inputMode="decimal" value={line.unitPrice} onFocus={(e) => e.target.select()} onChange={(e) => onChange({ unitPrice: e.target.value })} />
+          <Input id={id("price")} className="text-right" inputMode="decimal" value={line.unitPrice} onFocus={(e) => e.target.select()} onChange={(e) => onChange({ unitPrice: e.target.value })} />
         </div>
         <div>
           <label htmlFor={id("disc")} className={rowLabel}>
             Discount %
           </label>
-          <Input id={id("disc")} className="h-10 text-right" inputMode="decimal" value={line.discountPercent} onFocus={(e) => e.target.select()} onChange={(e) => onChange({ discountPercent: e.target.value })} />
+          <Input id={id("disc")} className="text-right" inputMode="decimal" value={line.discountPercent} onFocus={(e) => e.target.select()} onChange={(e) => onChange({ discountPercent: e.target.value })} />
         </div>
         <div>
           <label htmlFor={id("tax")} className={rowLabel}>
             Tax
           </label>
-          <Select id={id("tax")} className="h-10" value={line.taxGroupId ?? ""} onChange={(e) => onChange({ taxGroupId: e.target.value ? Number(e.target.value) : null })}>
+          <Select id={id("tax")} value={line.taxGroupId ?? ""} onChange={(e) => onChange({ taxGroupId: e.target.value ? Number(e.target.value) : null })}>
             <option value="">No tax</option>
             {taxGroups
               .filter((g) => g.isActive || g.id === line.taxGroupId)
@@ -735,12 +750,11 @@ function SaleLineRow({
               ))}
           </Select>
         </div>
-        <div className="text-right text-sm font-semibold text-gray-800 tabular-nums md:pr-1 dark:text-white/90">{formatAmount(total)}</div>
-        <div className="text-right">
-          <button type="button" aria-label={`Remove ${line.productName}`} onClick={onRemove} className="text-gray-400 hover:text-red-500">
-            <Trash2 className="size-4" aria-hidden />
-          </button>
+        <div>
+          <span className={cn(rowLabel, "text-right")}>Total</span>
+          <p className="flex h-9 items-center justify-end text-sm font-semibold text-gray-800 tabular-nums dark:text-white/90">{formatAmount(total)}</p>
         </div>
+        <div className="hidden h-9 items-center justify-end @2xl:flex">{removeButton}</div>
       </div>
 
       {line.productType === "Stock" && line.trackingType === "Batch" && (
@@ -776,11 +790,11 @@ function SaleBatchSelect({
     warehouseId ? `/api/lookup/batches?productId=${productId}&warehouseId=${warehouseId}` : null,
   );
   return (
-    <div className="flex items-center gap-2 md:max-w-md">
+    <div className="flex max-w-md items-center gap-2">
       <label htmlFor={id} className="shrink-0 text-xs font-medium text-gray-700 dark:text-gray-300">
         Batch
       </label>
-      <Select id={id} className="h-9 text-sm" value={value ?? ""} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}>
+      <Select id={id} value={value ?? ""} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}>
         <option value="">{loading ? "Loading batches…" : batches.length ? "Auto: first to expire" : "No batch in stock here"}</option>
         {batches.map((b) => (
           <option key={b.batchId} value={b.batchId}>

@@ -128,7 +128,7 @@ async function FindSale({ search }: { search: string | undefined }) {
         <Form action={basePath} className="flex flex-wrap items-center gap-2">
           <div className="relative w-full sm:w-80">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" aria-hidden />
-            <Input name="q" defaultValue={search} placeholder="Memo no or customer mobile" aria-label="Memo no or customer mobile" className="h-10 pl-9" />
+            <Input name="q" defaultValue={search} placeholder="Memo no or customer mobile" aria-label="Memo no or customer mobile" className="pl-9" />
           </div>
           <Button type="submit" size="sm">
             Find sale

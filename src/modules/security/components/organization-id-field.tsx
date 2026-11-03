@@ -21,7 +21,7 @@ export function OrganizationIdField({ defaultValue }: { defaultValue?: string })
         spellCheck={false}
         className="font-mono"
       />
-      <CopyButton value={value.trim()} className="h-11 px-3" />
+      <CopyButton value={value.trim()} className="h-9 px-3" />
     </div>
   );
 }

@@ -17,6 +17,7 @@ import { formatNumber } from "@/core/utils/format";
 import { canManageAccounting, canPostVouchers } from "@/modules/accounting/access";
 import { accountingApi } from "@/modules/accounting/api";
 import { VoucherTable } from "@/modules/accounting/components/voucher-table";
+import { VoucherViewModal } from "@/modules/accounting/components/voucher-view";
 import { getVoucherTypes } from "@/modules/accounting/queries";
 import { ACCOUNTING_MANAGE_PERMISSION, VOUCHER_STATUSES } from "@/modules/accounting/types";
 import { dateParam, idParam } from "@/modules/inventory/components/reports/report-parts";
@@ -50,12 +51,41 @@ export default function VouchersPage({ searchParams }: Props) {
           <VoucherList searchParams={searchParams} />
         </Suspense>
       </Card>
+      <Suspense>
+        <VoucherPopup searchParams={searchParams} />
+      </Suspense>
     </>
   );
 }
 
+type Query = Awaited<Props["searchParams"]>;
+
+/** The list's own parameters (search, filters, page) as they are in the address, without the popup's. */
+function listParams(query: Query) {
+  const params = new URLSearchParams();
+  for (const key of ["q", "type", "status", "from", "to", "offset"]) {
+    const value = firstParam(query[key]);
+    if (value) params.set(key, value);
+  }
+  return params;
+}
+
+/** A voucher clicked in the list (`?view=<id>`) opens in a popup over it; closing it keeps the list as it was. */
+async function VoucherPopup({ searchParams }: Pick<Props, "searchParams">) {
+  const query = await searchParams;
+  const id = idParam(query.view);
+  if (!id) return null;
+  const params = listParams(query);
+  return <VoucherViewModal id={id} closeHref={params.size ? `${basePath}?${params}` : basePath} />;
+}
+
 async function VoucherList({ searchParams }: Pick<Props, "searchParams">) {
   const query = await searchParams;
+  const viewHref = (id: number) => {
+    const params = listParams(query);
+    params.set("view", String(id));
+    return `${basePath}?${params}`;
+  };
   const search = firstParam(query.q);
   const voucherTypeId = idParam(query.type);
   const statusParam = firstParam(query.status);
@@ -123,6 +153,7 @@ async function VoucherList({ searchParams }: Pick<Props, "searchParams">) {
           <VoucherTable
             vouchers={result.data.items}
             manage={{ canManage: canManageAccounting(session), canPost: canPostVouchers(session) }}
+            viewHref={viewHref}
           />
           <Pagination
             basePath={basePath}

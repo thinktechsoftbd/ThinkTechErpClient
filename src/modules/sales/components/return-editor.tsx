@@ -379,7 +379,6 @@ export function ReturnEditor({
                   <Label htmlFor="returnDate">Return date</Label>
                   <Input
                     id="returnDate"
-                    className="h-10"
                     type="date"
                     min={sale.invoiceDate}
                     value={header.date}
@@ -389,7 +388,7 @@ export function ReturnEditor({
                 </div>
                 <div>
                   <Label htmlFor="reason">Reason</Label>
-                  <Select id="reason" className="h-10" value={header.reason} onChange={(e) => set("reason", e.target.value)}>
+                  <Select id="reason" value={header.reason} onChange={(e) => set("reason", e.target.value)}>
                     {RETURN_REASONS.map((reason) => (
                       <option key={reason} value={reason}>
                         {salesLabel(reason)}
@@ -402,7 +401,6 @@ export function ReturnEditor({
                 <Label htmlFor="warehouseId">Goods go back to</Label>
                 <Select
                   id="warehouseId"
-                  className="h-10"
                   value={header.warehouseId}
                   onChange={(e) => set("warehouseId", e.target.value ? Number(e.target.value) : sale.warehouseId)}
                 >
@@ -453,7 +451,7 @@ export function ReturnEditor({
                 <>
                   <div>
                     <Label htmlFor="refundMethod">Refunded by</Label>
-                    <Select id="refundMethod" className="h-10" value={header.refundMethod} onChange={(e) => set("refundMethod", e.target.value)}>
+                    <Select id="refundMethod" value={header.refundMethod} onChange={(e) => set("refundMethod", e.target.value)}>
                       {COUNTER_METHODS.map((method) => (
                         <option key={method} value={method}>
                           {salesLabel(method)}
@@ -467,7 +465,6 @@ export function ReturnEditor({
                         <Label htmlFor="refundProvider">{header.refundMethod === "MobileWallet" ? "Wallet" : "Bank / card"}</Label>
                         <Input
                           id="refundProvider"
-                          className="h-10"
                           value={header.refundProvider}
                           maxLength={100}
                           placeholder={header.refundMethod === "MobileWallet" ? "bKash, Nagad" : "e.g. DBBL"}
@@ -478,7 +475,6 @@ export function ReturnEditor({
                         <Label htmlFor="refundReferenceNo">Transaction ID</Label>
                         <Input
                           id="refundReferenceNo"
-                          className="h-10"
                           value={header.refundReferenceNo}
                           maxLength={100}
                           onChange={(e) => set("refundReferenceNo", e.target.value)}
@@ -653,7 +649,7 @@ function ReturnLineRow({
           </label>
           <Input
             id={id("qty")}
-            className="h-10 text-right"
+            className="text-right"
             inputMode="decimal"
             placeholder="0"
             value={state.quantity}

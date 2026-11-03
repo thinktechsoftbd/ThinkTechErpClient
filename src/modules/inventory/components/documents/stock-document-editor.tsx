@@ -676,7 +676,7 @@ function LineRow({
             <Label htmlFor={id("direction")}>Change</Label>
             <Select
               id={id("direction")}
-              className={cn("h-10", line.direction === "remove" ? "text-red-600 dark:text-red-400" : "text-green-700 dark:text-green-400")}
+              className={cn(line.direction === "remove" ? "text-red-600 dark:text-red-400" : "text-green-700 dark:text-green-400")}
               value={line.direction}
               onChange={(e) => onChange({ direction: e.target.value as "add" | "remove" })}
             >
@@ -687,7 +687,7 @@ function LineRow({
         )}
         <div>
           <Label htmlFor={id("unit")}>Unit</Label>
-          <Select id={id("unit")} className="h-10" value={line.unitId} onChange={(e) => onUnit(Number(e.target.value))}>
+          <Select id={id("unit")} value={line.unitId} onChange={(e) => onUnit(Number(e.target.value))}>
             {line.units.map((u) => (
               <option key={u.unitId} value={u.unitId}>
                 {u.unitCode}
@@ -700,7 +700,6 @@ function LineRow({
           <Label htmlFor={id("qty")}>Quantity</Label>
           <Input
             id={id("qty")}
-            className="h-10"
             inputMode="decimal"
             value={line.quantity}
             placeholder="0"
@@ -715,7 +714,6 @@ function LineRow({
             </Label>
             <Input
               id={id("cost")}
-              className="h-10"
               inputMode="decimal"
               value={line.unitCost}
               placeholder={mode === "adjustment" ? "Average" : "0.00"}
@@ -725,7 +723,7 @@ function LineRow({
         )}
         <div>
           <Label htmlFor={id("note")}>Note</Label>
-          <Input id={id("note")} className="h-10" value={line.remarks} maxLength={500} onChange={(e) => onChange({ remarks: e.target.value })} />
+          <Input id={id("note")} value={line.remarks} maxLength={500} onChange={(e) => onChange({ remarks: e.target.value })} />
         </div>
         {showValue && (
           <div className="text-right">
@@ -762,15 +760,15 @@ function LineRow({
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
                 <Label htmlFor={id("batch")}>Batch / lot no *</Label>
-                <Input id={id("batch")} className="h-10" value={line.batchNo} maxLength={60} onChange={(e) => onChange({ batchNo: e.target.value })} />
+                <Input id={id("batch")} value={line.batchNo} maxLength={60} onChange={(e) => onChange({ batchNo: e.target.value })} />
               </div>
               <div>
                 <Label htmlFor={id("mfg")}>Manufactured</Label>
-                <Input id={id("mfg")} className="h-10" type="date" value={line.manufactureDate} onChange={(e) => onChange({ manufactureDate: e.target.value })} />
+                <Input id={id("mfg")} type="date" value={line.manufactureDate} onChange={(e) => onChange({ manufactureDate: e.target.value })} />
               </div>
               <div>
                 <Label htmlFor={id("exp")}>Expiry{line.hasExpiry ? " *" : ""}</Label>
-                <Input id={id("exp")} className="h-10" type="date" value={line.expiryDate} onChange={(e) => onChange({ expiryDate: e.target.value })} />
+                <Input id={id("exp")} type="date" value={line.expiryDate} onChange={(e) => onChange({ expiryDate: e.target.value })} />
               </div>
             </div>
           ) : (
@@ -856,7 +854,6 @@ function StockBatchSelect({
       <Label htmlFor={id}>Batch *</Label>
       <Select
         id={id}
-        className="h-10"
         value={value ?? ""}
         onChange={(e) => {
           const batchId = e.target.value ? Number(e.target.value) : null;

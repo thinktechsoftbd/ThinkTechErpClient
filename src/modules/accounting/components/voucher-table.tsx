@@ -15,10 +15,13 @@ export function VoucherTable({
   vouchers,
   showType = true,
   manage,
+  viewHref,
 }: {
   vouchers: Voucher[];
   showType?: boolean;
   manage?: { canManage: boolean; canPost: boolean };
+  /** Where a ref. number goes, e.g. the list with the voucher in a popup; by default the voucher's page. */
+  viewHref?: (id: number) => string;
 }) {
   const selectable = !!manage?.canPost;
   const withActions = !!manage && (manage.canManage || manage.canPost);
@@ -51,8 +54,11 @@ export function VoucherTable({
               </TD>
             )}
             <TD>
+              {/* The popup adds no history entry (closing it replaces the address too), and the list keeps its scroll. */}
               <Link
-                href={`/accounting/vouchers/${voucher.id}`}
+                href={viewHref ? viewHref(voucher.id) : `/accounting/vouchers/${voucher.id}`}
+                replace={!!viewHref}
+                scroll={!viewHref}
                 className="font-medium whitespace-nowrap text-brand-500 tabular-nums hover:underline"
               >
                 {voucher.voucherRefNo}

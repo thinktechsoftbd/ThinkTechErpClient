@@ -967,7 +967,7 @@ function LineRow({
       <div className={cn("mt-3 grid gap-3 sm:grid-cols-3", hasTax ? "lg:grid-cols-6" : "lg:grid-cols-5")}>
         <div>
           <Label htmlFor={id("unit")}>Unit</Label>
-          <Select id={id("unit")} className="h-10" value={line.unitId} disabled={lockedProduct} onChange={(e) => onUnit(Number(e.target.value))}>
+          <Select id={id("unit")} value={line.unitId} disabled={lockedProduct} onChange={(e) => onUnit(Number(e.target.value))}>
             {line.units.map((u) => (
               <option key={u.unitId} value={u.unitId}>
                 {u.unitCode}
@@ -978,20 +978,20 @@ function LineRow({
         </div>
         <div>
           <Label htmlFor={id("qty")}>Quantity</Label>
-          <Input id={id("qty")} className="h-10" inputMode="decimal" value={line.quantity} onChange={(e) => onChange({ quantity: e.target.value })} />
+          <Input id={id("qty")} inputMode="decimal" value={line.quantity} onChange={(e) => onChange({ quantity: e.target.value })} />
         </div>
         <div>
           <Label htmlFor={id("price")}>Price / unit</Label>
-          <Input id={id("price")} className="h-10" inputMode="decimal" value={line.unitPrice} onChange={(e) => onChange({ unitPrice: e.target.value })} />
+          <Input id={id("price")} inputMode="decimal" value={line.unitPrice} onChange={(e) => onChange({ unitPrice: e.target.value })} />
         </div>
         <div>
           <Label htmlFor={id("discount")}>Discount %</Label>
-          <Input id={id("discount")} className="h-10" inputMode="decimal" value={line.discountPercent} onChange={(e) => onChange({ discountPercent: e.target.value })} />
+          <Input id={id("discount")} inputMode="decimal" value={line.discountPercent} onChange={(e) => onChange({ discountPercent: e.target.value })} />
         </div>
         {hasTax && (
           <div>
             <Label htmlFor={id("tax")}>Tax</Label>
-            <Select id={id("tax")} className="h-10" value={line.taxGroupId ?? ""} onChange={(e) => onChange({ taxGroupId: e.target.value ? Number(e.target.value) : null })}>
+            <Select id={id("tax")} value={line.taxGroupId ?? ""} onChange={(e) => onChange({ taxGroupId: e.target.value ? Number(e.target.value) : null })}>
               <option value="">No tax</option>
               {taxGroups
                 .filter((g) => g.isActive || g.id === line.taxGroupId)
@@ -1013,15 +1013,15 @@ function LineRow({
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           <div>
             <Label htmlFor={id("batch")}>Batch / lot no *</Label>
-            <Input id={id("batch")} className="h-10" value={line.batchNo} maxLength={60} onChange={(e) => onChange({ batchNo: e.target.value })} />
+            <Input id={id("batch")} value={line.batchNo} maxLength={60} onChange={(e) => onChange({ batchNo: e.target.value })} />
           </div>
           <div>
             <Label htmlFor={id("mfg")}>Manufactured</Label>
-            <Input id={id("mfg")} className="h-10" type="date" value={line.manufactureDate} onChange={(e) => onChange({ manufactureDate: e.target.value })} />
+            <Input id={id("mfg")} type="date" value={line.manufactureDate} onChange={(e) => onChange({ manufactureDate: e.target.value })} />
           </div>
           <div>
             <Label htmlFor={id("exp")}>Expiry{line.hasExpiry ? " *" : ""}</Label>
-            <Input id={id("exp")} className="h-10" type="date" value={line.expiryDate} onChange={(e) => onChange({ expiryDate: e.target.value })} />
+            <Input id={id("exp")} type="date" value={line.expiryDate} onChange={(e) => onChange({ expiryDate: e.target.value })} />
           </div>
         </div>
       )}
@@ -1092,7 +1092,7 @@ export function BatchSelect({
   return (
     <div>
       <Label htmlFor={id}>Batch *</Label>
-      <Select id={id} className="h-10" value={value ?? ""} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}>
+      <Select id={id} value={value ?? ""} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}>
         <option value="">{loading ? "Loading batches…" : batches.length ? "Choose the batch" : "No batch in stock here"}</option>
         {batches.map((b) => (
           <option key={b.batchId} value={b.batchId}>

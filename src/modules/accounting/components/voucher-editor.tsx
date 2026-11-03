@@ -325,18 +325,18 @@ export function VoucherEditor({
             </button>
           }
         />
-        {/* Tighter cells and modest minimum widths, so the entries fit the popup (about 1200px) without a
-            sideways scrollbar; wider screens give the extra room to the columns. */}
+        {/* Tighter cells and fixed widths, so the entries fit the popup (about 1200px) without a sideways
+            scrollbar; the ledger head (w-full) takes the rest, so its code and name show. */}
         <Table className="[&_td]:px-2.5 [&_th]:px-2.5 [&_td:first-child]:pl-5 [&_th:first-child]:pl-5">
           <THead>
             <tr>
               <TH className="w-8">#</TH>
-              <TH className="min-w-56">Ledger head</TH>
-              <TH className="min-w-36">Supplier / customer</TH>
-              <TH className="min-w-44">Currency · rate</TH>
-              <TH className="min-w-32">Line narration</TH>
-              <TH className="min-w-24 text-right">Debit</TH>
-              <TH className="min-w-24 text-right">Credit</TH>
+              <TH className="w-full min-w-64">Ledger head</TH>
+              <TH className="w-44 min-w-44">Supplier / customer</TH>
+              <TH className="w-44 min-w-44">Currency · rate</TH>
+              <TH className="w-36 min-w-32">Line narration</TH>
+              <TH className="w-24 min-w-24 text-right">Debit</TH>
+              <TH className="w-24 min-w-24 text-right">Credit</TH>
               <TH className="w-10">
                 <span className="sr-only">Remove</span>
               </TH>
@@ -352,7 +352,6 @@ export function VoucherEditor({
                     <LedgerHeadPicker
                       value={line.account}
                       aria-label={`Line ${index + 1} ledger head`}
-                      className="h-10"
                       onChange={(head) => update(line.key, { account: head })}
                     />
                   </TD>
@@ -362,17 +361,18 @@ export function VoucherEditor({
                       placeholder="None"
                       value={line.partyId}
                       aria-label={`Line ${index + 1} supplier or customer`}
-                      className="h-10"
                       onChange={(event) => update(line.key, { partyId: event.target.value })}
                     />
                   </TD>
                   <TD>
-                    {/* Select and Input are w-full, so the grid sizes them. */}
-                    <div className="grid grid-cols-[7rem_minmax(0,1fr)] gap-2">
+                    {/* Select and Input are w-full, so the grid sizes them. The boxes here and the number boxes
+                        below are tighter with pl-2 / pr-2 (px-2 wouldn't win over px-3: cn doesn't merge classes);
+                        the currency box keeps room for its name beside the dropdown arrow. */}
+                    <div className="grid grid-cols-[5.25rem_minmax(0,1fr)] gap-2">
                       <Select
+                        className="pl-2"
                         value={line.currencyId}
                         aria-label={`Line ${index + 1} currency`}
-                        className="h-10"
                         onChange={(event) =>
                           update(line.key, {
                             currencyId: event.target.value,
@@ -393,7 +393,7 @@ export function VoucherEditor({
                         readOnly={isLocal}
                         title={isLocal ? "BDT lines are at rate 1" : "BDT per unit of the currency"}
                         aria-label={`Line ${index + 1} local exchange rate`}
-                        className={cn("h-10 text-right tabular-nums", isLocal && "text-gray-400")}
+                        className={cn("pl-2 pr-2 text-right tabular-nums", isLocal && "text-gray-400")}
                         onChange={(event) => update(line.key, { rate: event.target.value })}
                       />
                     </div>
@@ -404,7 +404,6 @@ export function VoucherEditor({
                       maxLength={300}
                       placeholder="Optional"
                       aria-label={`Line ${index + 1} narration`}
-                      className="h-10"
                       onChange={(event) => update(line.key, { narration: event.target.value })}
                     />
                   </TD>
@@ -413,7 +412,7 @@ export function VoucherEditor({
                       value={line.debit}
                       inputMode="decimal"
                       aria-label={`Line ${index + 1} debit`}
-                      className="h-10 text-right tabular-nums"
+                      className="pl-2 pr-2 text-right tabular-nums"
                       onChange={(event) =>
                         update(line.key, { debit: event.target.value, ...(event.target.value.trim() ? { credit: "" } : {}) })
                       }
@@ -424,7 +423,7 @@ export function VoucherEditor({
                       value={line.credit}
                       inputMode="decimal"
                       aria-label={`Line ${index + 1} credit`}
-                      className="h-10 text-right tabular-nums"
+                      className="pl-2 pr-2 text-right tabular-nums"
                       onChange={(event) =>
                         update(line.key, { credit: event.target.value, ...(event.target.value.trim() ? { debit: "" } : {}) })
                       }

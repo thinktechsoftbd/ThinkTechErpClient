@@ -223,11 +223,11 @@ function QuickAddCustomer({
       <p className="text-sm font-medium text-gray-800 dark:text-white/90">New customer</p>
       <div>
         <Label htmlFor="quickCustomerName">Name *</Label>
-        <Input id="quickCustomerName" className="h-10" value={name} maxLength={250} autoFocus onChange={(e) => setName(e.target.value)} />
+        <Input id="quickCustomerName" value={name} maxLength={250} autoFocus onChange={(e) => setName(e.target.value)} />
       </div>
       <div>
         <Label htmlFor="quickCustomerMobile">Mobile</Label>
-        <Input id="quickCustomerMobile" className="h-10" value={mobile} maxLength={30} inputMode="tel" onChange={(e) => setMobile(e.target.value)} />
+        <Input id="quickCustomerMobile" value={mobile} maxLength={30} inputMode="tel" onChange={(e) => setMobile(e.target.value)} />
       </div>
       <p className="text-xs text-gray-500 dark:text-gray-400">Code, terms and credit limit can be set later on the Customers page.</p>
       {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}

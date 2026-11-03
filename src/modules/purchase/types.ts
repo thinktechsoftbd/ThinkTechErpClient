@@ -117,6 +117,40 @@ export type TaxGroupUpsertRequest = {
   rates: { taxRateId: number; isCompound: boolean }[];
 };
 
+/**
+ * Where money is paid from or received into (Cash, a bank, bKash, ...), with the ledger head each kind of payment
+ * posts to (GET /api/inventory/payment-sources). Shared by every organization, like the chart of accounts.
+ */
+export type PaymentSource = {
+  id: number;
+  objectId: number;
+  nameEn: string;
+  nameLocal: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string | null;
+  lines: PaymentSourceLine[];
+};
+
+export type PaymentSourceLine = {
+  id: number;
+  paymentFor: string;
+  /** The ledger head: an acc_sub_class id. */
+  accSubClassId: number;
+  accountCode: string;
+  accountName: string;
+  /** "Map class/Main class/Account class/Parent class". */
+  accountPath: string | null;
+};
+
+export type PaymentSourceUpsertRequest = {
+  nameEn: string;
+  nameLocal: string | null;
+  isActive: boolean;
+  /** Lines with an id are kept and updated, new ones (no id) added; lines left out are deleted. */
+  lines: { id: number | null; paymentFor: string; accSubClassId: number }[];
+};
+
 // ---- Documents
 
 /** A line as the user enters it; quantity and price are in unitId. */

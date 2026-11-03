@@ -7,9 +7,15 @@ import { actionError, actionSuccess, type ActionState } from "@/core/forms/actio
 import { parseDecimal } from "@/core/utils/number";
 import { purchaseApi } from "../api";
 import { purchaseModule } from "../module";
-import { TAX_TYPES, type SupplierUpsertRequest, type TaxGroupUpsertRequest, type TaxRateUpsertRequest } from "../types";
+import {
+  TAX_TYPES,
+  type PaymentSourceUpsertRequest,
+  type SupplierUpsertRequest,
+  type TaxGroupUpsertRequest,
+  type TaxRateUpsertRequest,
+} from "../types";
 
-// Save and delete Server Actions for the Purchase setup lists (suppliers, tax rates, tax groups).
+// Save and delete Server Actions for the Purchase setup lists (suppliers, tax rates, tax groups, payment sources).
 // Field limits mirror the API's request models so most mistakes are caught before the round trip.
 
 type FieldErrors = Record<string, string>;
@@ -278,4 +284,75 @@ export async function deleteTaxGroupAction(id: number): Promise<ActionState> {
   }
   refresh();
   return actionSuccess("Tax group deleted.");
+}
+
+// ---- Payment sources
+
+/** The lines posted as JSON in the hidden "lines" field: what each payment is for and its ledger head. */
+function readPaymentSourceLines(formData: FormData, fieldErrors: FieldErrors): PaymentSourceUpsertRequest["lines"] {
+  const raw = formData.get("lines");
+  if (typeof raw !== "string" || !raw.trim()) return [];
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    parsed = null;
+  }
+  if (!Array.isArray(parsed)) {
+    fieldErrors.lines = "The lines couldn't be read. Reload the page and try again.";
+    return [];
+  }
+
+  const lines: PaymentSourceUpsertRequest["lines"] = [];
+  const seen = new Set<string>();
+  for (const [index, item] of (parsed as { id?: unknown; paymentFor?: unknown; accSubClassId?: unknown }[]).entries()) {
+    const label = `Line ${index + 1}`;
+    const id = item?.id === null || item?.id === undefined ? null : Number(item.id);
+    const paymentFor = typeof item?.paymentFor === "string" ? item.paymentFor.trim() : "";
+    const accSubClassId = Number(item?.accSubClassId);
+    if (id !== null && (!Number.isSafeInteger(id) || id <= 0)) fieldErrors.lines = `${label} is not valid. Remove it and add it again.`;
+    else if (!paymentFor) fieldErrors.lines = `${label}: enter what the payment is for.`;
+    else if (paymentFor.length > 150) fieldErrors.lines = `${label}: "payment for" is limited to 150 characters.`;
+    else if (seen.has(paymentFor.toLowerCase())) fieldErrors.lines = `${label}: "${paymentFor}" is listed twice.`;
+    else if (!Number.isSafeInteger(accSubClassId) || accSubClassId <= 0) fieldErrors.lines = `${label}: choose the ledger head.`;
+    else {
+      seen.add(paymentFor.toLowerCase());
+      lines.push({ id, paymentFor, accSubClassId });
+    }
+  }
+  return lines;
+}
+
+/** Creates (id = null) or updates a payment source with its lines. */
+export async function savePaymentSourceAction(id: number | null, _previous: ActionState, formData: FormData): Promise<ActionState> {
+  const fieldErrors: FieldErrors = {};
+  const body: PaymentSourceUpsertRequest = {
+    nameEn: requiredText(formData, "nameEn", 150, fieldErrors),
+    nameLocal: text(formData, "nameLocal", 150, fieldErrors),
+    isActive: checked(formData, "isActive"),
+    lines: readPaymentSourceLines(formData, fieldErrors),
+  };
+  if (hasErrors(fieldErrors)) return invalid(fieldErrors);
+
+  try {
+    await requireModuleAccess(purchaseModule);
+    if (id === null) await purchaseApi.paymentSources.create(body);
+    else await purchaseApi.paymentSources.update(id, body);
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess(id === null ? "Payment source created." : "Payment source saved.");
+}
+
+export async function deletePaymentSourceAction(id: number): Promise<ActionState> {
+  try {
+    await requireModuleAccess(purchaseModule);
+    await purchaseApi.paymentSources.remove(id);
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess("Payment source deleted.");
 }

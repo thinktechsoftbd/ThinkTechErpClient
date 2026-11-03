@@ -6,6 +6,8 @@ import type {
   GoodsReceipt,
   GoodsReceiptUpsertRequest,
   OpenPurchaseInvoice,
+  PaymentSource,
+  PaymentSourceUpsertRequest,
   PurchaseByProductRow,
   PurchaseInvoice,
   PurchaseInvoiceUpsertRequest,
@@ -79,6 +81,15 @@ export const purchaseApi = {
   },
   taxRates: crud<TaxRate, TaxRateUpsertRequest>("tax-rates"),
   taxGroups: crud<TaxGroup, TaxGroupUpsertRequest>("tax-groups"),
+  /** Shared by every organization; the API keeps them under /api/inventory, for inventory and purchase alike. */
+  paymentSources: {
+    list: (query: ListQuery) => apiFetch<PagedResult<PaymentSource>>("/api/inventory/payment-sources", { query }),
+    create: (body: PaymentSourceUpsertRequest) =>
+      apiFetch<PaymentSource>("/api/inventory/payment-sources", { method: "POST", body }),
+    update: (id: number, body: PaymentSourceUpsertRequest) =>
+      apiFetch<PaymentSource>(`/api/inventory/payment-sources/${id}`, { method: "PUT", body }),
+    remove: (id: number) => apiFetch<void>(`/api/inventory/payment-sources/${id}`, { method: "DELETE" }),
+  },
 
   invoices: documents<PurchaseInvoice, PurchaseInvoiceUpsertRequest>("invoices"),
   orders: documents<PurchaseOrder, PurchaseOrderUpsertRequest>("orders"),

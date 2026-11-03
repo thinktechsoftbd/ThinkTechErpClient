@@ -16,6 +16,7 @@ export const purchaseModule = defineModule({
     { label: "Suppliers", href: "/purchase/suppliers" },
     { label: "Tax Rates", href: "/purchase/tax-rates" },
     { label: "Tax Groups", href: "/purchase/tax-groups" },
+    { label: "Payment Sources", href: "/purchase/payment-sources" },
     { label: "Purchase Invoices", href: "/purchase/invoices" },
     { label: "Purchase Orders", href: "/purchase/orders" },
     { label: "Goods Receipts", href: "/purchase/goods-receipts" },

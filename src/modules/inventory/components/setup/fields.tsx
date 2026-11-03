@@ -1,4 +1,6 @@
 import { Checkbox, Field, Input, Select, Textarea } from "@/core/forms/fields";
+import { LedgerHeadField } from "@/modules/accounting/components/ledger-head-picker";
+import { mappedLedgerHead } from "@/modules/accounting/components/pickers";
 import { UNIT_TYPES, WAREHOUSE_TYPES, type Brand, type Category, type Unit, type Warehouse } from "../../types";
 
 /** Readable warehouse types: a Store sells (shop/outlet), a Warehouse holds stock (godown). */
@@ -86,6 +88,9 @@ export function CategoryFields({
           <Input id="sortOrder" name="sortOrder" inputMode="numeric" defaultValue={String(value?.sortOrder ?? 0)} />
         </Field>
       </div>
+      <Field label="Ledger head" name="accSubClassId" hint="Optional. The chart of accounts head (sub class) mapped to this category.">
+        <LedgerHeadField id="accSubClassId" name="accSubClassId" defaultValue={value ? mappedLedgerHead(value) : null} />
+      </Field>
       <Checkbox name="isActive" defaultChecked={value?.isActive ?? true} label="Active (shown in pickers)" />
     </>
   );

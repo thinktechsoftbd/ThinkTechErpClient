@@ -50,6 +50,11 @@ export type Category = {
   sortOrder: number;
   isActive: boolean;
   productCount: number;
+  /** The mapped ledger head (an acc_sub_class id), if any, with its code, name and class path. */
+  accSubClassId: number | null;
+  ledgerHeadCode: string | null;
+  ledgerHeadName: string | null;
+  ledgerHeadPath: string | null;
   createdAt: string;
   updatedAt: string | null;
 };
@@ -61,6 +66,7 @@ export type CategoryUpsertRequest = {
   nameLocal: string | null;
   sortOrder: number;
   isActive: boolean;
+  accSubClassId: number | null;
 };
 
 export type Brand = {
@@ -576,3 +582,23 @@ export const LABELS: Record<string, string> = {
 };
 
 export const label = (value: string | null | undefined) => (value ? (LABELS[value] ?? value) : "—");
+
+// Payment sources (public.inv_payment_source_h with its lines in inv_payment_source_d): where money
+// is paid from or received into (Cash, a bank, bKash, ...), each line posting to a ledger head.
+// Shared by every organization, like the chart of accounts.
+export type PaymentSourceLine = {
+  id: number;
+  paymentFor: string;
+  accSubClassId: number;
+  accountCode: string;
+  accountName: string;
+  accountPath: string | null;
+};
+
+export type PaymentSource = {
+  id: number;
+  nameEn: string;
+  nameLocal: string | null;
+  isActive: boolean;
+  lines: PaymentSourceLine[];
+};

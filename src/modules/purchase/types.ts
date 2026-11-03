@@ -58,13 +58,27 @@ export type Supplier = {
   isCustomer: boolean;
   /** Owed to the supplier now (+) or advanced (-), base currency. */
   balance: number;
+  /** The mapped ledger head (an acc_sub_class id), if any, with its code, name and class path. */
+  accSubClassId: number | null;
+  ledgerHeadCode: string | null;
+  ledgerHeadName: string | null;
+  ledgerHeadPath: string | null;
   createdAt: string;
   updatedAt: string | null;
 };
 
 export type SupplierUpsertRequest = Omit<
   Supplier,
-  "id" | "objectId" | "supplierGroup" | "currency" | "balance" | "createdAt" | "updatedAt"
+  | "id"
+  | "objectId"
+  | "supplierGroup"
+  | "currency"
+  | "balance"
+  | "ledgerHeadCode"
+  | "ledgerHeadName"
+  | "ledgerHeadPath"
+  | "createdAt"
+  | "updatedAt"
 >;
 
 export type SupplierOption = {
@@ -281,6 +295,11 @@ export type PurchaseInvoice = {
   paymentMethod: string | null;
   paymentProvider: string | null;
   paymentReferenceNo: string | null;
+  /** The chosen payment source line (inv_payment_source_d). */
+  invPaymentSourceDId: number | null;
+  paymentSourceId: number | null;
+  paymentSourceName: string | null;
+  paymentSourceType: string | null;
   settledAmount: number;
   dueAmount: number;
   status: "Draft" | "Posted" | "Cancelled";
@@ -317,6 +336,8 @@ export type PurchaseInvoiceUpsertRequest = {
   paymentMethod: string | null;
   paymentProvider: string | null;
   paymentReferenceNo: string | null;
+  /** Required: the payment source line (inv_payment_source_d). */
+  invPaymentSourceDId: number | null;
   remarks: string | null;
   lines: PurchaseLineRequest[];
   charges: PurchaseChargeRequest[];

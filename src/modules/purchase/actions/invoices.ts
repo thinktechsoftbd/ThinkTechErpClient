@@ -23,6 +23,8 @@ export async function saveInvoiceAction(id: number | null, _previous: ActionStat
     });
   if (body.receivesStock && !body.warehouseId)
     return actionError("Choose the warehouse the stock goes into.", { warehouseId: "Required." });
+  if (!body.invPaymentSourceDId)
+    return actionError("Choose the payment source and its type.", { invPaymentSourceDId: "Required." });
 
   const target = popupReturn(formData, "/purchase/invoices", paths);
   return saveDocument(

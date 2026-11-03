@@ -5,6 +5,7 @@ import { FormModalButton, rowActionClass } from "@/core/crud/form-modal-button";
 import { StatusBadge } from "@/core/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatAmount } from "@/core/utils/number";
+import { MappedLedgerHead } from "@/modules/accounting/components/pickers";
 import type { LookupOption } from "@/modules/settings/types";
 import { deleteSupplierAction, saveSupplierAction } from "../../actions/setup";
 import type { Supplier } from "../../types";
@@ -54,6 +55,7 @@ export function SuppliersTable({
           <TH>Code</TH>
           <TH>Supplier</TH>
           <TH>Group</TH>
+          <TH>Ledger head</TH>
           <TH>Terms</TH>
           <TH className="text-right">Balance</TH>
           <TH>Status</TH>
@@ -79,6 +81,9 @@ export function SuppliersTable({
               )}
             </TD>
             <TD className={row.supplierGroup ? undefined : muted}>{row.supplierGroup ?? "—"}</TD>
+            <TD>
+              <MappedLedgerHead row={row} />
+            </TD>
             <TD className="whitespace-nowrap">
               {paymentTerms(row.paymentTermsDays)}
               {row.creditLimit !== null && <span className={`block text-xs ${muted}`}>limit {formatAmount(row.creditLimit)}</span>}

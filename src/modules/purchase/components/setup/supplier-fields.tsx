@@ -1,4 +1,6 @@
 import { Checkbox, Field, Input, Select, Textarea } from "@/core/forms/fields";
+import { LedgerHeadField } from "@/modules/accounting/components/ledger-head-picker";
+import { mappedLedgerHead } from "@/modules/accounting/components/pickers";
 import type { LookupOption } from "@/modules/settings/types";
 import type { Supplier } from "../../types";
 import { FormSection, withCurrentOption } from "./form-section";
@@ -161,7 +163,9 @@ export function SupplierFields({
             placeholder="No limit"
           />
         </Field>
-        <div aria-hidden className="hidden sm:block" />
+        <Field label="Ledger head" name="accSubClassId" hint="Optional. The chart of accounts head (sub class) mapped to this supplier.">
+          <LedgerHeadField id="accSubClassId" name="accSubClassId" defaultValue={value ? mappedLedgerHead(value) : null} />
+        </Field>
         <Field label="Opening balance" name="openingBalance">
           <div className="flex gap-2">
             <div className="min-w-0 flex-1">

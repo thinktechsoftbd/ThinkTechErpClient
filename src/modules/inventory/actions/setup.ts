@@ -156,6 +156,7 @@ export async function saveCategoryAction(id: number | null, _previous: ActionSta
     nameLocal: optionalText(formData, "nameLocal", 150, fieldErrors),
     sortOrder: readWhole(formData, "sortOrder", { min: -1_000_000, max: 1_000_000 }, 0, fieldErrors),
     isActive: checked(formData, "isActive"),
+    accSubClassId: optionalId(formData, "accSubClassId", fieldErrors),
   };
   if (hasErrors(fieldErrors)) return invalid(fieldErrors);
 

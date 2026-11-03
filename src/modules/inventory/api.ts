@@ -11,6 +11,7 @@ import type {
   InventoryOptions,
   InventorySetting,
   InventorySettingUpdateRequest,
+  PaymentSource,
   Product,
   ProductLookupItem,
   ProductUpsertRequest,
@@ -109,6 +110,13 @@ export const inventoryApi = {
     apiFetch<BatchStockItem[]>(`${base}/products/${productId}/batches`, { query: { warehouseId } }),
   getSerialStock: (productId: number, warehouseId: number) =>
     apiFetch<SerialStockItem[]>(`${base}/products/${productId}/serials`, { query: { warehouseId } }),
+
+  /** Payment sources (Cash, a bank, bKash, ...) for the document pickers, each with its lines. */
+  paymentSources: {
+    search: (query: { search?: string; limit: number; offset: number }) =>
+      apiFetch<PagedResult<PaymentSource>>(`${base}/payment-sources`, { query }),
+    get: (id: number) => apiFetch<PaymentSource>(`${base}/payment-sources/${id}`),
+  },
 
   reports: {
     stockOnHand: (query: {

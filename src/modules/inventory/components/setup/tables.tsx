@@ -6,6 +6,7 @@ import { Badge, StatusBadge } from "@/core/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatDateTime, formatNumber } from "@/core/utils/format";
 import { formatAmount, formatQuantity } from "@/core/utils/number";
+import { MappedLedgerHead } from "@/modules/accounting/components/pickers";
 import {
   deleteBrandAction,
   deleteCategoryAction,
@@ -138,6 +139,7 @@ export function CategoriesTable({
         <tr>
           <TH>Category</TH>
           <TH>Code</TH>
+          <TH>Ledger head</TH>
           <TH className="text-right">Sort</TH>
           <TH className="text-right">Products</TH>
           <TH>Status</TH>
@@ -153,6 +155,9 @@ export function CategoriesTable({
               <LocalName value={row.nameLocal} />
             </TD>
             <TD className={`font-mono ${muted}`}>{row.code ?? "—"}</TD>
+            <TD>
+              <MappedLedgerHead row={row} />
+            </TD>
             <TD className={`text-right tabular-nums ${muted}`}>{row.sortOrder}</TD>
             <TD className="text-right tabular-nums">
               <ProductCount count={row.productCount} href={`/inventory/products?category=${row.id}`} title={`Show the products in ${row.name}`} />

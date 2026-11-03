@@ -26,6 +26,7 @@ import {
   type PurchaseReturnUpsertRequest,
   type SupplierOption,
 } from "../types";
+import { PaymentSourceFields } from "./payment-source-fields";
 
 export type PurchaseEditorMode = "invoice" | "order" | "receipt" | "return";
 
@@ -94,6 +95,10 @@ export type PurchaseEditorInitial = {
   paymentMethod?: string;
   paymentProvider?: string;
   paymentReferenceNo?: string;
+  /** The saved payment source line and its header, for the picker. */
+  paymentSourceDId?: number | null;
+  paymentSourceId?: number | null;
+  paymentSourceName?: string;
   expectedDate?: string;
   supplierReference?: string;
   paymentTermsDays?: string;
@@ -213,6 +218,7 @@ export function PurchaseDocumentEditor({
     paymentMethod: initial.paymentMethod ?? "Cash",
     paymentProvider: initial.paymentProvider ?? "",
     paymentReferenceNo: initial.paymentReferenceNo ?? "",
+    paymentSourceDId: initial.paymentSourceDId ?? null,
     expectedDate: initial.expectedDate ?? "",
     supplierReference: initial.supplierReference ?? "",
     paymentTermsDays: initial.paymentTermsDays ?? "0",
@@ -336,6 +342,7 @@ export function PurchaseDocumentEditor({
         paymentMethod: paid > 0 ? header.paymentMethod : null,
         paymentProvider: paid > 0 ? orNull(header.paymentProvider) : null,
         paymentReferenceNo: paid > 0 ? orNull(header.paymentReferenceNo) : null,
+        invPaymentSourceDId: header.paymentSourceDId,
         remarks: orNull(header.remarks),
         lines: builtLines,
         charges: buildCharges(),
@@ -811,6 +818,14 @@ export function PurchaseDocumentEditor({
             <Card>
               <CardHeader title={credit ? "Paid now (optional)" : "Payment"} />
               <CardBody className="space-y-4">
+                <Field label="Payment Source" name="invPaymentSourceDId" required>
+                  <PaymentSourceFields
+                    dId={header.paymentSourceDId}
+                    initialSourceId={initial.paymentSourceId ?? null}
+                    initialName={initial.paymentSourceName}
+                    onChange={(id) => set("paymentSourceDId", id)}
+                  />
+                </Field>
                 {credit && (
                   <Field label="Amount paid now" name="paidAmount" hint="Leave 0 for a fully credit purchase.">
                     <Input id="paidAmount" inputMode="decimal" value={header.paidAmount} onChange={(e) => set("paidAmount", e.target.value)} />

@@ -137,6 +137,7 @@ async function InvoiceDetail({ params }: Pick<Props, "params">) {
                 },
                 { label: "Currency", value: invoice.exchangeRate !== 1 ? `${invoice.currency} at ${invoice.exchangeRate}` : invoice.currency },
                 { label: "Paid on the spot", value: invoice.paidAmount > 0 ? `${money(invoice.paidAmount)} · ${purchaseLabel(invoice.paymentMethod)}${invoice.paymentProvider ? ` (${invoice.paymentProvider})` : ""}${invoice.paymentReferenceNo ? ` · ${invoice.paymentReferenceNo}` : ""}` : null },
+                { label: "Payment source", value: invoice.paymentSourceName ? `${invoice.paymentSourceName}${invoice.paymentSourceType ? ` · ${invoice.paymentSourceType}` : ""}` : null },
                 { label: "Posted", value: invoice.postedAt ? formatDateTime(invoice.postedAt) : null },
                 { label: "Remarks", value: invoice.remarks },
               ]}

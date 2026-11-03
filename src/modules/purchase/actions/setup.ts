@@ -144,6 +144,7 @@ function supplierBody(formData: FormData, fieldErrors: FieldErrors): SupplierUps
     remarks: text(formData, "remarks", 1000, fieldErrors),
     isActive: checked(formData, "isActive"),
     isCustomer: checked(formData, "isCustomer"),
+    accSubClassId: optionalId(formData, "accSubClassId", fieldErrors),
   };
 }
 

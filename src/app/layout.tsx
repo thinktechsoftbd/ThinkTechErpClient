@@ -32,7 +32,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <ThemeScript />
       </head>
-      <body className="min-h-full font-sans">{children}</body>
+      {/* Browser extensions add attributes to <body> before React loads (ColorZilla's cz-shortcut-listen). This only
+          silences mismatches in body's own attributes; its children are still checked. */}
+      <body suppressHydrationWarning className="min-h-full font-sans">
+        {children}
+      </body>
     </html>
   );
 }

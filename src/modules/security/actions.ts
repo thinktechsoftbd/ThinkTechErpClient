@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireModuleAccess } from "@/core/auth/guards";
+import { tryApi } from "@/core/api/client";
 import { formString, optionalString, toActionError } from "@/core/forms/action-errors";
 import { actionError, actionSuccess, type ActionState } from "@/core/forms/action-state";
 import { securityApi } from "./api";
@@ -19,6 +20,7 @@ import {
   USER_STATUSES,
   UUID_PATTERN,
   type MenuUpsertRequest,
+  type OrganizationClientUpsertRequest,
   type OrganizationUpsertRequest,
   type SubscriptionUpsertRequest,
   type UserMenuAccessItem,
@@ -421,6 +423,82 @@ export async function deleteMenuAction(id: number): Promise<ActionState> {
     return toActionError(error);
   }
   redirect("/security/menus");
+}
+
+// ---- Integration organization clients
+
+export async function saveOrganizationClientAction(
+  id: number | null,
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const fieldErrors: FieldErrors = {};
+  const clientName = requiredText(formData, "clientName", 64, fieldErrors);
+  if (clientName && !/^[A-Za-z0-9][A-Za-z0-9_]{2,63}$/.test(clientName)) {
+    fieldErrors.clientName = "Use 3 to 64 letters, numbers, and underscores; start with a letter or number.";
+  }
+
+  const secretValue = typeof formData.get("secretSha256Hash") === "string"
+    ? (formData.get("secretSha256Hash") as string).trim().toLowerCase()
+    : "";
+  if (secretValue && !/^[0-9a-f]{64}$/.test(secretValue)) {
+    fieldErrors.secretSha256Hash = "Enter a 64-character SHA-256 hash in hexadecimal.";
+  } else if (id === null && !secretValue) {
+    fieldErrors.secretSha256Hash = "Enter the SHA-256 hash for the client secret.";
+  }
+
+  const actingUserId = requiredId(formData, "actingUserId", "Enter a valid user ID.", fieldErrors);
+  const orgObjectId = optionalString(formData, "orgObjectId");
+  if (orgObjectId && !UUID_PATTERN.test(orgObjectId)) {
+    fieldErrors.orgObjectId = "Choose a valid organization.";
+  }
+  const rawScopes = typeof formData.get("scopes") === "string" ? (formData.get("scopes") as string) : "";
+  const scopes = [...new Set(rawScopes.split(/[\r\n,]+/).map((scope) => scope.trim()).filter(Boolean))];
+  if (scopes.length === 0) fieldErrors.scopes = "Enter at least one scope.";
+  else if (scopes.length > 50 || scopes.some((scope) =>
+    scope.length > 128 || !["organization.sync", "sms.usage", "thinktech-website.exchange"].includes(scope))) {
+    fieldErrors.scopes = "Choose only: organization.sync, sms.usage, thinktech-website.exchange.";
+  }
+
+  const body: OrganizationClientUpsertRequest = {
+    clientName,
+    orgObjectId,
+    secretSha256Hash: secretValue || null,
+    actingUserId,
+    scopes,
+    isActive: formData.get("isActive") === "on",
+  };
+  if (hasErrors(fieldErrors)) return invalid(fieldErrors);
+
+  try {
+    await requireModuleAccess(securityModule);
+    if (id === null) await securityApi.createOrganizationClient(body);
+    else await securityApi.updateOrganizationClient(id, body);
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess(id === null ? "Client created." : "Client saved.");
+}
+
+export async function setOrganizationClientActiveAction(id: number, isActive: boolean): Promise<ActionState> {
+  try {
+    await requireModuleAccess(securityModule);
+    await securityApi.setOrganizationClientActive(id, isActive);
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess(isActive ? "Client activated." : "Client deactivated.");
+}
+
+export async function searchOrganizationClientOrganizationsAction(search: string, offset: number) {
+  await requireModuleAccess(securityModule);
+  return tryApi(() => securityApi.getOrganizationClientOrganizationOptions({
+    limit: 50,
+    offset,
+    search: search.trim() || undefined,
+  }));
 }
 
 // ---- Subscription modules

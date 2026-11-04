@@ -6,7 +6,7 @@ in a TailAdmin-style layout (collapsible sidebar, dark mode, responsive).
 
 | Module | Status | API |
 | --- | --- | --- |
-| Security | Login/logout working; users & roles screens ready | `/api/security/*` — **not implemented in the API yet** (see contract below) |
+| Security | Organizations, clients, users, roles, permissions, menus and subscriptions | `/api/security/*` |
 | SMS | Providers, purchases (with the BDT cost), allocations to organizations, organization usage | `Areas/SMS` (`/api/sms/*`) — needs `ThinkTechErpData/Sql/016_sms_management.sql` |
 | WebSite | Complete (generic editor for all 11 tables) | `WebsiteTablesController` |
 | Inventory, Purchase | Registered placeholders | — |
@@ -99,6 +99,10 @@ The security module uses these endpoints in ThinkTechErpAPI:
 | POST | `/api/security/auth/refresh` (anonymous) | `{ refreshToken }` → `AuthResponse` (rotates the refresh token) |
 | GET | `/api/security/auth/menus` | → the signed-in user's menu tree (drives the sidebar) |
 | GET / POST / PUT | `/api/security/organizations[/{id}]` | `Organization` (no delete) |
+| GET | `/api/security/clients?search&isActive&limit&offset` | → `{ items, totalCount, limit, offset }` (page size 50 by default) |
+| GET | `/api/security/clients/organizations/options?search&limit&offset` | → server-paginated organization dropdown options (name, code, UUID; page size 50) |
+| GET / POST / PUT | `/api/security/clients[/{id}]` | list (server-paginated), create and edit client identity, hash, acting user and scopes |
+| PATCH | `/api/security/clients/{id}/active` | `{ isActive }` → updated client |
 | GET / POST / PUT / DELETE | `/api/security/permissions[/{id}]` | `{ code, name, description }`; code is `MODULE.ACTION`; 409 while in use |
 | GET / POST / PUT / DELETE | `/api/security/roles[/{id}]` | `{ name, description, permissionIds[] }`; 409 while assigned |
 | GET | `/api/security/users?search&status&limit&offset` | → `{ items, totalCount, limit, offset }` |

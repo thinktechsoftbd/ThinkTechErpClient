@@ -3,6 +3,9 @@ import { apiFetch } from "@/core/api/client";
 import type {
   MenuUpsertRequest,
   Organization,
+  OrganizationClient,
+  OrganizationClientOrganizationOption,
+  OrganizationClientUpsertRequest,
   OrganizationUpsertRequest,
   PagedResult,
   PermissionUpsertRequest,
@@ -31,11 +34,23 @@ const menu = (id: number) => `${base}/menus/${id}`;
 const subscriptionModule = (id: number) => `${base}/subscription-modules/${id}`;
 const subscription = (id: number) => `${base}/subscriptions/${id}`;
 const organization = (id: number) => `${base}/organizations/${id}`;
+const organizationClient = (id: number) => `${base}/clients/${id}`;
 const permission = (id: number) => `${base}/permissions/${id}`;
 const role = (id: number) => `${base}/roles/${id}`;
 const user = (id: number) => `${base}/users/${id}`;
 
 export const securityApi = {
+  getOrganizationClients: (query: { limit: number; offset: number; search?: string; isActive?: boolean }) =>
+    apiFetch<PagedResult<OrganizationClient>>(`${base}/clients`, { query }),
+  getOrganizationClientOrganizationOptions: (query: { limit: number; offset: number; search?: string }) =>
+    apiFetch<PagedResult<OrganizationClientOrganizationOption>>(`${base}/clients/organizations/options`, { query }),
+  createOrganizationClient: (body: OrganizationClientUpsertRequest) =>
+    apiFetch<OrganizationClient>(`${base}/clients`, { method: "POST", body }),
+  updateOrganizationClient: (id: number, body: OrganizationClientUpsertRequest) =>
+    apiFetch<OrganizationClient>(organizationClient(id), { method: "PUT", body }),
+  setOrganizationClientActive: (id: number, isActive: boolean) =>
+    apiFetch<OrganizationClient>(`${organizationClient(id)}/active`, { method: "PATCH", body: { isActive } }),
+
   getOrganizations: () => apiFetch<Organization[]>(`${base}/organizations`),
   getOrganization: (id: number) => apiFetch<Organization>(organization(id)),
   createOrganization: (body: OrganizationUpsertRequest) =>

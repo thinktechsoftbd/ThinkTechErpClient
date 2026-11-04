@@ -10,7 +10,7 @@ import {
 export const securityModule = defineModule({
   key: "security",
   name: "Security",
-  description: "Organizations, users, roles and permissions for every ERP module.",
+  description: "Organizations, API clients, users, roles and permissions for every ERP module.",
   icon: ShieldCheck,
   basePath: "/security",
   status: "active",
@@ -26,6 +26,7 @@ export const securityModule = defineModule({
   nav: [
     { label: "Overview", href: "/security", exact: true },
     { label: "Organizations", href: "/security/organizations" },
+    { label: "Clients", href: "/security/clients" },
     { label: "Users", href: "/security/users" },
     { label: "Roles", href: "/security/roles" },
     { label: "Permissions", href: "/security/permissions" },

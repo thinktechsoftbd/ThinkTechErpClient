@@ -8,6 +8,42 @@ export const ORGANIZATION_MANAGE_PERMISSION = "ORGANIZATION.M";
 
 export type PagedResult<T> = { items: T[]; totalCount: number; limit: number; offset: number };
 
+// ---- Integration organization clients
+
+export type OrganizationClient = {
+  id: number;
+  objectId: string;
+  clientName: string;
+  orgObjectId: string | null;
+  organizationName: string | null;
+  actingUserId: number;
+  actingUserName: string;
+  scopes: string[];
+  isActive: boolean;
+  hasSecretSha256Hash: boolean;
+  createdAt: string;
+  createdBy: number | null;
+  updatedAt: string | null;
+  updatedBy: number | null;
+};
+
+/** An empty hash on update leaves the existing hash unchanged. */
+export type OrganizationClientUpsertRequest = {
+  clientName: string;
+  orgObjectId: string | null;
+  secretSha256Hash: string | null;
+  actingUserId: number;
+  scopes: string[];
+  isActive: boolean;
+};
+
+export type OrganizationClientOrganizationOption = {
+  objectId: string;
+  nameEn: string;
+  code: string | null;
+  isActive: boolean;
+};
+
 // ---- Organizations
 
 export type Organization = {

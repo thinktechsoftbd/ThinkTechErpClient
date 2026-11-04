@@ -67,6 +67,10 @@ export type VoucherOrganization = { id: number; name: string; parties: PartyOpti
 
 const amount = (value: string) => Math.max(0, parseDecimal(value) ?? 0);
 
+// A voucher is dense (many lines, long ledger head names), so its labels, boxes and table cells use 13px text
+// instead of the usual 14px. Descendant selectors win over the controls' own text-sm (cn doesn't merge classes).
+const compactText = "[&_input]:text-[12px] [&_label]:text-[12px] [&_select]:text-[12px] [&_td]:text-[12px] [&_textarea]:text-[12px]";
+
 /** The active values, plus the chosen one if it has since been made inactive. */
 const choices = (values: LookupValueOption[], selected: string) =>
   values.filter((value) => value.isActive || String(value.id) === selected);
@@ -196,7 +200,7 @@ export function VoucherEditor({
   }
 
   return (
-    <ActionForm action={action} className="space-y-6">
+    <ActionForm action={action} className={cn("space-y-6", compactText)}>
       <input type="hidden" name="payload" value={JSON.stringify(payload())} />
       <input type="hidden" name="organizationId" value={organizations.length > 0 ? header.organizationId : ""} />
       {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}

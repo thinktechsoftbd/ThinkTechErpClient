@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import { ConfirmDeleteButton } from "@/core/crud/confirm-delete-button";
-import { FormModalButton, rowActionClass } from "@/core/crud/form-modal-button";
+import { FormModalButton } from "@/core/crud/form-modal-button";
+import { rowAction } from "@/core/crud/row-action";
 import { StatusBadge } from "@/core/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatAmount } from "@/core/utils/number";
@@ -96,7 +97,7 @@ export function SuppliersTable({
             </TD>
             <TD className="text-right">
               <span className="inline-flex items-center gap-1">
-                <Link href={supplierLedgerHref(row.id)} className={rowActionClass}>
+                <Link href={supplierLedgerHref(row.id)} className={rowAction("view")}>
                   <BookOpen className="size-4" aria-hidden /> Ledger
                 </Link>
                 {canManage && (

@@ -7,6 +7,7 @@ import { Alert } from "@/core/ui/alert";
 import { Button, buttonClasses } from "@/core/ui/button";
 import { Modal } from "@/core/ui/modal";
 import { cn } from "@/core/utils/cn";
+import { rowAction } from "./row-action";
 
 /**
  * Row "Delete" action that asks for confirmation in a modal, then runs the Server Action.
@@ -34,7 +35,7 @@ export function ConfirmDeleteButton({
           setError(undefined);
           setOpen(true);
         }}
-        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium whitespace-nowrap text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
+        className={rowAction("delete")}
       >
         <Trash2 className="size-4" aria-hidden /> Delete
       </button>

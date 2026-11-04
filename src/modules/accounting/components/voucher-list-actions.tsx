@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { LoaderCircle, Pencil, Send, Trash2, Undo2, X } from "lucide-react";
 import { createContext, use, useMemo, useState, useTransition, type ReactNode } from "react";
+import { rowIconAction } from "@/core/crud/row-action";
 import type { ActionState } from "@/core/forms/action-state";
 import { Alert } from "@/core/ui/alert";
 import { Button } from "@/core/ui/button";
-import { cn } from "@/core/utils/cn";
 import { deleteVoucherAction, postVoucherAction, setVouchersPostedAction, unpostVoucherAction } from "../actions/vouchers";
 import type { Voucher } from "../types";
 
@@ -36,8 +36,15 @@ const canSelect = (row: VoucherRow) => row.status === "Draft" || row.status === 
 
 const checkboxClasses = "size-4 cursor-pointer rounded border-gray-300 accent-brand-500 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700";
 
-const iconButton =
-  "inline-flex size-8 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200";
+const iconButton = rowIconAction("neutral");
+
+/** A row's icons, each in its own colour (see rowActionTones). */
+const rowIcon = {
+  edit: rowIconAction("edit"),
+  post: rowIconAction("positive"),
+  unpost: rowIconAction("warn"),
+  delete: rowIconAction("delete"),
+};
 
 export function VoucherSelection({ rows, children }: { rows: VoucherRow[]; children: ReactNode }) {
   const [picked, setPicked] = useState<ReadonlySet<number>>(() => new Set());
@@ -198,7 +205,7 @@ export function VoucherRowActions({ row, canManage, canPost }: { row: VoucherRow
         {pending && <LoaderCircle className="size-4 animate-spin text-gray-400" aria-hidden />}
         {showEdit && (
           // Opens in a popup over the list (@modal/(.)[voucherId]/edit); saving comes back here.
-          <Link href={`/accounting/vouchers/${row.id}/edit?from=list`} className={iconButton} title="Edit" aria-label={`Edit voucher ${ref}`}>
+          <Link href={`/accounting/vouchers/${row.id}/edit?from=list`} className={rowIcon.edit} title="Edit" aria-label={`Edit voucher ${ref}`}>
             <Pencil className="size-4" aria-hidden />
           </Link>
         )}
@@ -207,7 +214,7 @@ export function VoucherRowActions({ row, canManage, canPost }: { row: VoucherRow
             type="button"
             disabled={pending}
             onClick={() => run(() => postVoucherAction(row.id), `Post voucher ${ref} to the ledgers?`)}
-            className={cn(iconButton, "hover:text-brand-600 dark:hover:text-brand-400")}
+            className={rowIcon.post}
             title="Post"
             aria-label={`Post voucher ${ref}`}
           >
@@ -221,7 +228,7 @@ export function VoucherRowActions({ row, canManage, canPost }: { row: VoucherRow
             onClick={() =>
               run(() => unpostVoucherAction(row.id), `Unpost voucher ${ref}? Its entries leave the ledgers and it becomes a draft again.`)
             }
-            className={cn(iconButton, "hover:text-amber-600 dark:hover:text-amber-400")}
+            className={rowIcon.unpost}
             title="Unpost"
             aria-label={`Unpost voucher ${ref}`}
           >
@@ -233,7 +240,7 @@ export function VoucherRowActions({ row, canManage, canPost }: { row: VoucherRow
             type="button"
             disabled={pending}
             onClick={() => run(() => deleteVoucherAction(row.id, true), `Delete draft voucher ${ref}?`)}
-            className={cn(iconButton, "hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400")}
+            className={rowIcon.delete}
             title="Delete"
             aria-label={`Delete voucher ${ref}`}
           >

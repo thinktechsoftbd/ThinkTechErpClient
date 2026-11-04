@@ -71,6 +71,7 @@ export type SupplierUpsertRequest = Omit<
   Supplier,
   | "id"
   | "objectId"
+  | "code"
   | "supplierGroup"
   | "currency"
   | "balance"
@@ -79,13 +80,18 @@ export type SupplierUpsertRequest = Omit<
   | "ledgerHeadPath"
   | "createdAt"
   | "updatedAt"
->;
+> & {
+  /** Empty: the next code in the series on create, the current one on update. */
+  code: string | null;
+};
 
 export type SupplierOption = {
   id: number;
   code: string;
   name: string;
   mobile: string | null;
+  /** Address line 1, or the city when it is empty. */
+  address: string | null;
   paymentTermsDays: number;
   currencyLookupDataId: number | null;
   balance: number;
@@ -321,6 +327,12 @@ export type PurchaseInvoiceUpsertRequest = {
   supplierId: number | null;
   supplierName: string | null;
   supplierMobile: string | null;
+  /**
+   * Adds the supplier to the supplier list on save (name, mobile and address line 1 required) and links the
+   * invoice to it. Without it, a cash purchase from a supplier not on file keeps the name and mobile on the invoice only.
+   */
+  addSupplier: boolean;
+  supplierAddressLine1: string | null;
   /** True: a direct purchase that receives stock. False: bills goods receipts. */
   receivesStock: boolean;
   warehouseId: number | null;

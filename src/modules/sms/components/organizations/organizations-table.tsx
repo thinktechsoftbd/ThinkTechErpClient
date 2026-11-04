@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ListFilter, MessageSquarePlus } from "lucide-react";
-import { FormModalButton, rowActionClass } from "@/core/crud/form-modal-button";
+import { FormModalButton } from "@/core/crud/form-modal-button";
+import { rowAction } from "@/core/crud/row-action";
 import { Field, Input } from "@/core/forms/fields";
 import { Badge } from "@/core/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
@@ -32,6 +33,7 @@ function RecordUsageButton({ row }: { row: SmsOrganizationBalance }) {
   return (
     <FormModalButton
       mode="edit"
+      tone="add"
       label="Record usage"
       title="Record usage"
       description={balanceSummary(row)}
@@ -58,6 +60,7 @@ function CorrectUsageButton({ row }: { row: SmsOrganizationBalance }) {
   return (
     <FormModalButton
       mode="edit"
+      tone="warn"
       label="Correct usage"
       title="Correct usage"
       description={balanceSummary(row)}
@@ -127,7 +130,7 @@ export function OrganizationsTable({ rows, canManage }: { rows: SmsOrganizationB
             <TD className="text-right">
               <span className="inline-flex items-center gap-1">
                 {canManage && row.isActive && !row.isFinalized && (
-                  <Link href={allocateToHref(row.objectId)} className={rowActionClass} title={`Allocate SMS to ${row.name}`}>
+                  <Link href={allocateToHref(row.objectId)} className={rowAction("positive")} title={`Allocate SMS to ${row.name}`}>
                     <MessageSquarePlus className="size-4" aria-hidden /> Allocate
                   </Link>
                 )}
@@ -135,7 +138,7 @@ export function OrganizationsTable({ rows, canManage }: { rows: SmsOrganizationB
                 {canManage && row.availableSms > 0 && <RecordUsageButton row={row} />}
                 {canManage && row.allocatedSms > 0 && <CorrectUsageButton row={row} />}
                 {row.allocationCount > 0 && (
-                  <Link href={organizationAllocationsHref(row.objectId)} className={rowActionClass}>
+                  <Link href={organizationAllocationsHref(row.objectId)} className={rowAction("view")}>
                     <ListFilter className="size-4" aria-hidden /> Allocations
                   </Link>
                 )}

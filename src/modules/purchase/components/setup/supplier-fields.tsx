@@ -26,14 +26,18 @@ export function SupplierFields({
   return (
     <div className="space-y-5">
       <FormSection title="Basics">
-        <Field label="Code" name="code" required hint="Unique in this organization, e.g. SUP-001.">
-          <Input id="code" name="code" maxLength={30} defaultValue={value?.code} required autoComplete="off" />
-        </Field>
         <Field label="Name" name="name" required>
           <Input id="name" name="name" maxLength={250} defaultValue={value?.name} required />
         </Field>
-        <Field label="Name (Bangla)" name="nameLocal" hint="Optional, for printed documents.">
+        <Field label="Local Name" name="nameLocal" hint="Optional, e.g. the Bangla name for printed documents.">
           <Input id="nameLocal" name="nameLocal" maxLength={250} defaultValue={value?.nameLocal ?? ""} lang="bn" />
+        </Field>
+        <Field
+          label="Code"
+          name="code"
+          hint={value ? "Unique in this organization. Empty keeps the current code." : "Unique in this organization. Empty: numbered for you, e.g. S-00001."}
+        >
+          <Input id="code" name="code" maxLength={30} defaultValue={value?.code} autoComplete="off" />
         </Field>
         <Field label="Supplier group" name="supplierGroupLookupDataId" hint="From Settings → Lookup Data → Supplier Group.">
           <Select
@@ -70,14 +74,14 @@ export function SupplierFields({
         <Field label="Mobile" name="mobile">
           <Input id="mobile" name="mobile" type="tel" maxLength={30} defaultValue={value?.mobile ?? ""} placeholder="01XXXXXXXXX" />
         </Field>
-        <Field label="Phone" name="phone">
-          <Input id="phone" name="phone" type="tel" maxLength={30} defaultValue={value?.phone ?? ""} />
+        <Field label="Phone" name="phone" required>
+          <Input id="phone" name="phone" type="tel" maxLength={30} defaultValue={value?.phone ?? ""} required />
         </Field>
         <Field label="Email" name="email">
           <Input id="email" name="email" type="email" maxLength={150} defaultValue={value?.email ?? ""} autoComplete="off" />
         </Field>
-        <Field label="Address line 1" name="addressLine1" className={wide}>
-          <Input id="addressLine1" name="addressLine1" maxLength={250} defaultValue={value?.addressLine1 ?? ""} />
+        <Field label="Address line 1" name="addressLine1" required className={wide}>
+          <Input id="addressLine1" name="addressLine1" maxLength={250} defaultValue={value?.addressLine1 ?? ""} required />
         </Field>
         <Field label="Address line 2" name="addressLine2" className={wide}>
           <Input id="addressLine2" name="addressLine2" maxLength={250} defaultValue={value?.addressLine2 ?? ""} />

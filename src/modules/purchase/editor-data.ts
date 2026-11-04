@@ -5,25 +5,17 @@ import { inventoryApi } from "@/modules/inventory/api";
 import type { ProductLookupItem } from "@/modules/inventory/types";
 import { getCurrencyOptions, getInventoryOptions, getInventorySettings } from "@/modules/inventory/queries";
 import type { EditorCharge, EditorLine, PurchaseEditorOptions } from "./components/purchase-document-editor";
-import { getSupplierOptions } from "./queries";
 import type { PurchaseCharge, PurchaseLine } from "./types";
 
-/** Everything a purchase document editor picks from, in one result. */
+/** Everything a purchase document editor picks from, in one result (suppliers are searched on the server). */
 export async function loadPurchaseEditorOptions(): Promise<ApiResult<PurchaseEditorOptions>> {
-  const [suppliers, options, settings, currencies] = await Promise.all([
-    getSupplierOptions(),
-    getInventoryOptions(),
-    getInventorySettings(),
-    getCurrencyOptions(),
-  ]);
-  if (!suppliers.ok) return suppliers;
+  const [options, settings, currencies] = await Promise.all([getInventoryOptions(), getInventorySettings(), getCurrencyOptions()]);
   if (!options.ok) return options;
   if (!settings.ok) return settings;
   if (!currencies.ok) return currencies;
   return {
     ok: true,
     data: {
-      suppliers: suppliers.data,
       warehouses: options.data.warehouses.map((w) => ({ id: w.id, name: w.name, isActive: w.isActive })),
       taxGroups: options.data.taxGroups,
       currencies: currencies.data,

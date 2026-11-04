@@ -2,7 +2,7 @@
 
 import { LoaderCircle, Pencil } from "lucide-react";
 import { startTransition, useState } from "react";
-import { rowActionClass } from "@/core/crud/form-modal-button";
+import { rowAction } from "@/core/crud/row-action";
 import { ActionForm, FormMessage, SubmitButton } from "@/core/forms/action-form";
 import type { FormAction } from "@/core/forms/action-state";
 import { Alert } from "@/core/ui/alert";
@@ -48,7 +48,7 @@ export function ProductEditButton({
 
   return (
     <>
-      <button type="button" onClick={openEditor} className={rowActionClass}>
+      <button type="button" onClick={openEditor} className={rowAction("edit")}>
         <Pencil className="size-4" aria-hidden />
         Edit
       </button>

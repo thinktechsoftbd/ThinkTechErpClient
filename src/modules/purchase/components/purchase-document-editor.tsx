@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Info, LoaderCircle, Plus, Trash2 } from "lucide-react";
+import { Info, LoaderCircle, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { computeLine } from "@/core/documents/line-math";
 import { ProductSearch } from "@/core/documents/product-search";
-import { ActionForm, FormMessage, useFormState } from "@/core/forms/action-form";
+import { ActionForm, FieldError, FormMessage, useFormState } from "@/core/forms/action-form";
 import type { FormAction } from "@/core/forms/action-state";
 import { Checkbox, Field, Input, Label, Select, Textarea } from "@/core/forms/fields";
 import { buttonClasses } from "@/core/ui/button";
@@ -27,6 +27,7 @@ import {
   type SupplierOption,
 } from "../types";
 import { PaymentSourceFields } from "./payment-source-fields";
+import { SupplierPicker, fetchSupplierOption } from "./supplier-picker";
 
 export type PurchaseEditorMode = "invoice" | "order" | "receipt" | "return";
 
@@ -116,8 +117,8 @@ export type PurchaseEditorInitial = {
   charges?: EditorCharge[];
 };
 
+/** Suppliers aren't listed here: the supplier box searches the server. */
 export type PurchaseEditorOptions = {
-  suppliers: SupplierOption[];
   warehouses: { id: number; name: string; isActive: boolean }[];
   taxGroups: TaxGroupOption[];
   currencies: { id: number; name: string }[];
@@ -205,6 +206,9 @@ export function PurchaseDocumentEditor({
     supplierId: initial.supplierId ?? null,
     supplierName: initial.supplierName ?? "",
     supplierMobile: initial.supplierMobile ?? "",
+    // "Add new supplier": saving adds the supplier (name, mobile, address line 1) to the supplier list.
+    addSupplier: false,
+    supplierAddressLine1: "",
     purchaseType: initial.purchaseType ?? ("Cash" as "Cash" | "Credit"),
     warehouseId: initial.warehouseId ?? options.defaultWarehouseId ?? options.warehouses.find((w) => w.isActive)?.id ?? null,
     dueDate: initial.dueDate ?? "",
@@ -233,8 +237,28 @@ export function PurchaseDocumentEditor({
     refundReferenceNo: initial.refundReferenceNo ?? "",
     remarks: initial.remarks ?? "",
   }));
+  // The chosen supplier's details (balance, terms); header.supplierId is what is saved.
+  const [supplierDetails, setSupplierDetails] = useState<SupplierOption | null>(null);
   const [lines, setLines] = useState<EditorLine[]>(initial.lines ?? []);
   const [charges, setCharges] = useState<EditorCharge[]>(initial.charges ?? []);
+
+  // The draft's or the source document's supplier comes from the server; a picked one brings its own details.
+  useEffect(() => {
+    const id = initial.supplierId;
+    if (!id) return;
+    let current = true;
+    fetchSupplierOption(id).then((option) => {
+      if (!current) return;
+      setSupplierDetails(
+        (details) =>
+          details ??
+          option ?? { id, code: "?", name: `Supplier #${id}`, mobile: null, address: null, paymentTermsDays: 0, currencyLookupDataId: null, balance: 0, isActive: true },
+      );
+    });
+    return () => {
+      current = false;
+    };
+  }, [initial.supplierId]);
   // The intent itself is sent by the clicked button (name="intent"); this shows its progress.
   const [submitIntent, setSubmitIntent] = useState<"save" | "post">("save");
 
@@ -244,9 +268,16 @@ export function PurchaseDocumentEditor({
   const hasTax = mode !== "receipt";
   const hasCharges = mode === "invoice" || mode === "receipt";
   const credit = mode !== "invoice" || header.purchaseType === "Credit";
-  const supplierRequired = mode === "order" || mode === "receipt" || (mode === "invoice" && credit) ||
+  // An invoice can add its supplier to the supplier list (unless an order or receipt fixed the supplier).
+  const canAddSupplier = mode === "invoice" && !(fromSource && initial.supplierId);
+  const addingSupplier = canAddSupplier && header.addSupplier;
+  const supplierRequired = mode === "order" || mode === "receipt" || (mode === "invoice" && credit && !addingSupplier) ||
     (mode === "return" && header.settlementType === "AdjustDue");
-  const walkIn = !header.supplierId && (mode === "invoice" || mode === "return");
+  // Otherwise a cash purchase may name a supplier who isn't on file: the invoice keeps the name and mobile
+  // (supplier_name, supplier_mobile) with no supplier_id, and nothing is added to the supplier list.
+  const allowsNotOnFile = mode === "invoice" && !credit && !addingSupplier;
+  const notOnFileName = allowsNotOnFile && !header.supplierId ? header.supplierName.trim() : "";
+  const walkIn = !header.supplierId && mode === "return";
   const foreign = header.currencyId !== null && header.currencyId !== options.baseCurrencyId;
   const taxGroups = useMemo(() => new Map(options.taxGroups.map((g) => [g.id, g])), [options.taxGroups]);
   const set = <K extends keyof typeof header>(key: K, value: (typeof header)[K]) =>
@@ -327,9 +358,11 @@ export function PurchaseDocumentEditor({
         invoiceDate: header.date,
         purchaseType: header.purchaseType,
         dueDate: credit ? orNull(header.dueDate) : null,
-        supplierId: header.supplierId,
-        supplierName: header.supplierId ? null : orNull(header.supplierName),
-        supplierMobile: orNull(header.supplierMobile),
+        supplierId: addingSupplier ? null : header.supplierId,
+        supplierName: addingSupplier ? orNull(header.supplierName) : orNull(notOnFileName),
+        supplierMobile: addingSupplier || notOnFileName ? orNull(header.supplierMobile) : null,
+        addSupplier: addingSupplier,
+        supplierAddressLine1: addingSupplier ? orNull(header.supplierAddressLine1) : null,
         receivesStock,
         warehouseId: receivesStock ? header.warehouseId : null,
         purchaseOrderId: initial.purchaseOrderId ?? null,
@@ -399,7 +432,7 @@ export function PurchaseDocumentEditor({
     return body;
   }
 
-  const supplier = options.suppliers.find((s) => s.id === header.supplierId);
+  const supplier = supplierDetails && supplierDetails.id === header.supplierId ? supplierDetails : null;
   const activeWarehouses = options.warehouses.filter((w) => w.isActive || w.id === header.warehouseId);
 
   return (
@@ -453,43 +486,139 @@ export function PurchaseDocumentEditor({
                   </div>
                   <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                     {credit
-                      ? "The unpaid part goes to the supplier's dues, so a supplier on file is required."
-                      : "Paid in full now. The supplier can be a walk-in one (name only)."}
+                      ? "The unpaid part goes to the supplier's dues: pick a supplier on file, or type a new name to add them."
+                      : "Paid in full now. Pick a supplier on file, type the name of one who isn't, or tick Add new supplier."}
                   </p>
                 </div>
               )}
 
-              <Field label="Supplier" name="supplierId" required={supplierRequired}>
-                <Select
-                  id="supplierId"
-                  value={header.supplierId ?? ""}
-                  disabled={fromSource && Boolean(initial.supplierId)}
-                  onChange={(event) => {
-                    const id = event.target.value ? Number(event.target.value) : null;
-                    const picked = options.suppliers.find((s) => s.id === id);
-                    setHeader((current) => ({
-                      ...current,
-                      supplierId: id,
-                      paymentTermsDays: picked ? String(picked.paymentTermsDays) : current.paymentTermsDays,
-                      currencyId: picked?.currencyLookupDataId ?? current.currencyId,
-                    }));
-                  }}
-                >
-                  <option value="">{supplierRequired ? "Choose a supplier" : "Walk-in supplier (not on file)"}</option>
-                  {options.suppliers
-                    .filter((s) => s.isActive || s.id === header.supplierId)
-                    .map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.code})
-                      </option>
-                    ))}
-                </Select>
+              <div>
+                <div className="mb-1.5 flex items-center justify-between gap-3">
+                  <label htmlFor="supplierId" className="text-sm font-medium text-gray-700 dark:text-gray-400">
+                    Supplier
+                    {(supplierRequired || addingSupplier) && <span className="text-red-500"> *</span>}
+                  </label>
+                  {canAddSupplier && (
+                    // On credit the box only shows what happens: a name not on file ticks it (a credit purchase
+                    // needs its supplier on file), and clearing the name goes back to the search.
+                    <label
+                      title={credit ? "On credit, a name not on file is added to the supplier list. Clear the name to search again." : undefined}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-md bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-600 dark:bg-brand-500/10 dark:text-brand-400",
+                        credit ? "cursor-not-allowed" : "cursor-pointer hover:bg-brand-100 dark:hover:bg-brand-500/20",
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        className="size-3.5 rounded border-gray-300 accent-brand-500 dark:border-gray-700"
+                        checked={header.addSupplier}
+                        disabled={credit}
+                        // A new supplier replaces the one picked; a name already typed is kept.
+                        onChange={(e) => setHeader((current) => ({ ...current, addSupplier: e.target.checked, supplierId: null }))}
+                      />
+                      Add new supplier
+                    </label>
+                  )}
+                </div>
+                {addingSupplier ? (
+                  <div className="relative">
+                    <Input
+                      id="supplierId"
+                      value={header.supplierName}
+                      maxLength={250}
+                      required
+                      autoComplete="off"
+                      placeholder="The new supplier's name"
+                      className={credit ? "pr-9" : undefined}
+                      onChange={(e) => set("supplierName", e.target.value)}
+                      // On credit, leaving the name empty goes back to the search.
+                      onBlur={() => credit && !header.supplierName.trim() && setHeader((current) => ({ ...current, addSupplier: false, supplierName: "" }))}
+                    />
+                    {credit && (
+                      <button
+                        type="button"
+                        onClick={() => setHeader((current) => ({ ...current, addSupplier: false, supplierName: "" }))}
+                        className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-red-500"
+                        aria-label="Clear the name and search the suppliers"
+                        title="Clear the name and search the suppliers"
+                      >
+                        <X className="size-3.5" aria-hidden />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <SupplierPicker
+                    id="supplierId"
+                    value={supplier}
+                    newName={notOnFileName}
+                    loadingValue={Boolean(header.supplierId) && !supplier}
+                    required={supplierRequired}
+                    disabled={fromSource && Boolean(initial.supplierId)}
+                    placeholder={allowsNotOnFile ? "Search, or type a name…" : "Search name, code or mobile…"}
+                    onChange={(picked) => {
+                      setSupplierDetails(picked);
+                      setHeader((current) => ({
+                        ...current,
+                        supplierId: picked?.id ?? null,
+                        supplierName: "",
+                        paymentTermsDays: picked ? String(picked.paymentTermsDays) : current.paymentTermsDays,
+                        currencyId: picked?.currencyLookupDataId ?? current.currencyId,
+                      }));
+                    }}
+                    onNewName={
+                      allowsNotOnFile
+                        ? (name) => setHeader((current) => ({ ...current, supplierId: null, supplierName: name }))
+                        : canAddSupplier
+                          ? // Credit: a name not on file ticks "Add new supplier", keeping the name.
+                            (name) =>
+                              name && setHeader((current) => ({ ...current, supplierId: null, supplierName: name, addSupplier: true }))
+                          : undefined
+                    }
+                    newNameHint={allowsNotOnFile ? "Leave it typed to use the name on this purchase." : "Leave it typed to add them as a new supplier."}
+                  />
+                )}
                 {supplier && supplier.balance !== 0 && (
                   <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                     {supplier.balance > 0 ? "Owed to supplier" : "Advance with supplier"}: {formatAmount(Math.abs(supplier.balance))}
                   </p>
                 )}
-              </Field>
+                {addingSupplier && (
+                  <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    {credit
+                      ? "Not on file, so saving adds them to the supplier list. Clear the name (×) to search again."
+                      : "Saving adds it to the supplier list; the code is numbered for you."}
+                  </p>
+                )}
+                {notOnFileName && (
+                  <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">Not on file: kept on this purchase only.</p>
+                )}
+                <FieldError name="supplierId" />
+              </div>
+
+              {(addingSupplier || notOnFileName) && (
+                <Field label="Supplier's mobile" name="supplierMobile" required={addingSupplier}>
+                  <Input
+                    id="supplierMobile"
+                    value={header.supplierMobile}
+                    maxLength={30}
+                    inputMode="tel"
+                    placeholder="01XXXXXXXXX"
+                    required={addingSupplier}
+                    onChange={(e) => set("supplierMobile", e.target.value)}
+                  />
+                </Field>
+              )}
+              {addingSupplier && (
+                <Field label="Address line 1" name="supplierAddressLine1" required>
+                  <Input
+                    id="supplierAddressLine1"
+                    value={header.supplierAddressLine1}
+                    maxLength={250}
+                    required
+                    onChange={(e) => set("supplierAddressLine1", e.target.value)}
+                  />
+                </Field>
+              )}
 
               {walkIn && !supplierRequired && (
                 <>
@@ -1027,15 +1156,22 @@ function LineRow({
       {line.productType === "Stock" && line.trackingType === "Batch" && receiving && (
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           <div>
-            <Label htmlFor={id("batch")}>Batch / lot no *</Label>
-            <Input id={id("batch")} value={line.batchNo} maxLength={60} onChange={(e) => onChange({ batchNo: e.target.value })} />
+            <Label htmlFor={id("batch")}>Batch / lot no</Label>
+            {/* Optional: posting stocks the line under the document's number when it's empty. */}
+            <Input
+              id={id("batch")}
+              value={line.batchNo}
+              maxLength={60}
+              placeholder="Empty: the document no"
+              onChange={(e) => onChange({ batchNo: e.target.value })}
+            />
           </div>
           <div>
             <Label htmlFor={id("mfg")}>Manufactured</Label>
             <Input id={id("mfg")} type="date" value={line.manufactureDate} onChange={(e) => onChange({ manufactureDate: e.target.value })} />
           </div>
           <div>
-            <Label htmlFor={id("exp")}>Expiry{line.hasExpiry ? " *" : ""}</Label>
+            <Label htmlFor={id("exp")}>Expiry</Label>
             <Input id={id("exp")} type="date" value={line.expiryDate} onChange={(e) => onChange({ expiryDate: e.target.value })} />
           </div>
         </div>

@@ -15,6 +15,7 @@ import { saveReceiptAction } from "../actions/receipts";
 import { saveReturnAction } from "../actions/returns";
 import { purchaseApi } from "../api";
 import { editorLinesFrom, loadLineProducts, loadPurchaseEditorOptions } from "../editor-data";
+import { getSupplierOptions } from "../queries";
 import { ON_THE_SPOT_METHODS, purchaseLabel, type OpenPurchaseInvoice, type PurchaseLine } from "../types";
 import { PaymentForm } from "./payment-form";
 import { PurchaseDocumentEditor, type EditorLine, type PurchaseEditorInitial } from "./purchase-document-editor";
@@ -320,12 +321,14 @@ export async function NewSupplierPaymentScreen({ searchParams, returnTo }: Scree
   const query = await searchParams;
   const supplierId = parseIdParam(firstParam(query.supplierId) ?? "");
   const invoiceId = parseIdParam(firstParam(query.invoiceId) ?? "");
-  const [session, options, openInvoices] = await Promise.all([
+  const [session, options, suppliers, openInvoices] = await Promise.all([
     requireSession(),
     loadPurchaseEditorOptions(),
+    getSupplierOptions(),
     supplierId ? tryApi(() => purchaseApi.suppliers.openInvoices(supplierId)) : Promise.resolve(null),
   ]);
   if (!options.ok) return <Card><ApiErrorState error={options.error} /></Card>;
+  if (!suppliers.ok) return <Card><ApiErrorState error={suppliers.error} /></Card>;
   if (!canManagePurchase(session)) {
     return (
       <Alert tone="warning" title="You can't record payments">
@@ -337,13 +340,13 @@ export async function NewSupplierPaymentScreen({ searchParams, returnTo }: Scree
     );
   }
 
-  const known = supplierId !== null && options.data.suppliers.some((s) => s.id === supplierId);
+  const known = supplierId !== null && suppliers.data.some((s) => s.id === supplierId);
   const invoices: OpenPurchaseInvoice[] = known && openInvoices?.ok ? openInvoices.data : [];
 
   return (
     <PaymentForm
       action={createPaymentAction}
-      suppliers={options.data.suppliers}
+      suppliers={suppliers.data}
       currencies={options.data.currencies}
       baseCurrencyId={options.data.baseCurrencyId}
       initial={{

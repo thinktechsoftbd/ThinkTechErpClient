@@ -7,9 +7,7 @@ import type { FormAction } from "@/core/forms/action-state";
 import { Button, buttonClasses } from "@/core/ui/button";
 import { Modal } from "@/core/ui/modal";
 import { cn } from "@/core/utils/cn";
-
-export const rowActionClass =
-  "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium whitespace-nowrap text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5";
+import { rowAction, type RowActionTone } from "./row-action";
 
 /**
  * A button that opens a modal holding a form bound to a Server Action ("add" or "edit").
@@ -25,10 +23,13 @@ export function FormModalButton({
   submitLabel = "Save",
   size,
   defaultOpen = false,
+  tone = "edit",
   children,
 }: {
   /** "create": primary toolbar button; "edit": compact row action. */
   mode: "create" | "edit";
+  /** The row action's colour (mode "edit"), e.g. "add" for a row action that adds something. */
+  tone?: RowActionTone;
   label: string;
   title: ReactNode;
   description?: ReactNode;
@@ -51,7 +52,7 @@ export function FormModalButton({
           setVersion((value) => value + 1);
           setOpen(true);
         }}
-        className={mode === "create" ? buttonClasses("primary") : rowActionClass}
+        className={mode === "create" ? buttonClasses("primary") : rowAction(tone)}
       >
         {mode === "create" ? <Plus className="size-4" aria-hidden /> : <Pencil className="size-4" aria-hidden />}
         {label}

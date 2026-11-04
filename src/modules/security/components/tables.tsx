@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { ListFilter } from "lucide-react";
 import { FormModalButton } from "@/core/crud/form-modal-button";
+import { rowAction } from "@/core/crud/row-action";
 import { Badge, StatusBadge } from "@/core/ui/badge";
-import { LinkButton } from "@/core/ui/button";
 import { CopyButton } from "@/core/ui/copy-button";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatDateTime, formatNumber } from "@/core/utils/format";
@@ -96,15 +96,9 @@ export function OrganizationsTable({
                     </FormModalButton>
                   )}
                   {smsLinks && (
-                    <LinkButton
-                      href={smsAllocationsHref(organization)}
-                      variant="ghost"
-                      size="sm"
-                      className="whitespace-nowrap"
-                      title={`SMS allocations of ${organization.nameEn}`}
-                    >
+                    <Link href={smsAllocationsHref(organization)} className={rowAction("view")} title={`SMS allocations of ${organization.nameEn}`}>
                       <ListFilter className="size-4" aria-hidden /> Allocations
-                    </LinkButton>
+                    </Link>
                   )}
                 </span>
               </TD>

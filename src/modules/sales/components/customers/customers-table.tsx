@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { BookOpen, HandCoins } from "lucide-react";
 import { ConfirmDeleteButton } from "@/core/crud/confirm-delete-button";
-import { FormModalButton, rowActionClass } from "@/core/crud/form-modal-button";
+import { FormModalButton } from "@/core/crud/form-modal-button";
+import { rowAction } from "@/core/crud/row-action";
 import { StatusBadge } from "@/core/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatAmount } from "@/core/utils/number";
@@ -113,11 +114,11 @@ export function CustomersTable({
             <TD className="text-right">
               <span className="inline-flex items-center gap-1">
                 {canManage && row.balance > 0 && (
-                  <Link href={collectDuesHref(row.id)} className={rowActionClass} title={`Record a money receipt from ${row.name}`}>
+                  <Link href={collectDuesHref(row.id)} className={rowAction("positive")} title={`Record a money receipt from ${row.name}`}>
                     <HandCoins className="size-4" aria-hidden /> Collect
                   </Link>
                 )}
-                <Link href={customerLedgerHref(row.id)} className={rowActionClass}>
+                <Link href={customerLedgerHref(row.id)} className={rowAction("view")}>
                   <BookOpen className="size-4" aria-hidden /> Ledger
                 </Link>
                 {canManage && (

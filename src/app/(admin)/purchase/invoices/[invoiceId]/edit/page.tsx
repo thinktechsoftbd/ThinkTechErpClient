@@ -75,7 +75,8 @@ async function EditInvoice({ params, searchParams }: Props) {
           date: data.invoiceDate,
           purchaseType: data.purchaseType,
           supplierId: data.supplierId,
-          supplierName: data.supplierId ? "" : (data.supplierName ?? ""),
+          // A supplier not on file shows by name; the placeholder the API saves for no name shows an empty box.
+          supplierName: data.supplierId || data.supplierName === "Walk-in supplier" ? "" : (data.supplierName ?? ""),
           supplierMobile: data.supplierMobile ?? "",
           receivesStock: data.receivesStock,
           warehouseId: data.warehouseId,

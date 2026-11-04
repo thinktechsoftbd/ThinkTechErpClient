@@ -111,15 +111,16 @@ function supplierBody(formData: FormData, fieldErrors: FieldErrors): SupplierUps
   const openingBalanceDate = date(formData, "openingBalanceDate", fieldErrors);
 
   return {
-    code: requiredText(formData, "code", 30, fieldErrors),
+    // Empty: the next code in the series on create, the current one on update.
+    code: text(formData, "code", 30, fieldErrors),
     name: requiredText(formData, "name", 250, fieldErrors),
     nameLocal: text(formData, "nameLocal", 250, fieldErrors),
     supplierGroupLookupDataId: optionalId(formData, "supplierGroupLookupDataId", fieldErrors),
     contactPerson: text(formData, "contactPerson", 150, fieldErrors),
-    phone: text(formData, "phone", 30, fieldErrors),
+    phone: requiredText(formData, "phone", 30, fieldErrors),
     mobile: text(formData, "mobile", 30, fieldErrors),
     email,
-    addressLine1: text(formData, "addressLine1", 250, fieldErrors),
+    addressLine1: requiredText(formData, "addressLine1", 250, fieldErrors),
     addressLine2: text(formData, "addressLine2", 250, fieldErrors),
     city: text(formData, "city", 100, fieldErrors),
     state: text(formData, "state", 100, fieldErrors),

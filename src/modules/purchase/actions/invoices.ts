@@ -17,10 +17,12 @@ export async function saveInvoiceAction(id: number | null, _previous: ActionStat
   const body = readPayload<PurchaseInvoiceUpsertRequest>(formData);
   if (!body) return actionError("The form couldn't be read. Reload the page and try again.");
   if (body.lines.length === 0) return actionError("Add at least one item.");
-  if (body.purchaseType === "Credit" && !body.supplierId)
-    return actionError("A credit purchase needs a supplier on file. Choose one, or make it a cash purchase.", {
+  if (body.purchaseType === "Credit" && !body.supplierId && !body.addSupplier)
+    return actionError("A credit purchase needs a supplier on file. Choose one, tick Add new supplier, or make it a cash purchase.", {
       supplierId: "Required for credit.",
     });
+  if (body.addSupplier && (!body.supplierName || !body.supplierMobile || !body.supplierAddressLine1))
+    return actionError("Enter the new supplier's name, mobile and address line 1.", { supplierId: "Required." });
   if (body.receivesStock && !body.warehouseId)
     return actionError("Choose the warehouse the stock goes into.", { warehouseId: "Required." });
   if (!body.invPaymentSourceDId)

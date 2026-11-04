@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { rowAction } from "@/core/crud/row-action";
 import { Badge, StatusBadge } from "@/core/ui/badge";
 import { LucideIcon } from "@/core/ui/lucide-icon";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
@@ -60,10 +61,7 @@ export function MenusTable({
             </TD>
             {canManage && (
               <TD className="text-right">
-                <Link
-                  href={`/security/menus/new?parentId=${menu.id}`}
-                  className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm font-medium whitespace-nowrap text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5"
-                >
+                <Link href={`/security/menus/new?parentId=${menu.id}`} className={rowAction("add")}>
                   <Plus className="size-4" aria-hidden /> Submenu
                 </Link>
               </TD>

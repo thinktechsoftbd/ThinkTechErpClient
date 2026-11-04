@@ -1,5 +1,5 @@
 import "server-only";
-import { refresh } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import { redirect, RedirectType } from "next/navigation";
 import { ApiError } from "@/core/api/errors";
 import { requireModuleAccess } from "@/core/auth/guards";
@@ -71,5 +71,9 @@ export async function saveDocument<T extends { id: number }>(
       throw error;
     }
   }
-  redirect(paths.view(saved.id), replace ? RedirectType.replace : RedirectType.push);
+  // Fresh data where it lands: the list behind a popup was rendered before the save, and the router
+  // would otherwise show it from its cache without the new document.
+  const target = paths.view(saved.id);
+  revalidatePath(target);
+  redirect(target, replace ? RedirectType.replace : RedirectType.push);
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Pencil, Trash2 } from "lucide-react";
+import { rowAction } from "@/core/crud/row-action";
 import { ConfirmActionButton } from "@/core/forms/confirm-action-button";
 import { Badge } from "@/core/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
@@ -60,10 +61,7 @@ export function RecordsTable({
               <TD className="text-right">
                 {id && (
                   <span className="inline-flex items-center gap-1">
-                    <Link
-                      href={`${basePath}/${encodeURIComponent(id)}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5"
-                    >
+                    <Link href={`${basePath}/${encodeURIComponent(id)}`} className={rowAction("edit")}>
                       <Pencil className="size-4" aria-hidden /> Edit
                     </Link>
                     <ConfirmActionButton

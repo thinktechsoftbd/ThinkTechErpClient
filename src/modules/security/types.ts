@@ -14,10 +14,12 @@ export type OrganizationClient = {
   id: number;
   objectId: string;
   clientName: string;
+  clientSecret: string | null;
+  secretSha256Hash: string | null;
   orgObjectId: string;
   organizationName: string | null;
-  actingUserId: number;
-  actingUserName: string;
+  actingUserId: number | null;
+  actingUserName: string | null;
   scopes: string[];
   isActive: boolean;
   hasSecretSha256Hash: boolean;
@@ -31,8 +33,9 @@ export type OrganizationClient = {
 export type OrganizationClientUpsertRequest = {
   clientName: string;
   clientSecret: string;
+  secretSha256Hash: string;
   orgObjectId: string | null;
-  actingUserId: number;
+  actingUserId: number | null;
   scopes: string[];
   isActive: boolean;
 };

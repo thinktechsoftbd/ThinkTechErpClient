@@ -443,8 +443,18 @@ export async function saveOrganizationClientAction(
     : "";
   if (!secretValue) fieldErrors.clientSecret = "Enter the client secret.";
   else if (secretValue.length > 512) fieldErrors.clientSecret = "Client secret cannot exceed 512 characters.";
+  const secretSha256Hash = typeof formData.get("secretSha256Hash") === "string"
+    ? (formData.get("secretSha256Hash") as string).trim().toLowerCase()
+    : "";
+  if (!/^[0-9a-f]{64}$/.test(secretSha256Hash)) {
+    fieldErrors.secretSha256Hash = "Click Generate Hash Key to create a valid hash for this secret.";
+  }
 
-  const actingUserId = requiredId(formData, "actingUserId", "Enter a valid user ID.", fieldErrors);
+  const actingUserIdValue = optionalString(formData, "actingUserId");
+  const actingUserId = actingUserIdValue === null ? null : Number(actingUserIdValue);
+  if (actingUserId !== null && (!Number.isSafeInteger(actingUserId) || actingUserId <= 0)) {
+    fieldErrors.actingUserId = "Enter a positive whole number or leave it empty.";
+  }
   const orgObjectId = optionalString(formData, "orgObjectId");
   if (!orgObjectId) {
     fieldErrors.orgObjectId = "Choose an organization.";
@@ -454,14 +464,14 @@ export async function saveOrganizationClientAction(
   const rawScopes = typeof formData.get("scopes") === "string" ? (formData.get("scopes") as string) : "";
   const scopes = [...new Set(rawScopes.split(/[\r\n,]+/).map((scope) => scope.trim()).filter(Boolean))];
   if (scopes.length === 0) fieldErrors.scopes = "Enter at least one scope.";
-  else if (scopes.length > 50 || scopes.some((scope) =>
-    scope.length > 128 || !["organization.sync", "sms.usage", "thinktech-website.exchange"].includes(scope))) {
-    fieldErrors.scopes = "Choose only: organization.sync, sms.usage, thinktech-website.exchange.";
+  else if (scopes.length > 50 || scopes.some((scope) => scope.length > 128 || /[\u0000-\u001f\u007f]/.test(scope))) {
+    fieldErrors.scopes = "Enter up to 50 scopes, each no longer than 128 characters.";
   }
 
   const body: OrganizationClientUpsertRequest = {
     clientName,
     clientSecret: secretValue,
+    secretSha256Hash,
     orgObjectId,
     actingUserId,
     scopes,

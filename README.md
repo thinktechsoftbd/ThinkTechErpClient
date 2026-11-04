@@ -101,7 +101,7 @@ The security module uses these endpoints in ThinkTechErpAPI:
 | GET / POST / PUT | `/api/security/organizations[/{id}]` | `Organization` (no delete) |
 | GET | `/api/security/clients?search&isActive&limit&offset` | → `{ items, totalCount, limit, offset }` (page size 50 by default) |
 | GET | `/api/security/clients/organizations/options?search&limit&offset` | → server-paginated organization dropdown options (name, code, UUID; page size 50) |
-| GET / POST / PUT | `/api/security/clients[/{id}]` | list (server-paginated), create and edit client identity, secret, organization, acting user and scopes |
+| GET / POST / PUT | `/api/security/clients[/{id}]` | list (server-paginated), create and edit client identity, secret plus SHA-256 hash, organization, optional acting user and custom scopes |
 | PATCH | `/api/security/clients/{id}/active` | `{ isActive }` → updated client |
 | GET / POST / PUT / DELETE | `/api/security/permissions[/{id}]` | `{ code, name, description }`; code is `MODULE.ACTION`; 409 while in use |
 | GET / POST / PUT / DELETE | `/api/security/roles[/{id}]` | `{ name, description, permissionIds[] }`; 409 while assigned |

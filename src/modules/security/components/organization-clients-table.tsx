@@ -5,6 +5,7 @@ import { OrganizationClientFields } from "./organization-client-fields";
 import { OrganizationClientActiveToggle } from "./organization-client-active-toggle";
 import { saveOrganizationClientAction } from "../actions";
 import type { OrganizationClient } from "../types";
+import { OrganizationClientCopyButton } from "./organization-client-copy-button";
 
 export function OrganizationClientsTable({
   clients,
@@ -29,10 +30,29 @@ export function OrganizationClientsTable({
         {clients.map((client) => (
           <TR key={client.id}>
             <TD>
-              <span className="font-medium text-gray-800 dark:text-white/90">{client.clientName}</span>
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-gray-800 dark:text-white/90">{client.clientName}</span>
+                {canManage && <OrganizationClientCopyButton value={client.clientName} label="client name" />}
+              </div>
               <p className="mt-1 font-mono text-xs text-gray-500 dark:text-gray-400" title={client.objectId}>
                 {client.objectId}
               </p>
+              {canManage && (
+                <div className="mt-2 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="max-w-56 truncate font-mono text-xs text-gray-600 dark:text-gray-300" title={client.clientSecret ?? ""}>
+                      Secret: {client.clientSecret ?? "Unavailable"}
+                    </span>
+                    <OrganizationClientCopyButton value={client.clientSecret} label="client secret" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="max-w-56 truncate font-mono text-xs text-gray-600 dark:text-gray-300" title={client.secretSha256Hash ?? ""}>
+                      Hash: {client.secretSha256Hash ?? "Unavailable"}
+                    </span>
+                    <OrganizationClientCopyButton value={client.secretSha256Hash} label="SHA-256 hash" />
+                  </div>
+                </div>
+              )}
             </TD>
             <TD>
               {client.organizationName ? (
@@ -40,8 +60,14 @@ export function OrganizationClientsTable({
               ) : <span className="text-gray-500">—</span>}
             </TD>
             <TD>
-              <span>{client.actingUserName}</span>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">ID {client.actingUserId}</p>
+              {client.actingUserId === null ? (
+                <span className="text-gray-500">—</span>
+              ) : (
+                <>
+                  <span>{client.actingUserName ?? "Unknown user"}</span>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">ID {client.actingUserId}</p>
+                </>
+              )}
             </TD>
             <TD>
               <div className="flex max-w-xl flex-wrap gap-1.5">

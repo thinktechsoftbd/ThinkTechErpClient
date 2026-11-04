@@ -33,20 +33,21 @@ export function OrganizationClientFields({ client }: { client?: OrganizationClie
         />
       </Field>
       <Field
-        label="Secret SHA-256 hash"
-        name="secretSha256Hash"
+        label="Client secret"
+        name="clientSecret"
         className="md:col-span-2"
-        hint={client ? "Leave empty to keep the current hash. The stored hash is never displayed." : "Paste the 64-character hexadecimal SHA-256 hash; the raw client secret is not stored."}
+        hint={client ? "Enter the client secret. Saving updates the stored secret and its authentication hash." : "The API stores this value and derives its SHA-256 authentication hash."}
+        required
       >
         <Input
-          id="secretSha256Hash"
-          name="secretSha256Hash"
-          maxLength={64}
-          minLength={64}
-          autoComplete="new-password"
+          id="clientSecret"
+          name="clientSecret"
+          type="text"
+          maxLength={512}
+          autoComplete="off"
           spellCheck={false}
           className="font-mono"
-          required={!client}
+          required
         />
       </Field>
       <Field label="Scopes" name="scopes" className="md:col-span-2" hint="One scope per line: organization.sync, sms.usage, or thinktech-website.exchange. Comma-separated values also work.">

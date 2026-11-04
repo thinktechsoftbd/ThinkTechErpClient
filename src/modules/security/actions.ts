@@ -438,18 +438,17 @@ export async function saveOrganizationClientAction(
     fieldErrors.clientName = "Use 3 to 64 letters, numbers, and underscores; start with a letter or number.";
   }
 
-  const secretValue = typeof formData.get("secretSha256Hash") === "string"
-    ? (formData.get("secretSha256Hash") as string).trim().toLowerCase()
+  const secretValue = typeof formData.get("clientSecret") === "string"
+    ? formData.get("clientSecret") as string
     : "";
-  if (secretValue && !/^[0-9a-f]{64}$/.test(secretValue)) {
-    fieldErrors.secretSha256Hash = "Enter a 64-character SHA-256 hash in hexadecimal.";
-  } else if (id === null && !secretValue) {
-    fieldErrors.secretSha256Hash = "Enter the SHA-256 hash for the client secret.";
-  }
+  if (!secretValue) fieldErrors.clientSecret = "Enter the client secret.";
+  else if (secretValue.length > 512) fieldErrors.clientSecret = "Client secret cannot exceed 512 characters.";
 
   const actingUserId = requiredId(formData, "actingUserId", "Enter a valid user ID.", fieldErrors);
   const orgObjectId = optionalString(formData, "orgObjectId");
-  if (orgObjectId && !UUID_PATTERN.test(orgObjectId)) {
+  if (!orgObjectId) {
+    fieldErrors.orgObjectId = "Choose an organization.";
+  } else if (!UUID_PATTERN.test(orgObjectId)) {
     fieldErrors.orgObjectId = "Choose a valid organization.";
   }
   const rawScopes = typeof formData.get("scopes") === "string" ? (formData.get("scopes") as string) : "";
@@ -462,8 +461,8 @@ export async function saveOrganizationClientAction(
 
   const body: OrganizationClientUpsertRequest = {
     clientName,
+    clientSecret: secretValue,
     orgObjectId,
-    secretSha256Hash: secretValue || null,
     actingUserId,
     scopes,
     isActive: formData.get("isActive") === "on",

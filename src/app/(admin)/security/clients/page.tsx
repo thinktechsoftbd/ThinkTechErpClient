@@ -44,7 +44,7 @@ export default function OrganizationClientsPage({ searchParams }: Props) {
                   mode="create"
                   label="New client"
                   title="New API client"
-                  description="The API stores only the SHA-256 hash you provide."
+                  description="The API stores the client secret and derives its SHA-256 authentication hash."
                   action={saveOrganizationClientAction.bind(null, null)}
                   submitLabel="Create client"
                   size="lg"

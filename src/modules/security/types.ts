@@ -14,7 +14,7 @@ export type OrganizationClient = {
   id: number;
   objectId: string;
   clientName: string;
-  orgObjectId: string | null;
+  orgObjectId: string;
   organizationName: string | null;
   actingUserId: number;
   actingUserName: string;
@@ -30,8 +30,8 @@ export type OrganizationClient = {
 /** An empty hash on update leaves the existing hash unchanged. */
 export type OrganizationClientUpsertRequest = {
   clientName: string;
+  clientSecret: string;
   orgObjectId: string | null;
-  secretSha256Hash: string | null;
   actingUserId: number;
   scopes: string[];
   isActive: boolean;

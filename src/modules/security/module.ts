@@ -33,6 +33,7 @@ export const securityModule = defineModule({
     { label: "Menus", href: "/security/menus" },
     { label: "Subscription Modules", href: "/security/subscription-modules" },
     { label: "Subscriptions", href: "/security/subscriptions" },
+    { label: "Subscription Plans", href: "/security/subscription-plans" },
   ],
   permissions: [
     { key: SECURITY_VIEW_PERMISSION, label: "View users, roles, permissions and menus" },

@@ -18,6 +18,8 @@ import type {
   SubscriptionFilter,
   SubscriptionModule,
   SubscriptionModuleUpsertRequest,
+  SubscriptionPlan,
+  SubscriptionPlanUpsertRequest,
   SubscriptionUpsertRequest,
   UserCreateRequest,
   UserMenuAccess,
@@ -33,6 +35,7 @@ const base = "/api/security";
 const menu = (id: number) => `${base}/menus/${id}`;
 const subscriptionModule = (id: number) => `${base}/subscription-modules/${id}`;
 const subscription = (id: number) => `${base}/subscriptions/${id}`;
+const subscriptionPlan = (id: number) => `${base}/subscription-plans/${id}`;
 const organization = (id: number) => `${base}/organizations/${id}`;
 const organizationClient = (id: number) => `${base}/clients/${id}`;
 const permission = (id: number) => `${base}/permissions/${id}`;
@@ -115,4 +118,14 @@ export const securityApi = {
   updateSubscription: (id: number, body: SubscriptionUpsertRequest) =>
     apiFetch<Subscription>(subscription(id), { method: "PUT", body }),
   deleteSubscription: (id: number) => apiFetch<void>(subscription(id), { method: "DELETE" }),
+
+  /** Each plan comes with its features and their details. */
+  getSubscriptionPlans: (query: { search?: string; isActive?: boolean; limit: number; offset: number }) =>
+    apiFetch<PagedResult<SubscriptionPlan>>(`${base}/subscription-plans`, { query }),
+  getSubscriptionPlan: (id: number) => apiFetch<SubscriptionPlan>(subscriptionPlan(id)),
+  createSubscriptionPlan: (body: SubscriptionPlanUpsertRequest) =>
+    apiFetch<SubscriptionPlan>(`${base}/subscription-plans`, { method: "POST", body }),
+  updateSubscriptionPlan: (id: number, body: SubscriptionPlanUpsertRequest) =>
+    apiFetch<SubscriptionPlan>(subscriptionPlan(id), { method: "PUT", body }),
+  deleteSubscriptionPlan: (id: number) => apiFetch<void>(subscriptionPlan(id), { method: "DELETE" }),
 };

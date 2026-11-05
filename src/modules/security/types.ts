@@ -215,6 +215,60 @@ export type SubscriptionModule = {
 
 export type SubscriptionModuleUpsertRequest = { moduleName: string; isActive: boolean; remarks: string | null };
 
+// ---- Subscription plans, with their features and each feature's details
+
+export type SubscriptionPlanFeatureDetail = { id: number; objectId: string; featureId: number; description: string };
+
+export type SubscriptionPlanFeature = {
+  id: number;
+  objectId: string;
+  subscriptionPlanId: number;
+  title: string;
+  isActive: boolean;
+  details: SubscriptionPlanFeatureDetail[];
+};
+
+export type SubscriptionPlan = {
+  id: number;
+  objectId: string;
+  nameEn: string;
+  nameLocal: string | null;
+  shortNote: string | null;
+  regularPrice: number;
+  discountPercentage: number;
+  /** The price after the discount. */
+  discountPrice: number;
+  /** A value of the "Currency" lookup table. */
+  currencyLookupDataId: number;
+  currencyName: string;
+  localExchangeRate: number;
+  billingPeriodType: BillingPeriodType;
+  isActive: boolean;
+  featureCount: number;
+  features: SubscriptionPlanFeature[];
+  createdAt: string;
+  createdBy: number | null;
+  updatedAt: string | null;
+  updatedBy: number | null;
+};
+
+export type SubscriptionPlanUpsertRequest = {
+  nameEn: string;
+  nameLocal: string | null;
+  shortNote: string | null;
+  regularPrice: number;
+  /** Above 0: the API works out the discount price from it. */
+  discountPercentage: number;
+  /** Used only when the percentage is 0 (the API then works out the percentage). */
+  discountPrice: number | null;
+  currencyLookupDataId: number;
+  localExchangeRate: number;
+  billingPeriodType: BillingPeriodType;
+  isActive: boolean;
+  /** Saved features and details keep their id; new ones have none; those left out are removed. */
+  features: { id: number | null; title: string; isActive: boolean; details: { id: number | null; description: string }[] }[];
+};
+
 export const SUBSCRIPTION_TYPES = ["Free Trial", "Premium"] as const;
 export const BILLING_PERIOD_TYPES = ["Monthly", "Yearly"] as const;
 export const SUBSCRIPTION_STATUSES = ["Pending", "Active", "Expired", "Cancelled"] as const;

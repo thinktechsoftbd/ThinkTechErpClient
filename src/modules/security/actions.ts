@@ -22,6 +22,7 @@ import {
   type MenuUpsertRequest,
   type OrganizationClientUpsertRequest,
   type OrganizationUpsertRequest,
+  type SubscriptionPlanUpsertRequest,
   type SubscriptionUpsertRequest,
   type UserMenuAccessItem,
   type UserStatus,
@@ -635,4 +636,103 @@ export async function deleteSubscriptionAction(id: number): Promise<ActionState>
   }
   refresh();
   return actionSuccess("Subscription deleted.");
+}
+
+// ---- Subscription plans
+
+const MAX_PLAN_FEATURES = 100;
+
+/** A saved id from the JSON, or null for a new row; anything else is reported. */
+function savedId(value: unknown) {
+  if (value === null || value === undefined) return null;
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : Number.NaN;
+}
+
+/** The features, each with its details, posted as JSON in the hidden "features" field. */
+function readPlanFeatures(formData: FormData, fieldErrors: FieldErrors): SubscriptionPlanUpsertRequest["features"] {
+  const raw = formData.get("features");
+  let parsed: unknown = [];
+  try {
+    parsed = typeof raw === "string" && raw ? JSON.parse(raw) : [];
+  } catch {
+    parsed = null;
+  }
+  if (!Array.isArray(parsed)) {
+    fieldErrors.features = "The features couldn't be read. Reload the page and try again.";
+    return [];
+  }
+  if (parsed.length > MAX_PLAN_FEATURES) fieldErrors.features = `A plan can have up to ${MAX_PLAN_FEATURES} features.`;
+
+  const features: SubscriptionPlanUpsertRequest["features"] = [];
+  parsed.forEach((item: { id?: unknown; title?: unknown; isActive?: unknown; details?: unknown }, index) => {
+    if (fieldErrors.features) return;
+    const label = `Feature ${index + 1}`;
+    const id = savedId(item?.id);
+    const title = typeof item?.title === "string" ? item.title.trim() : "";
+    const rawDetails = Array.isArray(item?.details) ? item.details : [];
+    if (Number.isNaN(id)) fieldErrors.features = `${label} is not valid. Remove it and add it again.`;
+    else if (!title) fieldErrors.features = `${label}: enter its title.`;
+    else if (title.length > 200) fieldErrors.features = `${label}: the title is limited to 200 characters.`;
+    if (fieldErrors.features) return;
+
+    const details: SubscriptionPlanUpsertRequest["features"][number]["details"] = [];
+    rawDetails.forEach((line: { id?: unknown; description?: unknown }, lineIndex) => {
+      if (fieldErrors.features) return;
+      const detailId = savedId(line?.id);
+      const description = typeof line?.description === "string" ? line.description.trim() : "";
+      if (Number.isNaN(detailId)) fieldErrors.features = `${label}, detail ${lineIndex + 1} is not valid. Remove it and add it again.`;
+      else if (!description) fieldErrors.features = `${label}, detail ${lineIndex + 1}: enter the description.`;
+      else if (description.length > 500) fieldErrors.features = `${label}, detail ${lineIndex + 1}: limited to 500 characters.`;
+      else details.push({ id: detailId, description });
+    });
+    features.push({ id, title, isActive: item?.isActive !== false, details });
+  });
+  return features;
+}
+
+/** Creates (id = null) or updates a subscription plan with its features; the API works out the discount. */
+export async function saveSubscriptionPlanAction(id: number | null, _previous: ActionState, formData: FormData): Promise<ActionState> {
+  const fieldErrors: FieldErrors = {};
+  const regularPrice = decimal(formData, "regularPrice", 0, 0, 9_999_999_999_999_999, fieldErrors);
+  const discountPercentage = decimal(formData, "discountPercentage", 0, 0, 100, fieldErrors);
+  const discountPrice = discountPercentage > 0 ? null : decimal(formData, "discountPrice", regularPrice, 0, 9_999_999_999_999_999, fieldErrors);
+  if (discountPrice !== null && discountPrice > regularPrice && !fieldErrors.discountPrice) {
+    fieldErrors.discountPrice = "Can't be more than the regular price.";
+  }
+  const body: SubscriptionPlanUpsertRequest = {
+    nameEn: requiredText(formData, "nameEn", 150, fieldErrors),
+    nameLocal: text(formData, "nameLocal", 150, fieldErrors),
+    shortNote: text(formData, "shortNote", 500, fieldErrors),
+    regularPrice,
+    discountPercentage,
+    discountPrice,
+    currencyLookupDataId: requiredId(formData, "currencyLookupDataId", "Choose a currency.", fieldErrors),
+    localExchangeRate: decimal(formData, "localExchangeRate", 1, 0.000001, 999_999_999_999, fieldErrors),
+    billingPeriodType: oneOf(formData, "billingPeriodType", BILLING_PERIOD_TYPES, fieldErrors),
+    isActive: formData.get("isActive") === "on",
+    features: readPlanFeatures(formData, fieldErrors),
+  };
+  if (hasErrors(fieldErrors)) return invalid(fieldErrors);
+
+  try {
+    await requireModuleAccess(securityModule);
+    if (id === null) await securityApi.createSubscriptionPlan(body);
+    else await securityApi.updateSubscriptionPlan(id, body);
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess(id === null ? "Subscription plan created." : "Subscription plan saved.");
+}
+
+export async function deleteSubscriptionPlanAction(id: number): Promise<ActionState> {
+  try {
+    await requireModuleAccess(securityModule);
+    await securityApi.deleteSubscriptionPlan(id);
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess("Subscription plan deleted.");
 }

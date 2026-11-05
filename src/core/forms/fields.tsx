@@ -2,7 +2,8 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/core/utils/cn";
 import { FieldError } from "./action-form";
 
-const controlClasses =
+/** The look shared by inputs, selects and textareas (and controls that look like them, e.g. SearchSelect). */
+export const controlClasses =
   "w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 dark:disabled:bg-gray-800";
 
 export function Label({ htmlFor, children }: { htmlFor: string; children: ReactNode }) {

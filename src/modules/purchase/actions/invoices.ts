@@ -29,18 +29,25 @@ export async function saveInvoiceAction(id: number | null, _previous: ActionStat
     return actionError("Choose the payment source and its type.", { invPaymentSourceDId: "Required." });
 
   const target = popupReturn(formData, "/purchase/invoices", paths);
+  // "finalize" posts the invoice and its bill voucher; a missing ledger mapping leaves the saved draft as it was.
+  const intent = readIntent(formData);
   return saveDocument(
     purchaseModule,
     () => (id === null ? purchaseApi.invoices.create(body) : purchaseApi.invoices.update(id, body)),
-    readIntent(formData) === "post" ? (savedId) => purchaseApi.invoices.action(savedId, "post") : null,
+    intent === "save" ? null : (savedId) => purchaseApi.invoices.action(savedId, intent),
     target.paths,
-    "posted",
+    intent === "finalize" ? "finalized" : "posted",
     target.replace,
   );
 }
 
 export async function postInvoiceAction(id: number): Promise<ActionState> {
   return runDocumentAction(purchaseModule, () => purchaseApi.invoices.action(id, "post"), "Invoice posted.");
+}
+
+/** Posts a draft first, then the bill voucher from the ledger mappings; the invoice is then locked. */
+export async function finalizeInvoiceAction(id: number): Promise<ActionState> {
+  return runDocumentAction(purchaseModule, () => purchaseApi.invoices.action(id, "finalize"), "Invoice finalized: its bill voucher is posted.");
 }
 
 export async function cancelInvoiceAction(id: number): Promise<ActionState> {

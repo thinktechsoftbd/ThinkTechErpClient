@@ -10,6 +10,7 @@ import { DocumentStatusBadge } from "@/core/documents/document-status";
 import { Facts, TotalsList } from "@/core/documents/facts";
 import { getCurrentOrganization } from "@/core/org/organization";
 import { ApiErrorState } from "@/core/ui/api-error-state";
+import { Badge } from "@/core/ui/badge";
 import { LinkButton } from "@/core/ui/button";
 import { Card, CardBody, CardHeader } from "@/core/ui/card";
 import { PageSkeleton } from "@/core/ui/feedback";
@@ -21,7 +22,7 @@ import { formatAmount, formatQuantity } from "@/core/utils/number";
 import { parseIdParam } from "@/core/utils/params";
 import { PrintButton } from "@/modules/inventory/components/reports/print-button";
 import { canManageSales } from "@/modules/sales/access";
-import { cancelSaleAction, deleteSaleAction, postSaleAction } from "@/modules/sales/actions/invoices";
+import { cancelSaleAction, deleteSaleAction, finalizeSaleAction, postSaleAction } from "@/modules/sales/actions/invoices";
 import { salesApi } from "@/modules/sales/api";
 import { SalesMemo } from "@/modules/sales/components/sales-memo";
 import { customerLabel, salesLabel } from "@/modules/sales/types";
@@ -59,6 +60,11 @@ async function SaleDetail({ params }: Pick<Props, "params">) {
   const lineDiscount = invoice.discountAmount - invoice.extraDiscountAmount;
   const profit = invoice.totalAmount - invoice.taxAmount - invoice.costAmount;
   const returnable = invoice.lines.some((line) => line.quantity - line.returnedQuantity > 0.0001);
+  // Finalized: its bill voucher is posted, and the sale is locked until the voucher is deleted.
+  const finalized = invoice.billVoucherId !== null;
+  const finalizeMessage =
+    "Finalize this sale? It is completed (if still a draft) and its bill voucher is posted from the ledger mappings. " +
+    "It can't be cancelled until that voucher is deleted.";
 
   return (
     <>
@@ -69,6 +75,7 @@ async function SaleDetail({ params }: Pick<Props, "params">) {
             <span className="inline-flex items-center gap-3">
               {invoice.invoiceNo} <DocumentStatusBadge status={isPosted ? "Posted" : invoice.status} />
               {isPosted && <DocumentStatusBadge status={invoice.paymentStatus} />}
+              {finalized && <Badge tone="brand">Finalized</Badge>}
             </span>
           }
           description={`${invoice.saleType} sale to ${customerLabel(invoice)} · ${formatDate(invoice.invoiceDate)}`}
@@ -93,6 +100,9 @@ async function SaleDetail({ params }: Pick<Props, "params">) {
                   >
                     Complete sale
                   </DocumentActionButton>
+                  <DocumentActionButton action={finalizeSaleAction.bind(null, id)} variant="primary" confirmMessage={finalizeMessage}>
+                    Finalize
+                  </DocumentActionButton>
                   <DocumentActionButton action={deleteSaleAction.bind(null, id)} variant="danger" confirmMessage="Delete this draft sale?">
                     Delete
                   </DocumentActionButton>
@@ -108,7 +118,12 @@ async function SaleDetail({ params }: Pick<Props, "params">) {
                   Return goods
                 </LinkButton>
               )}
-              {canManage && isPosted && (
+              {canManage && isPosted && !finalized && (
+                <DocumentActionButton action={finalizeSaleAction.bind(null, id)} variant="primary" confirmMessage={finalizeMessage}>
+                  Finalize
+                </DocumentActionButton>
+              )}
+              {canManage && isPosted && !finalized && (
                 <DocumentActionButton
                   action={cancelSaleAction.bind(null, id)}
                   variant="danger"
@@ -131,6 +146,15 @@ async function SaleDetail({ params }: Pick<Props, "params">) {
             <CardBody>
               <Facts
                 items={[
+                  {
+                    label: "Bill voucher",
+                    value: finalized ? (
+                      <Link href={`/accounting/vouchers?view=${invoice.billVoucherId}`} className="text-brand-500 hover:underline">
+                        {invoice.billVoucherRefNo}
+                        {invoice.billVoucherStatus === "Draft" ? " (unposted)" : ""}
+                      </Link>
+                    ) : null,
+                  },
                   {
                     label: "Customer",
                     value: invoice.customerId ? (

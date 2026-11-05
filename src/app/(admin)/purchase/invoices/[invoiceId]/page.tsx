@@ -9,6 +9,7 @@ import { DocumentActionButton } from "@/core/documents/document-action-button";
 import { DocumentStatusBadge } from "@/core/documents/document-status";
 import { Facts, TotalsList } from "@/core/documents/facts";
 import { ApiErrorState } from "@/core/ui/api-error-state";
+import { Badge } from "@/core/ui/badge";
 import { LinkButton } from "@/core/ui/button";
 import { Card, CardBody, CardHeader } from "@/core/ui/card";
 import { PageSkeleton } from "@/core/ui/feedback";
@@ -18,7 +19,7 @@ import { formatDate, formatDateTime } from "@/core/utils/format";
 import { formatAmount } from "@/core/utils/number";
 import { parseIdParam } from "@/core/utils/params";
 import { canManagePurchase } from "@/modules/purchase/access";
-import { cancelInvoiceAction, deleteInvoiceAction, postInvoiceAction } from "@/modules/purchase/actions/invoices";
+import { cancelInvoiceAction, deleteInvoiceAction, finalizeInvoiceAction, postInvoiceAction } from "@/modules/purchase/actions/invoices";
 import { purchaseApi } from "@/modules/purchase/api";
 import { PurchaseLinesTable } from "@/modules/purchase/components/purchase-lines-table";
 import { purchaseLabel } from "@/modules/purchase/types";
@@ -49,6 +50,11 @@ async function InvoiceDetail({ params }: Pick<Props, "params">) {
   const money = (value: number) => `${formatAmount(value)} ${invoice.currency}`;
   const isDraft = invoice.status === "Draft";
   const isPosted = invoice.status === "Posted";
+  // Finalized: its bill voucher is posted, and the invoice is locked until the voucher is deleted.
+  const finalized = invoice.billVoucherId !== null;
+  const finalizeMessage =
+    "Finalize this invoice? It is posted (if still a draft) and its bill voucher is posted from the ledger mappings. " +
+    "It can't be cancelled until that voucher is deleted.";
 
   return (
     <>
@@ -57,6 +63,7 @@ async function InvoiceDetail({ params }: Pick<Props, "params">) {
           <span className="inline-flex items-center gap-3">
             {invoice.invoiceNo} <DocumentStatusBadge status={invoice.status} />
             {isPosted && <DocumentStatusBadge status={invoice.paymentStatus} />}
+            {finalized && <Badge tone="brand">Finalized</Badge>}
           </span>
         }
         description={`${invoice.purchaseType} purchase from ${invoice.supplierName ?? "a walk-in supplier"} · ${formatDate(invoice.invoiceDate)}`}
@@ -85,6 +92,9 @@ async function InvoiceDetail({ params }: Pick<Props, "params">) {
                   >
                     Post
                   </DocumentActionButton>
+                  <DocumentActionButton action={finalizeInvoiceAction.bind(null, id)} variant="primary" confirmMessage={finalizeMessage}>
+                    Finalize
+                  </DocumentActionButton>
                   <DocumentActionButton action={deleteInvoiceAction.bind(null, id)} variant="danger" confirmMessage="Delete this draft invoice?">
                     Delete
                   </DocumentActionButton>
@@ -100,7 +110,12 @@ async function InvoiceDetail({ params }: Pick<Props, "params">) {
                   Return goods
                 </LinkButton>
               )}
-              {isPosted && (
+              {isPosted && !finalized && (
+                <DocumentActionButton action={finalizeInvoiceAction.bind(null, id)} variant="primary" confirmMessage={finalizeMessage}>
+                  Finalize
+                </DocumentActionButton>
+              )}
+              {isPosted && !finalized && (
                 <DocumentActionButton
                   action={cancelInvoiceAction.bind(null, id)}
                   variant="danger"
@@ -119,6 +134,15 @@ async function InvoiceDetail({ params }: Pick<Props, "params">) {
           <CardBody>
             <Facts
               items={[
+                {
+                  label: "Bill voucher",
+                  value: finalized ? (
+                    <Link href={`/accounting/vouchers?view=${invoice.billVoucherId}`} className="text-brand-500 hover:underline">
+                      {invoice.billVoucherRefNo}
+                      {invoice.billVoucherStatus === "Draft" ? " (unposted)" : ""}
+                    </Link>
+                  ) : null,
+                },
                 { label: "Supplier", value: invoice.supplierName ?? "Walk-in supplier" },
                 { label: "Mobile", value: invoice.supplierMobile },
                 { label: "Purchase type", value: invoice.purchaseType === "Cash" ? "Cash (paid now)" : "Credit" },

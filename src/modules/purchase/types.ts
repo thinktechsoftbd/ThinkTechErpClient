@@ -310,6 +310,10 @@ export type PurchaseInvoice = {
   dueAmount: number;
   status: "Draft" | "Posted" | "Cancelled";
   paymentStatus: PaymentStatus;
+  /** The bill voucher made by finalizing the invoice, while it is there; the invoice is locked meanwhile. */
+  billVoucherId: number | null;
+  billVoucherRefNo: string | null;
+  billVoucherStatus: string | null;
   lineCount: number;
   postedAt: string | null;
   remarks: string | null;

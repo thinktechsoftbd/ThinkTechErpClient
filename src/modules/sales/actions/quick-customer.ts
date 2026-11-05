@@ -44,6 +44,7 @@ export async function addQuickCustomerAction(input: { name: string; mobile: stri
       remarks: null,
       isActive: true,
       isSupplier: false,
+      accSubClassId: null,
     });
     return {
       ok: true,

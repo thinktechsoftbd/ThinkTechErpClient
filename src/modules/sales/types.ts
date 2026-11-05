@@ -48,6 +48,11 @@ export type Customer = {
   isSupplier: boolean;
   /** Owed by the customer now (+) or paid in advance (-), base currency. */
   balance: number;
+  /** The party's ledger head (shared with the supplier side): what a credit sale's receivable is debited to. */
+  accSubClassId: number | null;
+  ledgerHeadCode: string | null;
+  ledgerHeadName: string | null;
+  ledgerHeadPath: string | null;
   createdAt: string;
   updatedAt: string | null;
 };
@@ -78,6 +83,8 @@ export type CustomerUpsertRequest = {
   isActive: boolean;
   /** Also a supplier; their purchase terms are set on the purchase Suppliers screen. */
   isSupplier: boolean;
+  /** The ledger head (sub class) credit sales are debited to. */
+  accSubClassId: number | null;
 };
 
 /** A customer as the sales screen picks it, with what they owe and the credit left. */
@@ -199,6 +206,10 @@ export type SalesInvoice = {
   costAmount: number;
   status: "Draft" | "Posted" | "Cancelled";
   paymentStatus: "Unpaid" | "PartiallyPaid" | "Paid";
+  /** The bill voucher made by finalizing the invoice, while it is there; the invoice is locked meanwhile. */
+  billVoucherId: number | null;
+  billVoucherRefNo: string | null;
+  billVoucherStatus: string | null;
   lineCount: number;
   postedAt: string | null;
   postedBy: number | null;

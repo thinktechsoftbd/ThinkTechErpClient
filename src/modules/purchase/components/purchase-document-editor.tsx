@@ -26,6 +26,7 @@ import {
   type PurchaseReturnUpsertRequest,
   type SupplierOption,
 } from "../types";
+import type { SubmitIntentValue } from "@/modules/inventory/components/documents/intent-submit";
 import { PaymentSourceFields } from "./payment-source-fields";
 import { SupplierPicker, fetchSupplierOption } from "./supplier-picker";
 
@@ -260,7 +261,7 @@ export function PurchaseDocumentEditor({
     };
   }, [initial.supplierId]);
   // The intent itself is sent by the clicked button (name="intent"); this shows its progress.
-  const [submitIntent, setSubmitIntent] = useState<"save" | "post">("save");
+  const [submitIntent, setSubmitIntent] = useState<SubmitIntentValue>("save");
 
   const receivesStock = mode === "receipt" || (mode === "invoice" && initial.receivesStock !== false);
   const billsReceipt = mode === "invoice" && initial.receivesStock === false;
@@ -994,8 +995,14 @@ export function PurchaseDocumentEditor({
                 Save draft
               </SubmitIntent>
               {canPost && (
-                <SubmitIntent intent="post" chosen={submitIntent} onChoose={setSubmitIntent} variant="primary">
+                <SubmitIntent intent="post" chosen={submitIntent} onChoose={setSubmitIntent} variant={mode === "invoice" ? "outline" : "primary"}>
                   {postLabel ?? "Save & post"}
+                </SubmitIntent>
+              )}
+              {canPost && mode === "invoice" && (
+                // Posts the invoice, then its bill voucher from the ledger mappings; it is then locked.
+                <SubmitIntent intent="finalize" chosen={submitIntent} onChoose={setSubmitIntent} variant="primary">
+                  Save &amp; finalize
                 </SubmitIntent>
               )}
             </div>
@@ -1015,7 +1022,7 @@ export function PurchaseDocumentEditor({
   );
 }
 
-/** A submit button that says what to do with the document (sent as "intent"): keep a draft, or post it too. */
+/** A submit button that says what to do with the document (sent as "intent"): keep a draft, post it, or finalize it. */
 export function SubmitIntent({
   intent,
   chosen,
@@ -1023,10 +1030,10 @@ export function SubmitIntent({
   variant,
   children,
 }: {
-  intent: "save" | "post";
+  intent: SubmitIntentValue;
   /** The intent of the last submit (its button shows the progress). */
-  chosen: "save" | "post";
-  onChoose: (intent: "save" | "post") => void;
+  chosen: SubmitIntentValue;
+  onChoose: (intent: SubmitIntentValue) => void;
   variant: "primary" | "outline";
   children: ReactNode;
 }) {
@@ -1042,7 +1049,7 @@ export function SubmitIntent({
       className={buttonClasses(variant, "md", "w-full")}
     >
       {active && <LoaderCircle className="size-4 animate-spin" aria-hidden />}
-      {active ? (intent === "post" ? "Posting…" : "Saving…") : children}
+      {active ? ({ save: "Saving…", post: "Posting…", finalize: "Finalizing…" } as const)[intent] : children}
     </button>
   );
 }

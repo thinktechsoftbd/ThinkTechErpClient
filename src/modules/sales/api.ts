@@ -53,8 +53,8 @@ export const salesApi = {
     create: (body: SalesInvoiceUpsertRequest) => apiFetch<SalesInvoice>(`${base}/invoices`, { method: "POST", body }),
     update: (id: number, body: SalesInvoiceUpsertRequest) => apiFetch<SalesInvoice>(`${base}/invoices/${id}`, { method: "PUT", body }),
     remove: (id: number) => apiFetch<void>(`${base}/invoices/${id}`, { method: "DELETE" }),
-    /** post or cancel */
-    action: (id: number, action: "post" | "cancel") =>
+    /** post, finalize (post, then post the bill voucher) or cancel */
+    action: (id: number, action: "post" | "finalize" | "cancel") =>
       apiFetch<SalesInvoice>(`${base}/invoices/${id}/${action}`, { method: "POST", body: {} }),
   },
 

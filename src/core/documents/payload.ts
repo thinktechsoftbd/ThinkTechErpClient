@@ -14,8 +14,10 @@ export function readPayload<T>(formData: FormData): T | null {
   }
 }
 
-export function readIntent(formData: FormData): "save" | "post" {
-  return formData.get("intent") === "post" ? "post" : "save";
+/** "finalize" (invoices): post, then post the bill voucher; other documents treat it as "save". */
+export function readIntent(formData: FormData): "save" | "post" | "finalize" {
+  const intent = formData.get("intent");
+  return intent === "post" || intent === "finalize" ? intent : "save";
 }
 
 /** A message passed to the next page in the query string (e.g. a post that failed after saving). */

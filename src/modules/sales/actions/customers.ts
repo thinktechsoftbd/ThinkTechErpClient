@@ -129,6 +129,7 @@ function customerBody(formData: FormData, fieldErrors: FieldErrors): CustomerUps
     remarks: text(formData, "remarks", 1000, fieldErrors),
     isActive: checked(formData, "isActive"),
     isSupplier: checked(formData, "isSupplier"),
+    accSubClassId: optionalId(formData, "accSubClassId", fieldErrors),
   };
 }
 

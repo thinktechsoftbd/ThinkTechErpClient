@@ -580,10 +580,25 @@ export function SalesEditor({
                     setShowIssues(true);
                     chooseIntent(value);
                   }}
-                  variant="primary"
+                  variant="outline"
                   pendingLabel="Completing…"
                 >
                   Complete sale · {formatAmount(total)}
+                </IntentSubmit>
+              )}
+              {canPost && (
+                // Completes the sale, then posts its bill voucher from the ledger mappings; the sale is then locked.
+                <IntentSubmit
+                  intent="finalize"
+                  chosen={chosenIntent}
+                  onChoose={(value) => {
+                    setShowIssues(true);
+                    chooseIntent(value);
+                  }}
+                  variant="primary"
+                  pendingLabel="Finalizing…"
+                >
+                  Complete &amp; finalize · {formatAmount(total)}
                 </IntentSubmit>
               )}
             </div>

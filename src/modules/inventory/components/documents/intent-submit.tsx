@@ -5,7 +5,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useFormState } from "@/core/forms/action-form";
 import { buttonClasses } from "@/core/ui/button";
 
-export type SubmitIntentValue = "save" | "post";
+/** "finalize": an invoice is posted, then its bill voucher is posted too. */
+export type SubmitIntentValue = "save" | "post" | "finalize";
 
 /**
  * The intent of the last submit of a document form (save a draft, or post it too), so the

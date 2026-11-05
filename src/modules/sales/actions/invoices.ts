@@ -24,18 +24,25 @@ export async function saveSaleAction(id: number | null, _previous: ActionState, 
   if (!body.warehouseId) return actionError("Choose the warehouse the goods are sold from.", { warehouseId: "Required." });
 
   const target = popupReturn(formData, "/sales/invoices", paths);
+  // "finalize" posts the sale and its bill voucher; a missing ledger mapping leaves the saved draft as it was.
+  const intent = readIntent(formData);
   return saveDocument(
     salesModule,
     () => (id === null ? salesApi.invoices.create(body) : salesApi.invoices.update(id, body)),
-    readIntent(formData) === "post" ? (savedId) => salesApi.invoices.action(savedId, "post") : null,
+    intent === "save" ? null : (savedId) => salesApi.invoices.action(savedId, intent),
     target.paths,
-    "posted",
+    intent === "finalize" ? "finalized" : "posted",
     target.replace,
   );
 }
 
 export async function postSaleAction(id: number): Promise<ActionState> {
   return runDocumentAction(salesModule, () => salesApi.invoices.action(id, "post"), "Sale completed.");
+}
+
+/** Posts a draft first, then the bill voucher from the ledger mappings; the sale is then locked. */
+export async function finalizeSaleAction(id: number): Promise<ActionState> {
+  return runDocumentAction(salesModule, () => salesApi.invoices.action(id, "finalize"), "Sale finalized: its bill voucher is posted.");
 }
 
 export async function cancelSaleAction(id: number): Promise<ActionState> {

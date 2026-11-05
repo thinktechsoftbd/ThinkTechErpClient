@@ -1,4 +1,6 @@
 import { Checkbox, Field, Input, Select, Textarea } from "@/core/forms/fields";
+import { LedgerHeadField } from "@/modules/accounting/components/ledger-head-picker";
+import { mappedLedgerHead } from "@/modules/accounting/components/pickers";
 import { FormSection, withCurrentOption } from "@/modules/purchase/components/setup/form-section";
 import type { LookupOption } from "@/modules/settings/types";
 import type { Customer } from "../../types";
@@ -135,6 +137,14 @@ export function CustomerFields({
             defaultValue={value?.creditLimit === null || value?.creditLimit === undefined ? "" : String(value.creditLimit)}
             placeholder="No limit"
           />
+        </Field>
+        <Field
+          label="Ledger head"
+          name="accSubClassId"
+          className="sm:col-span-2"
+          hint="The receivable head a credit sale is debited to when the sale is finalized. Shared with the supplier side."
+        >
+          <LedgerHeadField id="accSubClassId" name="accSubClassId" defaultValue={value ? mappedLedgerHead(value) : null} />
         </Field>
         <Field label="Opening balance" name="openingBalance">
           <div className="flex gap-2">

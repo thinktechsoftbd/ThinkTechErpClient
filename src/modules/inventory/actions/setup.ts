@@ -170,6 +170,32 @@ export async function deleteCategoryAction(id: number): Promise<ActionState> {
   return mutate(() => inventoryApi.categories.remove(id), "Category deleted.");
 }
 
+/**
+ * Sets the ledger head of categories (e.g. the ones an invoice couldn't be finalized without), keeping the rest of
+ * each category as it is.
+ */
+export async function mapCategoryLedgerHeadsAction(items: { categoryId: number; accSubClassId: number }[]): Promise<ActionState> {
+  const valid = items.filter(
+    (item) => Number.isSafeInteger(item.categoryId) && item.categoryId > 0 && Number.isSafeInteger(item.accSubClassId) && item.accSubClassId > 0,
+  );
+  if (valid.length === 0) return actionError("Choose a ledger head for each category.");
+
+  return mutate(async () => {
+    for (const item of valid) {
+      const category = await inventoryApi.categories.get(item.categoryId);
+      await inventoryApi.categories.update(item.categoryId, {
+        parentCategoryId: category.parentCategoryId,
+        code: category.code,
+        name: category.name,
+        nameLocal: category.nameLocal,
+        sortOrder: category.sortOrder,
+        isActive: category.isActive,
+        accSubClassId: item.accSubClassId,
+      });
+    }
+  }, valid.length === 1 ? "Category mapped." : `${valid.length} categories mapped.`);
+}
+
 // ---- Brands
 
 /** Creates (id = null) or updates a brand. */

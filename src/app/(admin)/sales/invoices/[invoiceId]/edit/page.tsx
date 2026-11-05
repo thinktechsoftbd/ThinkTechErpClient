@@ -10,6 +10,8 @@ import { PageSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
 import { firstParam } from "@/core/ui/pagination";
 import { parseIdParam } from "@/core/utils/params";
+import { MapCategoryHeadsButton } from "@/modules/accounting/components/map-category-heads-button";
+import { loadUnmappedCategories } from "@/modules/accounting/voucher-mappings";
 import { canManageSales } from "@/modules/sales/access";
 import { saveSaleAction } from "@/modules/sales/actions/invoices";
 import { salesApi } from "@/modules/sales/api";
@@ -39,7 +41,11 @@ async function EditSale({ params, searchParams }: Props) {
   }
   if (invoice.data.status !== "Draft") redirect(`/sales/invoices/${id}`);
   if (!options.ok) return <Card><ApiErrorState error={options.error} /></Card>;
-  const initial = await loadSalesEditorInitial(invoice.data);
+  // A failed finalize: the categories still without a ledger head get a Map button beside the reason.
+  const [initial, unmapped] = await Promise.all([
+    loadSalesEditorInitial(invoice.data),
+    notice ? loadUnmappedCategories(invoice.data.lines.map((line) => line.productId)) : Promise.resolve([]),
+  ]);
   if (!initial.ok) return <Card><ApiErrorState error={initial.error} /></Card>;
 
   const canManage = canManageSales(session);
@@ -58,7 +64,10 @@ async function EditSale({ params, searchParams }: Props) {
       />
       {notice && (
         <Alert tone="error" className="mb-6">
-          {notice}
+          <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span>{notice}</span>
+            {unmapped.length > 0 && <MapCategoryHeadsButton categories={unmapped} />}
+          </span>
         </Alert>
       )}
       <SalesEditor

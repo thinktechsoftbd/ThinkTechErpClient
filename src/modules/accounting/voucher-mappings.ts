@@ -1,19 +1,41 @@
 import "server-only";
 import { tryApi } from "@/core/api/client";
 import { inventoryApi } from "@/modules/inventory/api";
-
-/** A category an invoice's bill voucher can't be made without: it has no ledger head yet. */
-export type UnmappedCategory = { id: number; name: string; path: string };
+import { purchaseApi } from "@/modules/purchase/api";
+import { salesApi } from "@/modules/sales/api";
 
 /**
- * The categories of these products that have no ledger head, for the Map popup shown when finalizing an
- * invoice failed. Products or categories that can't be read are left out.
+ * Something an invoice's bill voucher can't be made without, because it has no ledger head yet: an item
+ * category, or the invoice's supplier or customer.
  */
-export async function loadUnmappedCategories(productIds: number[]): Promise<UnmappedCategory[]> {
-  const products = await Promise.all([...new Set(productIds)].map((id) => tryApi(() => inventoryApi.products.get(id))));
+export type UnmappedHead = { kind: "category" | "supplier" | "customer"; id: number; name: string; detail: string | null };
+
+/**
+ * What still has no ledger head, for the Map popup shown when finalizing an invoice failed: the products'
+ * categories, and the party when the invoice leaves something unpaid. Anything that can't be read is left out.
+ */
+export async function loadUnmappedHeads(
+  productIds: number[],
+  party: { kind: "supplier" | "customer"; id: number } | null,
+): Promise<UnmappedHead[]> {
+  const [products, partyResult] = await Promise.all([
+    Promise.all([...new Set(productIds)].map((id) => tryApi(() => inventoryApi.products.get(id)))),
+    party
+      ? tryApi<{ id: number; name: string; code: string; accSubClassId: number | null }>(() =>
+          party.kind === "supplier" ? purchaseApi.suppliers.get(party.id) : salesApi.customers.get(party.id),
+        )
+      : null,
+  ]);
   const categoryIds = [...new Set(products.flatMap((product) => (product.ok && product.data.categoryId ? [product.data.categoryId] : [])))];
   const categories = await Promise.all(categoryIds.map((id) => tryApi(() => inventoryApi.categories.get(id))));
-  return categories.flatMap((category) =>
-    category.ok && category.data.accSubClassId === null ? [{ id: category.data.id, name: category.data.name, path: category.data.path }] : [],
+
+  const heads: UnmappedHead[] = categories.flatMap((category) =>
+    category.ok && category.data.accSubClassId === null
+      ? [{ kind: "category" as const, id: category.data.id, name: category.data.name, detail: category.data.path }]
+      : [],
   );
+  if (party && partyResult?.ok && partyResult.data.accSubClassId === null) {
+    heads.push({ kind: party.kind, id: partyResult.data.id, name: partyResult.data.name, detail: partyResult.data.code });
+  }
+  return heads;
 }

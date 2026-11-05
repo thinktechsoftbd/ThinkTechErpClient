@@ -10,8 +10,8 @@ import { PageSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
 import { firstParam } from "@/core/ui/pagination";
 import { parseIdParam } from "@/core/utils/params";
-import { MapCategoryHeadsButton } from "@/modules/accounting/components/map-category-heads-button";
-import { loadUnmappedCategories } from "@/modules/accounting/voucher-mappings";
+import { MapLedgerHeadsButton } from "@/modules/accounting/components/map-ledger-heads-button";
+import { loadUnmappedHeads } from "@/modules/accounting/voucher-mappings";
 import { canManageSales } from "@/modules/sales/access";
 import { saveSaleAction } from "@/modules/sales/actions/invoices";
 import { salesApi } from "@/modules/sales/api";
@@ -41,10 +41,17 @@ async function EditSale({ params, searchParams }: Props) {
   }
   if (invoice.data.status !== "Draft") redirect(`/sales/invoices/${id}`);
   if (!options.ok) return <Card><ApiErrorState error={options.error} /></Card>;
-  // A failed finalize: the categories still without a ledger head get a Map button beside the reason.
+  // A failed finalize: the categories (and the customer of an unpaid part) still without a ledger head get a
+  // Map button beside the reason.
+  const owedByCustomer = invoice.data.customerId !== null && invoice.data.totalAmount > invoice.data.paidAmount;
   const [initial, unmapped] = await Promise.all([
     loadSalesEditorInitial(invoice.data),
-    notice ? loadUnmappedCategories(invoice.data.lines.map((line) => line.productId)) : Promise.resolve([]),
+    notice
+      ? loadUnmappedHeads(
+          invoice.data.lines.map((line) => line.productId),
+          owedByCustomer ? { kind: "customer", id: invoice.data.customerId! } : null,
+        )
+      : Promise.resolve([]),
   ]);
   if (!initial.ok) return <Card><ApiErrorState error={initial.error} /></Card>;
 
@@ -66,7 +73,7 @@ async function EditSale({ params, searchParams }: Props) {
         <Alert tone="error" className="mb-6">
           <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <span>{notice}</span>
-            {unmapped.length > 0 && <MapCategoryHeadsButton categories={unmapped} />}
+            {unmapped.length > 0 && <MapLedgerHeadsButton items={unmapped} />}
           </span>
         </Alert>
       )}

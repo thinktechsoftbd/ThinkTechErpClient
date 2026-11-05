@@ -9,9 +9,13 @@ import { formatAmount } from "@/core/utils/number";
 import { addQuickCustomerAction } from "../actions/quick-customer";
 import type { CustomerOption } from "../types";
 
+/** Name - Address (address line 1, or the city), e.g. "Korim - Milonpur". */
+const customerLabel = (customer: CustomerOption) => (customer.address ? `${customer.name} - ${customer.address}` : customer.name);
+
 /**
- * Picks a customer on file by name, code or mobile number (shops look customers up by mobile), or
- * adds one on the spot with a name and mobile. Shows what the customer owes and the credit left.
+ * Picks a customer on file by name, code, mobile, phone or address (shops look customers up by mobile), or
+ * adds one on the spot with a name, phone and address. The list opens on a click, with the first parties.
+ * Shows what the customer owes and the credit left.
  */
 export function CustomerPicker({
   value,
@@ -19,6 +23,7 @@ export function CustomerPicker({
   canAdd,
   required,
   includeInactive = false,
+  includeSuppliers = false,
 }: {
   value: CustomerOption | null;
   onChange: (customer: CustomerOption | null) => void;
@@ -27,6 +32,8 @@ export function CustomerPicker({
   required?: boolean;
   /** Inactive customers too (e.g. collecting what a closed account still owes); a sale can't use them. */
   includeInactive?: boolean;
+  /** Every party of the supplier table, suppliers too (a sale to one makes them a customer). */
+  includeSuppliers?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CustomerOption[]>([]);
@@ -37,27 +44,30 @@ export function CustomerPicker({
   const requestRef = useRef(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
+  // The first parties as soon as the list opens, then a new search 250 ms after the user stops typing.
   useEffect(() => {
+    if (!open) return;
     const text = query.trim();
-    if (!text) return;
     const request = ++requestRef.current;
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const response = await fetch(`/api/lookup/customers?search=${encodeURIComponent(text)}`, { headers: { Accept: "application/json" } });
+        const params = new URLSearchParams();
+        if (text) params.set("search", text);
+        if (includeSuppliers) params.set("includeSuppliers", "true");
+        const response = await fetch(`/api/lookup/customers?${params}`, { headers: { Accept: "application/json" } });
         const data: unknown = await response.json().catch(() => []);
         if (request !== requestRef.current) return;
         setResults(Array.isArray(data) ? (data as CustomerOption[]).filter((c) => includeInactive || c.isActive) : []);
         setActive(0);
-        setOpen(true);
       } catch {
         if (request === requestRef.current) setResults([]);
       } finally {
         if (request === requestRef.current) setLoading(false);
       }
-    }, 250);
+    }, text ? 250 : 0);
     return () => clearTimeout(timer);
-  }, [query, includeInactive]);
+  }, [open, query, includeInactive, includeSuppliers]);
 
   useEffect(() => {
     function close(event: MouseEvent) {
@@ -86,7 +96,9 @@ export function CustomerPicker({
       <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-800">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate font-medium text-gray-800 dark:text-white/90">{value.name}</p>
+            <p className="truncate font-medium text-gray-800 dark:text-white/90" title={customerLabel(value)}>
+              {customerLabel(value)}
+            </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {value.code}
               {value.mobile && ` · ${value.mobile}`}
@@ -120,21 +132,20 @@ export function CustomerPicker({
           className="pl-9"
           value={query}
           autoComplete="off"
-          placeholder="Name, code or mobile number"
+          placeholder="Name, code, mobile or address"
           aria-expanded={open}
           aria-controls="customerResults"
           role="combobox"
           onChange={(event) => {
             setQuery(event.target.value);
-            if (!event.target.value.trim()) {
-              setResults([]);
-              setOpen(false);
-            }
+            setOpen(true);
           }}
-          onFocus={() => results.length > 0 && setOpen(true)}
+          onFocus={() => setOpen(true)}
+          onClick={() => setOpen(true)}
           onKeyDown={(event) => {
             if (event.key === "ArrowDown") {
               event.preventDefault();
+              setOpen(true);
               setActive((index) => Math.min(index + 1, results.length - 1));
             } else if (event.key === "ArrowUp") {
               event.preventDefault();
@@ -147,38 +158,30 @@ export function CustomerPicker({
         />
         {loading && <LoaderCircle className="absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin text-gray-400" aria-hidden />}
       </div>
-      {open && query.trim() && (
+      {open && (
         <ul
           id="customerResults"
           role="listbox"
           className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-800 dark:bg-gray-900"
         >
           {results.length === 0 && !loading && (
-            <li className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">No customer found.</li>
+            <li className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">{query.trim() ? "No customer found." : "No customers yet."}</li>
           )}
+          {results.length === 0 && loading && <li className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">Loading…</li>}
           {results.map((customer, index) => (
             <li key={customer.id} role="option" aria-selected={index === active}>
+              {/* Just Name - Address, e.g. "Korim - Milonpur": what's owed shows once picked. */}
               <button
                 type="button"
                 onMouseEnter={() => setActive(index)}
                 onClick={() => pick(customer)}
+                title={customerLabel(customer)}
                 className={cn(
-                  "flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm",
+                  "block w-full truncate px-3 py-2 text-left text-sm text-gray-800 dark:text-white/90",
                   index === active ? "bg-brand-50 dark:bg-brand-500/10" : "hover:bg-gray-50 dark:hover:bg-white/5",
                 )}
               >
-                <span className="min-w-0">
-                  <span className="block truncate font-medium text-gray-800 dark:text-white/90">{customer.name}</span>
-                  <span className="block text-xs text-gray-500 dark:text-gray-400">
-                    {customer.code}
-                    {customer.mobile && ` · ${customer.mobile}`}
-                  </span>
-                </span>
-                {customer.balance !== 0 && (
-                  <span className={cn("shrink-0 text-xs tabular-nums", customer.balance > 0 ? "text-red-600 dark:text-red-400" : "text-gray-500")}>
-                    {customer.balance > 0 ? `owes ${formatAmount(customer.balance)}` : `adv ${formatAmount(-customer.balance)}`}
-                  </span>
-                )}
+                {customerLabel(customer)}
               </button>
             </li>
           ))}
@@ -203,16 +206,18 @@ function QuickAddCustomer({
   onCancel: () => void;
 }) {
   // A typed number goes to the mobile box, anything else to the name.
-  const typedMobile = /^[+\d][\d\s-]*$/.test(initialName.trim());
-  const [name, setName] = useState(typedMobile ? "" : initialName.trim());
-  const [mobile, setMobile] = useState(typedMobile ? initialName.trim() : "");
+  const typedNumber = /^[+\d][\d\s-]*$/.test(initialName.trim());
+  const [name, setName] = useState(typedNumber ? "" : initialName.trim());
+  const [mobile, setMobile] = useState(typedNumber ? initialName.trim() : "");
+  const [addressLine1, setAddressLine1] = useState("");
   const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
+  const complete = Boolean(name.trim() && mobile.trim() && addressLine1.trim());
 
   function save() {
     setError(undefined);
     startTransition(async () => {
-      const result = await addQuickCustomerAction({ name, mobile });
+      const result = await addQuickCustomerAction({ name, mobile, addressLine1 });
       if (result.ok) onAdded(result.customer);
       else setError(result.error);
     });
@@ -226,13 +231,19 @@ function QuickAddCustomer({
         <Input id="quickCustomerName" value={name} maxLength={250} autoFocus onChange={(e) => setName(e.target.value)} />
       </div>
       <div>
-        <Label htmlFor="quickCustomerMobile">Mobile</Label>
-        <Input id="quickCustomerMobile" value={mobile} maxLength={30} inputMode="tel" onChange={(e) => setMobile(e.target.value)} />
+        <Label htmlFor="quickCustomerMobile">Mobile *</Label>
+        <Input id="quickCustomerMobile" value={mobile} maxLength={30} inputMode="tel" placeholder="01XXXXXXXXX" onChange={(e) => setMobile(e.target.value)} />
       </div>
-      <p className="text-xs text-gray-500 dark:text-gray-400">Code, terms and credit limit can be set later on the Customers page.</p>
+      <div>
+        <Label htmlFor="quickCustomerAddress">Address line 1 *</Label>
+        <Input id="quickCustomerAddress" value={addressLine1} maxLength={250} onChange={(e) => setAddressLine1(e.target.value)} />
+      </div>
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        Added to the supplier table as a customer. Code, terms and credit limit can be set later on the Customers page.
+      </p>
       {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
       <div className="flex gap-2">
-        <button type="button" disabled={pending || !name.trim()} onClick={save} className={buttonClasses("primary", "sm")}>
+        <button type="button" disabled={pending || !complete} onClick={save} className={buttonClasses("primary", "sm")}>
           {pending && <LoaderCircle className="size-4 animate-spin" aria-hidden />}
           Add customer
         </button>

@@ -426,7 +426,7 @@ export function SalesEditor({
                   </button>
                 ))}
               </div>
-              <CustomerPicker value={customer} onChange={setCustomer} canAdd={canAddCustomer} required={credit} />
+              <CustomerPicker value={customer} onChange={setCustomer} canAdd={canAddCustomer} required={credit} includeSuppliers />
               {credit && !customer && (
                 <p className="text-xs text-amber-700 dark:text-amber-400">A credit sale needs a customer on file, so the due can be collected later.</p>
               )}

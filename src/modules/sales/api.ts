@@ -41,10 +41,16 @@ export const salesApi = {
     create: (body: CustomerUpsertRequest) => apiFetch<Customer>(`${base}/customers`, { method: "POST", body }),
     update: (id: number, body: CustomerUpsertRequest) => apiFetch<Customer>(`${base}/customers/${id}`, { method: "PUT", body }),
     remove: (id: number) => apiFetch<void>(`${base}/customers/${id}`, { method: "DELETE" }),
-    /** By code, name or mobile (an exact mobile first); ids returns exactly those customers. */
-    options: (query: { search?: string; ids?: string; limit?: number }) =>
+    /**
+     * By code, name, mobile, phone or address (an exact mobile first); ids returns exactly those customers;
+     * includeSuppliers lists the suppliers that aren't customers yet too.
+     */
+    options: (query: { search?: string; ids?: string; limit?: number; includeSuppliers?: boolean }) =>
       apiFetch<CustomerOption[]>(`${base}/customers/options`, { query }),
     openInvoices: (customerId: number) => apiFetch<OpenSalesInvoice[]>(`${base}/customers/${customerId}/open-invoices`),
+    /** Just the customer's ledger head (null clears it). */
+    setLedgerHead: (customerId: number, accSubClassId: number | null) =>
+      apiFetch<void>(`${base}/customers/${customerId}/ledger-head`, { method: "PUT", body: { accSubClassId } }),
   },
 
   invoices: {

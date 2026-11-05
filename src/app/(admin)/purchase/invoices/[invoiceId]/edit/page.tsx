@@ -10,8 +10,8 @@ import { PageSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
 import { firstParam } from "@/core/ui/pagination";
 import { parseIdParam } from "@/core/utils/params";
-import { MapCategoryHeadsButton } from "@/modules/accounting/components/map-category-heads-button";
-import { loadUnmappedCategories } from "@/modules/accounting/voucher-mappings";
+import { MapLedgerHeadsButton } from "@/modules/accounting/components/map-ledger-heads-button";
+import { loadUnmappedHeads } from "@/modules/accounting/voucher-mappings";
 import { canManagePurchase } from "@/modules/purchase/access";
 import { saveInvoiceAction } from "@/modules/purchase/actions/invoices";
 import { purchaseApi } from "@/modules/purchase/api";
@@ -45,10 +45,17 @@ async function EditInvoice({ params, searchParams }: Props) {
   }
   if (invoice.data.status !== "Draft") redirect(`/purchase/invoices/${id}`);
   if (!options.ok) return <Card><ApiErrorState error={options.error} /></Card>;
-  // A failed finalize: the categories still without a ledger head get a Map button beside the reason.
+  // A failed finalize: the categories (and the supplier of an unpaid part) still without a ledger head get a
+  // Map button beside the reason.
+  const owesSupplier = invoice.data.supplierId !== null && invoice.data.totalAmount > invoice.data.paidAmount;
   const [products, unmapped] = await Promise.all([
     loadLineProducts(invoice.data.lines),
-    notice ? loadUnmappedCategories(invoice.data.lines.map((line) => line.productId)) : Promise.resolve([]),
+    notice
+      ? loadUnmappedHeads(
+          invoice.data.lines.map((line) => line.productId),
+          owesSupplier ? { kind: "supplier", id: invoice.data.supplierId! } : null,
+        )
+      : Promise.resolve([]),
   ]);
   if (!products.ok) return <Card><ApiErrorState error={products.error} /></Card>;
 
@@ -70,7 +77,7 @@ async function EditInvoice({ params, searchParams }: Props) {
         <Alert tone="error" className="mb-6">
           <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <span>{notice}</span>
-            {unmapped.length > 0 && <MapCategoryHeadsButton categories={unmapped} />}
+            {unmapped.length > 0 && <MapLedgerHeadsButton items={unmapped} />}
           </span>
         </Alert>
       )}

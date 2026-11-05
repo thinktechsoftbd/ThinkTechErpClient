@@ -9,14 +9,17 @@ import type { CustomerOption } from "../types";
 export type QuickCustomerResult = { ok: true; customer: CustomerOption } | { ok: false; error: string };
 
 /**
- * Adds a customer from the sales screen with just a name and mobile (the code is the next in the
- * series; terms and credit limit can be set later on the Customers page).
+ * Adds a customer from the sales screen (a row of the supplier table marked as a customer) with a name, mobile
+ * and address line 1. The code is the next in the series; terms and credit limit can be set later on the
+ * Customers page.
  */
-export async function addQuickCustomerAction(input: { name: string; mobile: string }): Promise<QuickCustomerResult> {
+export async function addQuickCustomerAction(input: { name: string; mobile: string; addressLine1: string }): Promise<QuickCustomerResult> {
   const name = input.name.trim();
   const mobile = input.mobile.trim();
-  if (!name) return { ok: false, error: "Enter the customer's name." };
-  if (name.length > 250 || mobile.length > 30) return { ok: false, error: "The name or mobile is too long." };
+  const addressLine1 = input.addressLine1.trim();
+  if (!name || !mobile || !addressLine1) return { ok: false, error: "Enter the customer's name, mobile and address line 1." };
+  if (name.length > 250 || addressLine1.length > 250 || mobile.length > 30)
+    return { ok: false, error: "The name, mobile or address is too long." };
 
   try {
     await requireModuleAccess(salesModule);
@@ -26,10 +29,10 @@ export async function addQuickCustomerAction(input: { name: string; mobile: stri
       nameLocal: null,
       customerGroupLookupDataId: null,
       contactPerson: null,
-      mobile: mobile || null,
+      mobile,
       phone: null,
       email: null,
-      addressLine1: null,
+      addressLine1,
       addressLine2: null,
       city: null,
       state: null,
@@ -53,12 +56,13 @@ export async function addQuickCustomerAction(input: { name: string; mobile: stri
         code: customer.code,
         name: customer.name,
         mobile: customer.mobile,
-        address: null,
+        address: customer.addressLine1,
         paymentTermsDays: customer.paymentTermsDays,
         creditLimit: customer.creditLimit,
         balance: customer.balance,
         availableCredit: customer.creditLimit === null ? null : customer.creditLimit - customer.balance,
         isActive: customer.isActive,
+        isCustomer: true,
       },
     };
   } catch (error) {

@@ -78,6 +78,9 @@ export const purchaseApi = {
     options: (search?: string, limit = 200) =>
       apiFetch<SupplierOption[]>(`${base}/suppliers/options`, { query: { search, limit } }),
     openInvoices: (supplierId: number) => apiFetch<OpenPurchaseInvoice[]>(`${base}/suppliers/${supplierId}/open-invoices`),
+    /** Just the supplier's ledger head (null clears it). */
+    setLedgerHead: (supplierId: number, accSubClassId: number | null) =>
+      apiFetch<void>(`${base}/suppliers/${supplierId}/ledger-head`, { method: "PUT", body: { accSubClassId } }),
   },
   taxRates: crud<TaxRate, TaxRateUpsertRequest>("tax-rates"),
   taxGroups: crud<TaxGroup, TaxGroupUpsertRequest>("tax-groups"),

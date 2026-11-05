@@ -100,6 +100,8 @@ export type CustomerOption = {
   /** Credit limit minus balance; null when there is no limit. */
   availableCredit: number | null;
   isActive: boolean;
+  /** False for a supplier listed by the sales screen: selling to them makes them a customer too. */
+  isCustomer: boolean;
 };
 
 // ---- Sales invoice

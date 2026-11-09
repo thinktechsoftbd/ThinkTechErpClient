@@ -40,7 +40,10 @@ const MIN_PASSWORD_LENGTH = 8;
 const MAX_PASSWORD_BYTES = 72;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Forgot password: the API emails a reset link if the address belongs to an active account. */
+/**
+ * Forgot password: the API emails a reset link to an active account's address, and says when no account
+ * uses the email or the account is inactive.
+ */
 export async function forgotPasswordAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const email = formString(formData, "email");
   if (!email || email.length > 256 || !EMAIL_PATTERN.test(email))
@@ -49,7 +52,7 @@ export async function forgotPasswordAction(_previous: ActionState, formData: For
   const result = await requestPasswordReset(email);
   if (!result.ok) return actionError(result.message);
   return actionSuccess(
-    `If ${email} belongs to an active account, we've emailed it a link to reset the password. ` +
+    `We've emailed a link to reset the password to ${email}. ` +
       "The link works for 30 minutes. Check your spam folder if it doesn't arrive.",
   );
 }

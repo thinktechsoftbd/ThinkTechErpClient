@@ -84,16 +84,19 @@ async function postPasswordReset(path: string, body: object, rejected: string): 
   }
   if (response.ok) return { ok: true };
   if (response.status === 429) return { ok: false, message: "Too many attempts. Please wait a minute and try again." };
-  if (response.status === 400) {
+  // 400 (invalid input or token), 403 (inactive account) and 404 (no account uses the email) carry the API's
+  // message; a 404 without one is a missing endpoint.
+  if (response.status === 400 || response.status === 403 || response.status === 404) {
     const data = (await response.json().catch(() => null)) as { error?: string } | null;
-    return { ok: false, message: typeof data?.error === "string" && data.error ? data.error : rejected };
+    if (typeof data?.error === "string" && data.error) return { ok: false, message: data.error };
+    if (response.status === 400) return { ok: false, message: rejected };
   }
   return { ok: false, message: `The request failed (HTTP ${response.status}). Please try again.` };
 }
 
 /**
- * Asks the API to email a reset link. It answers the same whether or not the account exists, so the page
- * can't be used to find out who has one.
+ * Asks the API to email a reset link. It refuses an email no account uses ("No account uses this email
+ * address.") or an inactive account's, with a message for the page.
  */
 export function requestPasswordReset(email: string) {
   return postPasswordReset("/api/security/auth/forgot-password", { email }, "Enter a valid email address.");

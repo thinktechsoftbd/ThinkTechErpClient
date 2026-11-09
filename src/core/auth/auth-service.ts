@@ -66,6 +66,48 @@ async function signInWithApi(email: string, password: string): Promise<SignInRes
   return parsed.ok ? { ok: true, ...parsed.session } : parsed;
 }
 
+export type PasswordResetResult = { ok: true } | { ok: false; message: string };
+
+/** POSTs to one of the API's anonymous password reset endpoints and words its failures for the page. */
+async function postPasswordReset(path: string, body: object, rejected: string): Promise<PasswordResetResult> {
+  let response: Response;
+  try {
+    response = await fetch(`${serverEnv.apiBaseUrl}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(body),
+      cache: "no-store",
+      redirect: "manual",
+    });
+  } catch {
+    return { ok: false, message: "Could not reach the server. Please try again in a moment." };
+  }
+  if (response.ok) return { ok: true };
+  if (response.status === 429) return { ok: false, message: "Too many attempts. Please wait a minute and try again." };
+  if (response.status === 400) {
+    const data = (await response.json().catch(() => null)) as { error?: string } | null;
+    return { ok: false, message: typeof data?.error === "string" && data.error ? data.error : rejected };
+  }
+  return { ok: false, message: `The request failed (HTTP ${response.status}). Please try again.` };
+}
+
+/**
+ * Asks the API to email a reset link. It answers the same whether or not the account exists, so the page
+ * can't be used to find out who has one.
+ */
+export function requestPasswordReset(email: string) {
+  return postPasswordReset("/api/security/auth/forgot-password", { email }, "Enter a valid email address.");
+}
+
+/** Sets a new password with the token from the reset link (good once, for 30 minutes). */
+export function resetPassword(token: string, newPassword: string) {
+  return postPasswordReset(
+    "/api/security/auth/reset-password",
+    { token, newPassword },
+    "The reset link is invalid or has expired. Ask for a new one.",
+  );
+}
+
 function safeEqual(a: string, b: string) {
   const left = Buffer.from(a);
   const right = Buffer.from(b);

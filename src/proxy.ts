@@ -12,6 +12,9 @@ import { authModeFromEnv } from "@/core/config/env";
 
 const LOGIN_PATH = "/login";
 
+/** Pages for people who can't sign in: open without a session (and to signed-in users too). */
+const PUBLIC_PATHS = new Set(["/forgot-password", "/reset-password"]);
+
 /** Renew this long before the access token expires, so a render never starts with a dying token. */
 const RENEW_BEFORE_EXPIRY_MS = 60_000;
 
@@ -49,7 +52,7 @@ export async function proxy(request: NextRequest) {
   let response: NextResponse;
   if (onLoginPage && state.signedIn) {
     response = NextResponse.redirect(new URL(safeRedirectPath(searchParams.get("next")), request.url));
-  } else if (!onLoginPage && !state.signedIn) {
+  } else if (!onLoginPage && !PUBLIC_PATHS.has(pathname) && !state.signedIn) {
     const loginUrl = new URL(LOGIN_PATH, request.url);
     loginUrl.searchParams.set("next", `${pathname}${search}`);
     response = NextResponse.redirect(loginUrl);

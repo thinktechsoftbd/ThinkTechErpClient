@@ -37,8 +37,9 @@ export function OrganizationsTable({
       <THead>
         <tr>
           <TH>Organization</TH>
-          <TH>Organization Id</TH>
+          <TH>Organization ID</TH>
           <TH>Code</TH>
+          <TH>Slug</TH>
           <TH>Contact</TH>
           <TH>Location</TH>
           <TH className="text-right">SMS used</TH>
@@ -68,6 +69,7 @@ export function OrganizationsTable({
               </span>
             </TD>
             <TD className="font-mono text-xs">{organization.code ?? "—"}</TD>
+            <TD className={organization.slug ? "font-mono text-xs" : muted}>{organization.slug ?? "—"}</TD>
             <TD className={muted}>
               {organization.email ?? "—"}
               {organization.phone && <p className="text-xs">{organization.phone}</p>}

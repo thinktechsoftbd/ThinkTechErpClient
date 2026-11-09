@@ -45,7 +45,7 @@ export default function OrganizationsPage({ searchParams }: Props) {
                 mode="create"
                 label="New organization"
                 title="New organization"
-                description="Fill in its details. The Organization Id is generated when left empty."
+                description="Fill in its details. The Organization ID is generated when left empty."
                 action={createOrganizationFromListAction}
                 submitLabel="Create organization"
                 size="lg"
@@ -67,13 +67,14 @@ export default function OrganizationsPage({ searchParams }: Props) {
   );
 }
 
-/** Whether the organization's name, code, Organization Id, email, phone or city contains the search. */
+/** Whether the organization's name, code, slug, Organization Id, email, phone or city contains the search. */
 function matches(organization: Organization, search: string) {
   const needle = search.toLowerCase();
   return [
     organization.nameEn,
     organization.nameBn,
     organization.code,
+    organization.slug,
     organization.objectId,
     organization.email,
     organization.phone,

@@ -39,6 +39,6 @@ export const securityModule = defineModule({
     { key: SECURITY_VIEW_PERMISSION, label: "View users, roles, permissions and menus" },
     { key: SECURITY_MANAGE_PERMISSION, label: "Create and edit them" },
     { key: ORGANIZATION_VIEW_PERMISSION, label: "View organizations" },
-    { key: ORGANIZATION_MANAGE_PERMISSION, label: "Add and edit organizations (incl. Organization Id)" },
+    { key: ORGANIZATION_MANAGE_PERMISSION, label: "Add and edit organizations (incl. Organization ID)" },
   ],
 });

@@ -90,6 +90,7 @@ function organizationBody(formData: FormData, fieldErrors: FieldErrors): Organiz
     nameBn: text(formData, "nameBn", 200, fieldErrors),
     slogan: text(formData, "slogan", 500, fieldErrors),
     code: text(formData, "code", 50, fieldErrors),
+    slug: organizationSlug(formData, fieldErrors),
     email: email(formData, "email", 150, fieldErrors, false),
     phone: text(formData, "phone", 50, fieldErrors),
     website: text(formData, "website", 255, fieldErrors),
@@ -105,6 +106,15 @@ function organizationBody(formData: FormData, fieldErrors: FieldErrors): Organiz
     isActive: formData.get("isActive") === "on",
     isFinalized: formData.get("isFinalized") === "on",
   };
+}
+
+/** The slug: lowercase letters, numbers and single hyphens (stored lowercase), or null when empty. Same rule as the API. */
+function organizationSlug(formData: FormData, fieldErrors: FieldErrors) {
+  const value = text(formData, "slug", 100, fieldErrors)?.toLowerCase() ?? null;
+  if (value && !fieldErrors.slug && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(value)) {
+    fieldErrors.slug = "Use lowercase letters, numbers and single hyphens, e.g. dental-test-care.";
+  }
+  return value;
 }
 
 /** The Organization Id field: a UUID, or null (empty) to keep the current one / generate one. */

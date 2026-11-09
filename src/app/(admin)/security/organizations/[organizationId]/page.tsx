@@ -67,8 +67,9 @@ async function OrganizationDetail({ params }: Pick<Props, "params">) {
         description={
           <span className="flex flex-col gap-1">
             <span>{`${organization.code ? `${organization.code} · ` : ""}created ${formatDateTime(organization.createdAt)}${updated}`}</span>
-            <span className="flex flex-wrap items-center gap-1">
-              Organization Id <code className="font-mono text-xs text-gray-700 dark:text-gray-300">{organization.objectId}</code>
+            <span className="flex flex-wrap items-center gap-1.5">
+              <span>Organization ID :</span>
+              <code className="font-mono text-xs text-gray-700 dark:text-gray-300">{organization.objectId}</code>
               <CopyButton value={organization.objectId} />
             </span>
           </span>
@@ -82,7 +83,8 @@ async function OrganizationDetail({ params }: Pick<Props, "params">) {
       />
       <Card className="max-w-4xl">
         <CardHeader title="Organization" />
-        <CardBody>
+        {/* Less space under the title: the form starts with its own section heading. */}
+        <CardBody className="pt-3 sm:pt-4">
           <OrganizationForm organization={organization} readOnly={!canManageOrganizations(session)} />
         </CardBody>
       </Card>

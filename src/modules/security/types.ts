@@ -57,6 +57,8 @@ export type Organization = {
   nameBn: string | null;
   slogan: string | null;
   code: string | null;
+  /** A unique, URL-friendly name, e.g. dental-test-care. */
+  slug: string | null;
   email: string | null;
   phone: string | null;
   website: string | null;

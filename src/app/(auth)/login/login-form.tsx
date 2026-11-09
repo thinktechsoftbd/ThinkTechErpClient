@@ -1,6 +1,7 @@
 "use client";
 
 import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { loginAction } from "@/core/auth/actions";
@@ -14,9 +15,17 @@ function NextField() {
   return <input type="hidden" name="next" value={next} />;
 }
 
-export function ExpiredNotice() {
-  const expired = useSearchParams().has("expired");
-  if (!expired) return null;
+/** ?expired: the session ended; ?reset: the password was just changed on the reset page. */
+export function LoginNotice() {
+  const params = useSearchParams();
+  if (params.has("reset")) {
+    return (
+      <Alert tone="success" className="mb-5">
+        Your password has been changed. Sign in with the new one.
+      </Alert>
+    );
+  }
+  if (!params.has("expired")) return null;
   return (
     <Alert tone="warning" className="mb-5">
       Your session has ended. Please sign in again.
@@ -69,6 +78,11 @@ export function LoginForm({ defaults = {} }: { defaults?: LoginDefaults }) {
           </button>
         </div>
       </Field>
+      <div className="-mt-2 text-right">
+        <Link href="/forgot-password" className="text-sm font-medium text-brand-500 hover:underline">
+          Forgot password?
+        </Link>
+      </div>
       <SubmitButton pendingLabel="Signing in…" className="w-full">
         Sign in
       </SubmitButton>

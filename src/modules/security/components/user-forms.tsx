@@ -1,5 +1,6 @@
 import { ActionForm, FormMessage, SubmitButton } from "@/core/forms/action-form";
 import { Field, Input, Select } from "@/core/forms/fields";
+import { ImageUpload } from "@/core/forms/image-upload";
 import { Badge } from "@/core/ui/badge";
 import { createUserAction, setPasswordAction, setUserPermissionsAction, updateUserAction } from "../actions";
 import type { RoleSummary, SecurityPermission, SecurityUser, UserPermissionSet } from "../types";
@@ -14,8 +15,8 @@ function ProfileFields({ user }: { user?: SecurityUser }) {
       <Field label="Email" name="email" required hint="Used to sign in.">
         <Input id="email" name="email" type="email" maxLength={256} autoComplete="off" defaultValue={user?.email} required />
       </Field>
-      <Field label="Photo URL" name="photoUrl">
-        <Input id="photoUrl" name="photoUrl" type="url" maxLength={500} defaultValue={user?.photoUrl ?? ""} />
+      <Field label="Photo" name="photoUrl">
+        <ImageUpload id="photoUrl" name="photoUrl" folder="user" defaultValue={user?.photoUrl} alt={user ? `Photo of ${user.name}` : "Photo"} />
       </Field>
       <Field label="Status" name="status" hint="Inactive users cannot sign in.">
         <Select id="status" name="status" defaultValue={user?.status ?? "ACTIVE"}>

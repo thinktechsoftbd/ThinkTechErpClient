@@ -1,5 +1,6 @@
 import { ActionForm, FormMessage } from "@/core/forms/action-form";
 import { Checkbox, Field, Input, Textarea } from "@/core/forms/fields";
+import { ImageUpload } from "@/core/forms/image-upload";
 import { formatQuantity } from "@/core/utils/number";
 import { saveOrganizationAction, savePermissionAction, saveRoleAction } from "../actions";
 import { ORGANIZATION_MANAGE_PERMISSION, type Organization, type SecurityPermission, type SecurityRole } from "../types";
@@ -93,7 +94,17 @@ export function OrganizationFields({ organization }: { organization?: Organizati
         hint="Unique. Lowercase letters, numbers and hyphens, e.g. dental-test-care."
       />
       <OrganizationInput {...field} name="slogan" label="Slogan" maxLength={500} className="md:col-span-2" />
-      <OrganizationInput {...field} name="logoUrl" label="Logo URL" type="url" maxLength={500} className="md:col-span-2" />
+      {/* The logo goes to the organization's own folder; a new one's to the current organization's. */}
+      <Field label="Logo" name="logoUrl" className="md:col-span-2">
+        <ImageUpload
+          id="logoUrl"
+          name="logoUrl"
+          folder="organization"
+          organizationId={organization?.id}
+          defaultValue={organization?.logoUrl}
+          alt={organization ? `${organization.nameEn} logo` : "Logo"}
+        />
+      </Field>
 
       <h4 className={`${sectionTitle} pt-2`}>Contact</h4>
       <OrganizationInput {...field} name="email" label="Email" type="email" maxLength={150} />

@@ -4,6 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useState, type KeyboardEvent, type ReactNode } from "react";
 import { FieldError, FormMessage } from "@/core/forms/action-form";
 import { Checkbox, Field, Input, Select } from "@/core/forms/fields";
+import { ImageUpload } from "@/core/forms/image-upload";
 import { Button } from "@/core/ui/button";
 import { cn } from "@/core/utils/cn";
 import { formatAmount, formatQuantity } from "@/core/utils/number";
@@ -263,8 +264,8 @@ export function ProductForm({ value, options }: { value?: Product; options: Prod
               ))}
             </Select>
           </Field>
-          <Field label="Image URL" name="imageUrl" className="sm:col-span-2">
-            <Input id="imageUrl" name="imageUrl" type="url" maxLength={500} defaultValue={value?.imageUrl ?? ""} placeholder="https://" />
+          <Field label="Image" name="imageUrl" className="sm:col-span-2">
+            <ImageUpload id="imageUrl" name="imageUrl" folder="product" defaultValue={value?.imageUrl} alt={value?.name ?? "Product image"} />
           </Field>
         </div>
         <Checkbox name="isActive" defaultChecked={value?.isActive ?? true} label="Active (can be bought and sold)" />

@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import Form from "next/form";
-import { Plus, Search, Users } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
-import { Input, Select } from "@/core/forms/fields";
+import { FilterSelect, ListToolbar } from "@/core/crud/list-toolbar";
 import { ApiErrorState } from "@/core/ui/api-error-state";
-import { Button, LinkButton } from "@/core/ui/button";
+import { LinkButton } from "@/core/ui/button";
 import { Card, CardHeader } from "@/core/ui/card";
 import { EmptyState, TableSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
@@ -18,6 +17,11 @@ import { SECURITY_PAGE_SIZE, USER_STATUSES, type UserStatus } from "@/modules/se
 export const metadata: Metadata = { title: "Users" };
 
 const basePath = "/security/users";
+
+const STATUS_OPTIONS = [
+  { value: "ACTIVE", label: "Active" },
+  { value: "INACTIVE", label: "Inactive" },
+] as const;
 
 export default function UsersPage({ searchParams }: PageProps<"/security/users">) {
   return (
@@ -58,20 +62,10 @@ async function UsersList({ searchParams }: Pick<PageProps<"/security/users">, "s
       <CardHeader
         title="All users"
         actions={
-          <Form action={basePath} className="flex flex-wrap items-center gap-2">
-            <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" aria-hidden />
-              <Input name="q" defaultValue={search} placeholder="Name or email" className="h-9 w-56 pl-9" aria-label="Search users" />
-            </div>
-            <Select name="status" defaultValue={status ?? ""} className="h-9 w-36" aria-label="Status">
-              <option value="">All statuses</option>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
-            </Select>
-            <Button type="submit" variant="outline" size="sm">
-              Search
-            </Button>
-          </Form>
+          // The shared toolbar keeps search, status and Search on one line next to the title.
+          <ListToolbar basePath={basePath} search={search} placeholder="Name or email" filtered={Boolean(search || status)}>
+            <FilterSelect name="status" label="Status" value={status} options={STATUS_OPTIONS} allLabel="All statuses" className="w-36" />
+          </ListToolbar>
         }
       />
       {!result.ok ? (

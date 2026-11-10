@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ListFilter } from "lucide-react";
 import { FormModalButton } from "@/core/crud/form-modal-button";
 import { rowAction } from "@/core/crud/row-action";
+import { Avatar } from "@/core/ui/avatar";
 import { Badge, StatusBadge } from "@/core/ui/badge";
 import { CopyButton } from "@/core/ui/copy-button";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
@@ -183,10 +184,15 @@ export function UsersTable({ users }: { users: SecurityUser[] }) {
         {users.map((user) => (
           <TR key={user.id}>
             <TD>
-              <Link href={`/security/users/${user.id}`} className={link}>
-                {user.name}
-              </Link>
-              <p className={`text-xs ${muted}`}>{user.email}</p>
+              <div className="flex items-center gap-3">
+                <Avatar name={user.name} src={user.photoUrl} />
+                <div className="min-w-0">
+                  <Link href={`/security/users/${user.id}`} className={link}>
+                    {user.name}
+                  </Link>
+                  <p className={`text-xs ${muted}`}>{user.email}</p>
+                </div>
+              </div>
             </TD>
             <TD>
               <span className="flex flex-wrap gap-1">

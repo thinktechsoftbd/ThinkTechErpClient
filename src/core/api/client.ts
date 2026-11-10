@@ -13,6 +13,7 @@ type QueryValue = string | number | boolean | null | undefined;
 export type ApiRequest = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   query?: Record<string, QueryValue>;
+  /** Sent as JSON, or as multipart/form-data when it is a FormData (file uploads). */
   body?: unknown;
   /** Attach the session's bearer token (default true). */
   auth?: boolean;
@@ -36,8 +37,10 @@ export async function apiFetch<T>(path: string, request: ApiRequest = {}): Promi
     if (value !== undefined && value !== null && value !== "") url.searchParams.set(key, String(value));
   }
 
+  const multipart = body instanceof FormData;
   const headers = new Headers({ Accept: "application/json" });
-  if (body !== undefined) headers.set("Content-Type", "application/json");
+  // fetch sets multipart/form-data with its boundary itself.
+  if (body !== undefined && !multipart) headers.set("Content-Type", "application/json");
   if (auth) {
     const token = await getAccessToken();
     if (!token) redirect(expiredPath);
@@ -55,7 +58,7 @@ export async function apiFetch<T>(path: string, request: ApiRequest = {}): Promi
     response = await fetch(url, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : multipart ? body : JSON.stringify(body),
       cache: "no-store",
       // A redirect (e.g. http -> https) would drop the Authorization header; surface it instead.
       redirect: "manual",

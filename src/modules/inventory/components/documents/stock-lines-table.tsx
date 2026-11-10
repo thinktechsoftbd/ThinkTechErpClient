@@ -1,4 +1,5 @@
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
+import { showDate } from "@/core/utils/date";
 import { cn } from "@/core/utils/cn";
 import { formatAmount, formatQuantity, round } from "@/core/utils/number";
 import type { StockLine, StockTransferLine } from "../../types";
@@ -47,7 +48,7 @@ export function StockLinesTable({
                 <span className="block text-xs text-gray-500 dark:text-gray-400">
                   {line.productCode}
                   {line.batchNo && ` · batch ${line.batchNo}`}
-                  {line.expiryDate && ` · exp ${line.expiryDate}`}
+                  {line.expiryDate && ` · exp ${showDate(line.expiryDate)}`}
                   {line.remarks && ` · ${line.remarks}`}
                 </span>
                 {line.serialNos.length > 0 && (

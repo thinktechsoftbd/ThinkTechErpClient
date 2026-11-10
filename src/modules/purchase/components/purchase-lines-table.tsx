@@ -1,4 +1,5 @@
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
+import { showDate } from "@/core/utils/date";
 import { formatAmount, formatQuantity } from "@/core/utils/number";
 import type { PurchaseLine } from "../types";
 
@@ -40,7 +41,7 @@ export function PurchaseLinesTable({
               <span className="block text-xs text-gray-500 dark:text-gray-400">
                 {line.productCode}
                 {line.batchNo && ` · batch ${line.batchNo}`}
-                {line.expiryDate && ` · exp ${line.expiryDate}`}
+                {line.expiryDate && ` · exp ${showDate(line.expiryDate)}`}
                 {line.serialNos.length > 0 && ` · S/N ${line.serialNos.join(", ")}`}
                 {line.description && ` · ${line.description}`}
               </span>

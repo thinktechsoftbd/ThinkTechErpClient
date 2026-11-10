@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { showDate } from "@/core/utils/date";
 import { useRouter } from "next/navigation";
 import { Check, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -866,13 +867,13 @@ function StockBatchSelect({
         {batches.map((b) => (
           <option key={b.batchId} value={b.batchId}>
             {b.batchNo} · {formatQuantity(b.quantity)} {baseUnitCode}
-            {b.expiryDate ? ` · exp ${b.expiryDate}` : ""}
+            {b.expiryDate ? ` · exp ${showDate(b.expiryDate)}` : ""}
           </option>
         ))}
         {value && !selected && <option value={value}>{fallbackLabel ?? `Batch #${value}`}</option>}
       </Select>
       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-        {selected?.expiryDate ? `Expires ${selected.expiryDate}. ` : ""}The first to expire is listed first.
+        {selected?.expiryDate ? `Expires ${showDate(selected.expiryDate)}. ` : ""}The first to expire is listed first.
       </p>
     </div>
   );

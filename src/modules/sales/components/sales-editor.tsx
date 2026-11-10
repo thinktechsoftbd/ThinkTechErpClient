@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { showDate } from "@/core/utils/date";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -813,7 +814,7 @@ function SaleBatchSelect({
         <option value="">{loading ? "Loading batches…" : batches.length ? "Auto: first to expire" : "No batch in stock here"}</option>
         {batches.map((b) => (
           <option key={b.batchId} value={b.batchId}>
-            {b.batchNo} · {formatQuantity(b.quantity)} in stock{b.expiryDate ? ` · exp ${b.expiryDate}` : ""}
+            {b.batchNo} · {formatQuantity(b.quantity)} in stock{b.expiryDate ? ` · exp ${showDate(b.expiryDate)}` : ""}
           </option>
         ))}
         {value && !batches.some((b) => b.batchId === value) && <option value={value}>Batch #{value}</option>}

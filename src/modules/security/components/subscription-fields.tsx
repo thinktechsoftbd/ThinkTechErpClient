@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { showDate } from "@/core/utils/date";
 import { Field, Input, Select } from "@/core/forms/fields";
 import {
   BILLING_PERIOD_TYPES,
@@ -174,7 +175,7 @@ export function SubscriptionFields({
             required
           />
         </Field>
-        <Field label="End date" name="endDate" hint={autoEndDate ? `Empty = ${autoEndDate}` : "Empty = calculated"}>
+        <Field label="End date" name="endDate" hint={autoEndDate ? `Empty = ${showDate(autoEndDate)}` : "Empty = calculated"}>
           <Input
             id="endDate"
             name="endDate"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { showDate } from "@/core/utils/date";
 import { ActionForm, FormMessage } from "@/core/forms/action-form";
 import { actionError, type FormAction } from "@/core/forms/action-state";
 import { Input } from "@/core/forms/fields";
@@ -79,7 +80,7 @@ export function ReceiveTransferForm({
                 <span className="block text-xs text-gray-500 dark:text-gray-400">
                   {line.productCode}
                   {line.batchNo && ` · batch ${line.batchNo}`}
-                  {line.expiryDate && ` · exp ${line.expiryDate}`}
+                  {line.expiryDate && ` · exp ${showDate(line.expiryDate)}`}
                 </span>
               </TD>
               <TD className="text-right whitespace-nowrap tabular-nums">

@@ -1,6 +1,7 @@
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/core/utils/cn";
 import { FieldError } from "./action-form";
+import { DateInput } from "./date-input";
 
 /** The look shared by inputs, selects and textareas (and controls that look like them, e.g. SearchSelect). */
 export const controlClasses =
@@ -14,8 +15,10 @@ export function Label({ htmlFor, children }: { htmlFor: string; children: ReactN
   );
 }
 
-export function Input({ className, ...props }: ComponentProps<"input">) {
-  return <input className={cn(controlClasses, "h-9", className)} {...props} />;
+/** A text-like input. `type="date"` shows and takes day/month/year (see DateInput) but keeps YYYY-MM-DD values. */
+export function Input({ className, type, ...props }: ComponentProps<"input">) {
+  if (type === "date") return <DateInput controlClassName={cn(controlClasses, "h-9")} className={className} {...props} />;
+  return <input type={type} className={cn(controlClasses, "h-9", className)} {...props} />;
 }
 
 export function Textarea({ className, rows = 4, ...props }: ComponentProps<"textarea">) {

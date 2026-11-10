@@ -1,6 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
+import { showDate } from "@/core/utils/date";
 import { useState, type KeyboardEvent } from "react";
 import { ActionForm, FormMessage } from "@/core/forms/action-form";
 import { actionError, type FormAction } from "@/core/forms/action-state";
@@ -172,7 +173,7 @@ export function CountSheet({ count, action }: { count: StockCount; action?: Form
                   </TD>
                   <TD className="text-xs whitespace-nowrap text-gray-500 dark:text-gray-400">
                     {line.batchNo ?? "—"}
-                    {line.expiryDate && <span className="block">exp {line.expiryDate}</span>}
+                    {line.expiryDate && <span className="block">exp {showDate(line.expiryDate)}</span>}
                   </TD>
                   <TD className="text-right whitespace-nowrap tabular-nums">
                     {formatQuantity(line.systemQuantity)} <span className="text-xs text-gray-500">{line.baseUnitCode}</span>

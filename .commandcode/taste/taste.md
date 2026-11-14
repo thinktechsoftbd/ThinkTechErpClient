@@ -1,3 +1,3 @@
 # Taste
 
-- Prefers to apply database migrations/schema scripts to the dev database himself when given the choice — the agent should treat the live DB as read-only and stop at read-only verification rather than executing migration files. Confidence: 0.75
+- Always run (apply) new database migration/schema scripts against the dev database after writing them (e.g. ThinkTechErpData/Sql/034_settings_areas.sql); don't leave them for the user to apply. This supersedes the earlier preference to treat the live DB as read-only and leave migrations to the user. Confidence: 0.9

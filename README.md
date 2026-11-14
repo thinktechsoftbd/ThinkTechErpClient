@@ -7,6 +7,7 @@ in a TailAdmin-style layout (collapsible sidebar, dark mode, responsive).
 | Module | Status | API |
 | --- | --- | --- |
 | Security | Organizations, clients, users, roles, permissions, menus and subscriptions | `/api/security/*` |
+| Settings | Lookup tables and their values, and delivery areas (upazila / thana / city area) | `/api/settings/*` |
 | SMS | Providers, purchases (with the BDT cost), allocations to organizations, organization usage | `Areas/SMS` (`/api/sms/*`) — needs `ThinkTechErpData/Sql/016_sms_management.sql` |
 | WebSite | Complete (generic editor for all 11 tables) | `WebsiteTablesController` |
 | Inventory, Purchase | Registered placeholders | — |
@@ -111,6 +112,14 @@ The security module uses these endpoints in ThinkTechErpAPI:
 | GET / PUT | `/api/security/users/{id}/permissions` | `{ permissionIds[] }` → `{ direct[], effective[] }` |
 | GET / PUT | `/api/security/users/{id}/menus` | `{ menus: [{ menuId, canView, canCreate, canEdit, canDelete }] }` (per-user overrides) |
 | GET | `/api/security/menus` | → every menu (for the menu-access editor) |
+| GET | `/api/settings/areas?districtId&areaType&search&isActive&limit&offset` | → `{ items, totalCount, limit, offset }` of areas with district, division and shipping-zone names |
+| GET / POST / PUT / DELETE | `/api/settings/areas[/{areaId}]` | `{ districtId, name, nameBn, areaType, shippingZoneId, isActive }`; 409 on a duplicate name in the district |
+| GET | `/api/settings/areas/districts?search&limit&offset` | → districts for the picker and filter |
+| GET | `/api/settings/areas/shipping-zones` | → the active shipping zones an area can override its district with |
+
+Areas use their own `AREA.V` / `AREA.M` pair (the API's `AreaView` / `AreaManage` policies), so
+`DatabaseChanges`-style scripts must add those permission rows and the Settings → Areas menu; see
+`ThinkTechErpData/Sql/034_settings_areas.sql` in the API repo. The `public.area` table already exists.
 
 Ids are integers and JSON is camelCase; the types live in `src/modules/security/types.ts`. The
 Security screens need the `SECURITY.V` permission in the access token (`SECURITY.M` to change data),

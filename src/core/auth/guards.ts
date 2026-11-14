@@ -12,3 +12,12 @@ export async function requireModuleAccess(module: ModuleDefinition) {
   }
   return session;
 }
+
+/** Server Action guard for a permission code the API also enforces (e.g. "AREA.M"). */
+export async function requirePermission(code: string) {
+  const session = await requireSession();
+  if (!session.permissions.includes(code)) {
+    throw new ApiError({ status: 403, message: `Your account does not have the ${code} permission.` });
+  }
+  return session;
+}

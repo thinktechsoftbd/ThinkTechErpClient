@@ -21,3 +21,9 @@ export const getAllDistricts = cache(() =>
 
 /** The active shipping zones an area can override its district's zone with. */
 export const getShippingZones = cache(() => tryApi(() => settingsApi.getShippingZones()));
+
+/** Every division, inactive ones flagged, for the District picker and filter. */
+export const getDistrictDivisionOptions = cache(() => tryApi(() => settingsApi.getDistrictDivisionOptions()));
+
+/** Every shipping zone, inactive ones flagged, for the District picker and filter. */
+export const getDistrictZoneOptions = cache(() => tryApi(() => settingsApi.getDistrictZoneOptions()));

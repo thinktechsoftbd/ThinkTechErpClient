@@ -100,3 +100,103 @@ export type ShippingZoneOption = { id: number; code: string; name: string };
 export function areaTypeLabel(value: string) {
   return AREA_TYPES.find((type) => type.value === value)?.label ?? value;
 }
+
+// ---- Divisions, districts and shipping zones (SettingDivision/District/ShippingZoneController)
+
+/** Each screen has its own permission pair, like Areas. */
+export const DIVISION_VIEW_PERMISSION = "DIVISION.V";
+export const DIVISION_MANAGE_PERMISSION = "DIVISION.M";
+export const DISTRICT_VIEW_PERMISSION = "DISTRICT.V";
+export const DISTRICT_MANAGE_PERMISSION = "DISTRICT.M";
+export const SHIPPING_ZONE_VIEW_PERMISSION = "SHIPPING_ZONE.V";
+export const SHIPPING_ZONE_MANAGE_PERMISSION = "SHIPPING_ZONE.M";
+
+/** Rows per page on the Divisions, Districts and Shipping Zones lists. */
+export const LOCATION_PAGE_SIZE = 50;
+
+export const LOCATION_NAME_MAX_LENGTH = 150;
+export const SHIPPING_ZONE_CODE_MAX_LENGTH = 50;
+export const SHIPPING_ZONE_MAX_DELIVERY_DAYS = 365;
+/** Lowercase words joined by underscores, like inside_dhaka (the API's ShippingZoneRules.CodePattern). */
+export const SHIPPING_ZONE_CODE_PATTERN = /^[a-z0-9]+(_[a-z0-9]+)*$/;
+
+export type Division = {
+  id: number;
+  objectId: string;
+  name: string;
+  nameBn: string | null;
+  isActive: boolean;
+  /** Districts in the division; one with districts can't be deleted. */
+  districtCount: number;
+  createdAt: string;
+  createdBy: number | null;
+  updatedAt: string | null;
+  updatedBy: number | null;
+};
+
+export type DivisionUpsertRequest = { name: string; nameBn: string | null; isActive: boolean };
+
+export type District = {
+  id: number;
+  objectId: string;
+  divisionId: number;
+  divisionName: string;
+  name: string;
+  nameBn: string | null;
+  /** The zone its areas use unless they override it. */
+  shippingZoneId: number | null;
+  shippingZoneName: string | null;
+  isActive: boolean;
+  areaCount: number;
+  createdAt: string;
+  createdBy: number | null;
+  updatedAt: string | null;
+  updatedBy: number | null;
+};
+
+export type DistrictUpsertRequest = {
+  divisionId: number;
+  name: string;
+  nameBn: string | null;
+  shippingZoneId: number | null;
+  isActive: boolean;
+};
+
+/** Every division, inactive ones flagged (GET /api/settings/districts/divisions). */
+export type DivisionOption = { id: number; name: string; isActive: boolean };
+
+/** Every shipping zone, inactive ones flagged (GET /api/settings/districts/shipping-zones). */
+export type DistrictZoneOption = ShippingZoneOption & { isActive: boolean };
+
+export type ShippingZone = {
+  id: number;
+  objectId: string;
+  code: string;
+  name: string;
+  minDeliveryDays: number | null;
+  maxDeliveryDays: number | null;
+  isActive: boolean;
+  /** Districts whose zone this is. */
+  districtCount: number;
+  /** Areas that override their district's zone with this one. */
+  areaCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ShippingZoneUpsertRequest = {
+  code: string;
+  name: string;
+  minDeliveryDays: number | null;
+  maxDeliveryDays: number | null;
+  isActive: boolean;
+};
+
+/** "1–2 days", "Up to 5 days", "From 2 days" or null when neither is set. */
+export function deliveryDaysLabel(min: number | null, max: number | null) {
+  const days = (value: number) => `${value} day${value === 1 ? "" : "s"}`;
+  if (min !== null && max !== null) return min === max ? days(min) : `${min}–${days(max)}`;
+  if (max !== null) return `Up to ${days(max)}`;
+  if (min !== null) return `From ${days(min)}`;
+  return null;
+}

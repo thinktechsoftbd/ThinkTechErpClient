@@ -94,13 +94,11 @@ export function OrganizationFields({ organization }: { organization?: Organizati
         hint="Unique. Lowercase letters, numbers and hyphens, e.g. dental-test-care."
       />
       <OrganizationInput {...field} name="slogan" label="Slogan" maxLength={500} className="md:col-span-2" />
-      {/* The logo goes to the organization's own folder; a new one's to the current organization's. */}
       <Field label="Logo" name="logoUrl" className="md:col-span-2">
         <ImageUpload
           id="logoUrl"
           name="logoUrl"
           folder="organization"
-          organizationId={organization?.id}
           defaultValue={organization?.logoUrl}
           alt={organization ? `${organization.nameEn} logo` : "Logo"}
         />

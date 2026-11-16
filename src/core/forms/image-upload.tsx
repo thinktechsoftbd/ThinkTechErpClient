@@ -9,8 +9,7 @@ import { cn } from "@/core/utils/cn";
 /**
  * An image a record links to (a product's image_url, an organization's logo_url, a user's photoUrl): shows
  * the current one, uploads a new one to the API's file storage (button, or drop a file on the box) and
- * submits its url as `name` with the form. The file goes to `organizationId`'s folder, else the current
- * organization's. Remove only clears the link; the stored file stays.
+ * submits its url as `name` with the form. Remove only clears the link; the stored file stays.
  */
 export function ImageUpload({
   name,
@@ -18,14 +17,12 @@ export function ImageUpload({
   defaultValue,
   id,
   alt = "Image",
-  organizationId,
 }: {
   name: string;
   folder: FileFolder;
   defaultValue?: string | null;
   id?: string;
   alt?: string;
-  organizationId?: number;
 }) {
   const [url, setUrl] = useState(defaultValue ?? "");
   const [uploading, setUploading] = useState(false);
@@ -45,7 +42,6 @@ export function ImageUpload({
       const body = new FormData();
       body.set("folder", folder);
       body.set("file", file);
-      if (organizationId) body.set("organizationId", String(organizationId));
       const response = await fetch("/api/files", { method: "POST", body });
       // An expired session is redirected to the sign-in page.
       if (response.redirected) return setError("Your session has expired. Sign in again to upload.");

@@ -1,5 +1,5 @@
 // ThinkTechErpAPI's file storage (Areas/Security/Controller/FileStorageController.cs, /api/files): files a
-// record links to, stored per organization and readable without sign-in at their url.
+// record links to, kept in the ThinkTech storage API and readable without sign-in at their url (the API fetches them).
 
 /** The folders a file can be stored in: for product.image_url, organization.logo_url and User.photoUrl. */
 export const FILE_FOLDERS = ["product", "organization", "user"] as const;
@@ -13,14 +13,16 @@ export const IMAGE_ACCEPT = IMAGE_EXTENSIONS.join(",");
 export const MAX_UPLOAD_MB = 10;
 
 export type StoredFile = {
-  /** {organization slug}/{folder}/{file name}. */
+  /** {folder}/{file name}, e.g. product/7964b4d0...832.jpg. */
   path: string;
   /** Where the file is read from: save it in the record's column. */
   url: string;
-  organizationSlug: string;
   folder: FileFolder;
+  /** The storage API's random id and the file's extension. */
   fileName: string;
+  /** The name it was uploaded with. */
+  originalFileName: string | null;
   size: number;
   contentType: string;
-  lastModified: string;
+  uploadedAt: string | null;
 };

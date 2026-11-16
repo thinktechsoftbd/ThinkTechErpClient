@@ -8,14 +8,40 @@
       "port": 3000
     },
     {
-      "name": "thinktecherp-api-test",
-      "runtimeExecutable": "dotnet",
+      "name": "thinktecherp-storage-test",
+      "runtimeExecutable": "node",
       "runtimeArgs": [
-        "C:/Users/Dev/AppData/Local/Temp/claude/D--ThinkTech-Projects-ThinkTechErpClient/861f2f83-664c-489d-9416-1f86cf9e4773/scratchpad/apibuild/ThinkTechErpAPI.dll",
-        "--environment",
-        "Development",
-        "--urls",
-        "http://localhost:5391"
+        "C:/Users/Dev/AppData/Local/Temp/claude/794c45cbbb6b360f/861f2f83-664c-489d-9416-1f86cf9e4773/scratchpad/scripts/launch-test.cjs",
+        "storage"
+      ],
+      "port": 5400
+    },
+    {
+      "name": "thinktecherp-storage-test-rotated",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Users/Dev/AppData/Local/Temp/claude/794c45cbbb6b360f/861f2f83-664c-489d-9416-1f86cf9e4773/scratchpad/scripts/launch-test.cjs",
+        "storage",
+        "--rotate-key"
+      ],
+      "port": 5400
+    },
+    {
+      "name": "thinktecherp-api-test",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Users/Dev/AppData/Local/Temp/claude/794c45cbbb6b360f/861f2f83-664c-489d-9416-1f86cf9e4773/scratchpad/scripts/launch-test.cjs",
+        "api"
+      ],
+      "port": 5391
+    },
+    {
+      "name": "thinktecherp-api-test-wrong-secret",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Users/Dev/AppData/Local/Temp/claude/794c45cbbb6b360f/861f2f83-664c-489d-9416-1f86cf9e4773/scratchpad/scripts/launch-test.cjs",
+        "api",
+        "--wrong-secret"
       ],
       "port": 5391
     },
@@ -23,7 +49,8 @@
       "name": "thinktecherp-web-test",
       "runtimeExecutable": "node",
       "runtimeArgs": [
-        "C:/Users/Dev/AppData/Local/Temp/claude/D--ThinkTech-Projects-ThinkTechErpClient/861f2f83-664c-489d-9416-1f86cf9e4773/scratchpad/start-web-test.cjs"
+        "C:/Users/Dev/AppData/Local/Temp/claude/794c45cbbb6b360f/861f2f83-664c-489d-9416-1f86cf9e4773/scratchpad/scripts/launch-test.cjs",
+        "web"
       ],
       "port": 3002
     }

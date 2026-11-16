@@ -157,6 +157,8 @@ export type UserOrganization = {
   isLinked: boolean;
   /** Outside this company (e.g. a customer): left out of the header's switcher and the "current" organization. */
   isExternal: boolean;
+  /** The organization's logo, shown with its name at the top of the sidebar. */
+  logoUrl: string | null;
 };
 
 /** Replaces the user's links; a null default makes the first organization the default. */

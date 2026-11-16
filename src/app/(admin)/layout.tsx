@@ -1,6 +1,7 @@
 import { Suspense, type ReactNode } from "react";
-import { AdminMain, AppSidebar, SidebarBackdrop } from "@/core/layout/app-sidebar";
+import { AdminMain, AppSidebar, BrandMark, SidebarBackdrop, SidebarBrand } from "@/core/layout/app-sidebar";
 import { AppHeader } from "@/core/layout/app-header";
+import { OrganizationHeaderMark, OrganizationSidebarBrand } from "@/core/layout/organization-brand";
 import { OrganizationSwitcher } from "@/core/layout/organization-switcher";
 import { SessionSidebarNav, SessionUserMenu } from "@/core/layout/session-parts";
 import { SidebarNavSkeleton } from "@/core/layout/sidebar-nav";
@@ -12,6 +13,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <SidebarProvider>
       <div className="min-h-screen xl:flex">
         <AppSidebar
+          brand={
+            <Suspense fallback={<SidebarBrand />}>
+              <OrganizationSidebarBrand />
+            </Suspense>
+          }
           nav={
             <Suspense fallback={<SidebarNavSkeleton />}>
               <SessionSidebarNav />
@@ -21,6 +27,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <SidebarBackdrop />
         <AdminMain>
           <AppHeader
+            brand={
+              <Suspense fallback={<BrandMark className="xl:hidden" />}>
+                <OrganizationHeaderMark />
+              </Suspense>
+            }
             organization={
               <Suspense>
                 <OrganizationSwitcher />

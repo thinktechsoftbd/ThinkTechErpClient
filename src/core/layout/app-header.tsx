@@ -6,7 +6,16 @@ import { ThemeToggle } from "@/core/theme/theme-toggle";
 import { BrandMark } from "./app-sidebar";
 import { useSidebar } from "./sidebar-context";
 
-export function AppHeader({ userMenu, organization }: { userMenu: ReactNode; organization?: ReactNode }) {
+/** `brand` is the mark shown below xl, where the sidebar is hidden (a BrandMark with xl:hidden); `organization` the switcher. */
+export function AppHeader({
+  userMenu,
+  organization,
+  brand,
+}: {
+  userMenu: ReactNode;
+  organization?: ReactNode;
+  brand?: ReactNode;
+}) {
   const { toggleSidebar, toggleMobile, isMobileOpen } = useSidebar();
 
   return (
@@ -27,7 +36,7 @@ export function AppHeader({ userMenu, organization }: { userMenu: ReactNode; org
       >
         {isMobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
       </button>
-      <BrandMark className="xl:hidden" />
+      {brand ?? <BrandMark className="xl:hidden" />}
       <div className="ml-auto flex items-center gap-3">
         {organization}
         <ThemeToggle />

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { canAccessModule } from "@/core/auth/roles";
 import { requireSession } from "@/core/auth/session";
 import type { ModuleDefinition } from "@/core/modules/types";
+import { getCurrentOrganization } from "@/core/org/organization";
 import { LinkButton } from "@/core/ui/button";
 import { Card } from "@/core/ui/card";
 import { EmptyState } from "@/core/ui/feedback";
@@ -22,8 +23,9 @@ export async function SessionSidebarNav() {
   return <SidebarNav allowedModuleKeys={getAccessibleModules(session).map((module) => module.key)} />;
 }
 
+/** The account menu, pictured with the logo of the organization the user works in. */
 export async function SessionUserMenu() {
-  const session = await requireSession();
+  const [session, organization] = await Promise.all([requireSession(), getCurrentOrganization()]);
   return (
     <UserMenu
       user={{
@@ -32,6 +34,7 @@ export async function SessionUserMenu() {
         email: session.email,
         roles: session.roles,
       }}
+      organization={organization ? { name: organization.name, logoUrl: organization.logoUrl } : null}
     />
   );
 }

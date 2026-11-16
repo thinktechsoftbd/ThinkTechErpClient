@@ -12,14 +12,36 @@ export type UserMenuUser = {
   roles: string[];
 };
 
+/** The organization the user works in (chosen in the header's switcher), shown as the menu's picture. */
+export type UserMenuOrganization = { name: string; logoUrl: string | null };
+
 function initials(name: string) {
   const parts = name.split(/[\s._@-]+/).filter(Boolean);
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 
-export function UserMenu({ user }: { user: UserMenuUser }) {
+/** "M/S Akhi Enterprise" -> "AE", "ThinkTech" -> "TT", "Rangpur" -> "R". */
+function organizationInitials(name: string) {
+  const words = name.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  const longWords = words.filter((word) => word.length > 1);
+  const picked = (longWords.length > 0 ? longWords : words).slice(0, 2);
+  if (picked.length === 1) {
+    const capitals = picked[0].match(/\p{Lu}/gu) ?? [];
+    return (capitals.length >= 2 ? capitals.slice(0, 2).join("") : picked[0][0]).toUpperCase();
+  }
+  return picked.map((word) => word[0]).join("").toUpperCase() || "?";
+}
+
+/**
+ * The account menu. Its picture is the current organization's logo (keeping the logo's shape, up to 112px
+ * wide), else the organization's initials, else the user's (no organization, e.g. dev sign-in).
+ */
+export function UserMenu({ user, organization }: { user: UserMenuUser; organization?: UserMenuOrganization | null }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  // A logo that fails to load (deleted, storage down) falls back to the initials.
+  const [brokenLogo, setBrokenLogo] = useState<string | null>(null);
+  const logoUrl = organization?.logoUrl && organization.logoUrl !== brokenLogo ? organization.logoUrl : null;
 
   useEffect(() => {
     if (!open) return;
@@ -45,11 +67,22 @@ export function UserMenu({ user }: { user: UserMenuUser }) {
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={`Account menu for ${user.displayName}`}
+        title={organization ? `${user.displayName} · ${organization.name}` : undefined}
         className="flex items-center gap-2 rounded-full py-1 pr-2 pl-1 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5"
       >
-        <span className="flex size-9 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-600 dark:bg-brand-500/20 dark:text-brand-300">
-          {initials(user.displayName)}
-        </span>
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- the logo comes from the API's file storage, any size
+          <img
+            src={logoUrl}
+            alt=""
+            onError={() => setBrokenLogo(logoUrl)}
+            className="h-9 w-auto max-w-28 min-w-9 rounded-lg bg-white object-contain p-0.5 ring-1 ring-gray-200 dark:ring-gray-700"
+          />
+        ) : (
+          <span className="flex size-9 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-600 dark:bg-brand-500/20 dark:text-brand-300">
+            {organization ? organizationInitials(organization.name) : initials(user.displayName)}
+          </span>
+        )}
         <span className="hidden max-w-40 truncate text-sm font-medium sm:block">{user.displayName}</span>
         <ChevronDown className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
       </button>

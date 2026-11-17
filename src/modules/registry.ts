@@ -7,6 +7,7 @@ import { salesModule } from "./sales/module";
 import { securityModule } from "./security/module";
 import { settingsModule } from "./settings/module";
 import { smsModule } from "./sms/module";
+import { warrantyModule } from "./warranty/module";
 import { websiteModule } from "./website/module";
 
 /** Every module known to the shell, in sidebar order. Register new modules here. */
@@ -19,6 +20,7 @@ export const modules: readonly ModuleDefinition[] = [
   purchaseModule,
   salesModule,
   accountingModule,
+  warrantyModule,
 ];
 
 export function getModule(key: string) {

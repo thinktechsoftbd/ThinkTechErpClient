@@ -15,6 +15,6 @@ export async function switchOrganizationAction(formData: FormData) {
 
   // Ids in the current URL belong to the previous organization: go back to the section's start.
   const returnTo = String(formData.get("returnTo") ?? "/dashboard");
-  const section = returnTo.match(/^\/(inventory|purchase)(\/[a-z-]+)?/)?.[0];
+  const section = returnTo.match(/^\/(inventory|purchase|warranty)(\/[a-z-]+)?/)?.[0];
   redirect(section ?? (returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/dashboard"));
 }

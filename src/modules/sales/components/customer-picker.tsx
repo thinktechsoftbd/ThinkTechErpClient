@@ -24,6 +24,7 @@ export function CustomerPicker({
   required,
   includeInactive = false,
   includeSuppliers = false,
+  endpoint = "/api/lookup/customers",
 }: {
   value: CustomerOption | null;
   onChange: (customer: CustomerOption | null) => void;
@@ -34,6 +35,8 @@ export function CustomerPicker({
   includeInactive?: boolean;
   /** Every party of the supplier table, suppliers too (a sale to one makes them a customer). */
   includeSuppliers?: boolean;
+  /** The lookup route to search, e.g. /api/lookup/warranty-customers for warranty users without Sales access. */
+  endpoint?: string;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CustomerOption[]>([]);
@@ -55,7 +58,7 @@ export function CustomerPicker({
         const params = new URLSearchParams();
         if (text) params.set("search", text);
         if (includeSuppliers) params.set("includeSuppliers", "true");
-        const response = await fetch(`/api/lookup/customers?${params}`, { headers: { Accept: "application/json" } });
+        const response = await fetch(`${endpoint}?${params}`, { headers: { Accept: "application/json" } });
         const data: unknown = await response.json().catch(() => []);
         if (request !== requestRef.current) return;
         setResults(Array.isArray(data) ? (data as CustomerOption[]).filter((c) => includeInactive || c.isActive) : []);
@@ -67,7 +70,7 @@ export function CustomerPicker({
       }
     }, text ? 250 : 0);
     return () => clearTimeout(timer);
-  }, [open, query, includeInactive, includeSuppliers]);
+  }, [open, query, includeInactive, includeSuppliers, endpoint]);
 
   useEffect(() => {
     function close(event: MouseEvent) {

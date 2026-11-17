@@ -24,6 +24,9 @@ export function FormModalButton({
   size,
   defaultOpen = false,
   tone = "edit",
+  icon,
+  variant = "primary",
+  buttonSize = "md",
   children,
 }: {
   /** "create": primary toolbar button; "edit": compact row action. */
@@ -38,6 +41,12 @@ export function FormModalButton({
   size?: "sm" | "md" | "lg";
   /** Open the modal when the button first renders, e.g. for a page linked with ?new=1. */
   defaultOpen?: boolean;
+  /** The button's icon, e.g. <Wrench className="size-4" /> (default: Plus for "create", Pencil for "edit"); null for none. */
+  icon?: ReactNode;
+  /** The look of a "create" (toolbar) button. */
+  variant?: "primary" | "outline" | "danger";
+  /** The size of a "create" button, e.g. "sm" among a page header's document actions. */
+  buttonSize?: "sm" | "md";
   /** The form fields (rendered inside the modal's form). */
   children: ReactNode;
 }) {
@@ -52,9 +61,13 @@ export function FormModalButton({
           setVersion((value) => value + 1);
           setOpen(true);
         }}
-        className={mode === "create" ? buttonClasses("primary") : rowAction(tone)}
+        className={mode === "create" ? buttonClasses(variant, buttonSize) : rowAction(tone)}
       >
-        {mode === "create" ? <Plus className="size-4" aria-hidden /> : <Pencil className="size-4" aria-hidden />}
+        {icon === undefined ? (
+          mode === "create" ? <Plus className="size-4" aria-hidden /> : <Pencil className="size-4" aria-hidden />
+        ) : (
+          icon
+        )}
         {label}
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title={title} description={description} size={size}>

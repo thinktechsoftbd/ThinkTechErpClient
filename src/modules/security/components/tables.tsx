@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ListFilter } from "lucide-react";
+import { ListFilter, Server } from "lucide-react";
 import { FormModalButton } from "@/core/crud/form-modal-button";
 import { rowAction } from "@/core/crud/row-action";
 import { Avatar } from "@/core/ui/avatar";
@@ -8,6 +8,7 @@ import { CopyButton } from "@/core/ui/copy-button";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatDateTime, formatNumber } from "@/core/utils/format";
 import { saveOrganizationAction } from "../actions";
+import { deploymentPath } from "../deployment-types";
 import type { Organization, SecurityPermission, SecurityRole, SecurityUser } from "../types";
 import { OrganizationFields } from "./forms";
 
@@ -21,18 +22,21 @@ export function smsAllocationsHref(organization: Pick<Organization, "objectId">)
 
 /**
  * With `canManage` (ORGANIZATION.M) each row has Edit, opening the form in a popup; with `smsLinks` (the
- * user can open the SMS module) it links to the organization's allocations.
+ * user can open the SMS module) it links to the organization's allocations; with `deploymentLinks`
+ * (DEPLOYMENT.V or .M) to its deployment page.
  */
 export function OrganizationsTable({
   organizations,
   canManage = false,
   smsLinks = false,
+  deploymentLinks = false,
 }: {
   organizations: Organization[];
   canManage?: boolean;
   smsLinks?: boolean;
+  deploymentLinks?: boolean;
 }) {
-  const withActions = canManage || smsLinks;
+  const withActions = canManage || smsLinks || deploymentLinks;
   return (
     <Table>
       <THead>
@@ -101,6 +105,15 @@ export function OrganizationsTable({
                   {smsLinks && (
                     <Link href={smsAllocationsHref(organization)} className={rowAction("view")} title={`SMS allocations of ${organization.nameEn}`}>
                       <ListFilter className="size-4" aria-hidden /> Allocations
+                    </Link>
+                  )}
+                  {deploymentLinks && (
+                    <Link
+                      href={deploymentPath({ objectId: organization.objectId, slug: organization.slug, name: organization.nameEn })}
+                      className={rowAction("neutral")}
+                      title={`What is deployed for ${organization.nameEn}`}
+                    >
+                      <Server className="size-4" aria-hidden /> Deployment
                     </Link>
                   )}
                 </span>

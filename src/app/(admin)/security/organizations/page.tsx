@@ -12,7 +12,7 @@ import { EmptyState, TableSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
 import { firstParam } from "@/core/ui/pagination";
 import { formatNumber } from "@/core/utils/format";
-import { canManageOrganizations } from "@/modules/security/access";
+import { canManageOrganizations, canViewDeployments } from "@/modules/security/access";
 import { createOrganizationFromListAction } from "@/modules/security/actions";
 import { securityApi } from "@/modules/security/api";
 import { PermissionOnly } from "@/core/crud/permission-only";
@@ -122,11 +122,12 @@ async function OrganizationsList({ searchParams }: Pick<Props, "searchParams">) 
           title={filtered ? "No organizations match these filters" : "No organizations yet"}
         />
       ) : (
-        // The Allocations links open SMS → Allocations, so only for users who can open the SMS module.
+        // The Allocations and Deployment links open other screens, so only for users who can open them.
         <OrganizationsTable
           organizations={rows}
           canManage={canManageOrganizations(session)}
           smsLinks={canAccessModule(session, smsModule)}
+          deploymentLinks={canViewDeployments(session)}
         />
       )}
     </>

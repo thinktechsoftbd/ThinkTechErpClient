@@ -1,8 +1,8 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
 import bizoneIcon from "@/assets/brand/bizone-icon.webp";
-import bizoneLogo from "@/assets/brand/bizone-logo.webp";
 import { appConfig } from "@/core/config/app";
+import { BrandLogo } from "@/core/layout/brand-logo";
 import { ThemeToggle } from "@/core/theme/theme-toggle";
 import { modules } from "@/modules/registry";
 
@@ -12,13 +12,10 @@ export function AuthShell({ title, description, children }: { title: string; des
     <div className="relative flex min-h-screen bg-white dark:bg-gray-900">
       <div className="flex w-full flex-col justify-center px-6 py-12 lg:w-1/2 lg:px-16">
         <div className="mx-auto w-full max-w-md">
-          <Image
-            src={bizoneLogo}
-            alt={`${appConfig.productName}: ${appConfig.productSlogan}`}
-            loading="eager"
-            // The logo is transparent with dark lettering: on the dark theme it sits on a white tile.
-            className="mb-8 h-14 w-auto dark:rounded-lg dark:bg-white dark:px-2 dark:py-1"
-          />
+          {/* Navy lettering on the light theme, white on the dark one: no tile behind it. */}
+          <div className="mb-8">
+            <BrandLogo className="w-[220px]" />
+          </div>
           <h1 className="mb-2 text-2xl font-semibold text-gray-800 sm:text-3xl dark:text-white/90">{title}</h1>
           <p className="mb-8 text-sm text-gray-500 dark:text-gray-400">{description}</p>
           {children}

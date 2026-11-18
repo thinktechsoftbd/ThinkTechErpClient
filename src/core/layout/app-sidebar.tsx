@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import bizoneIcon from "@/assets/brand/bizone-icon.webp";
-import bizoneLogo from "@/assets/brand/bizone-logo.webp";
+import bizoneLogoTrimmed from "@/assets/brand/bizone-logo-trimmed.webp";
 import { appConfig } from "@/core/config/app";
 import { cn } from "@/core/utils/cn";
 import { useSidebar } from "./sidebar-context";
@@ -23,12 +23,12 @@ function SidebarBrand({ expanded }: { expanded: boolean }) {
     <Link href={appConfig.homePath} aria-label={`${PRODUCT_NAME}: home`} className="flex items-center">
       {expanded ? (
         <Image
-          src={bizoneLogo}
+          src={bizoneLogoTrimmed}
           alt={`${PRODUCT_NAME}: ${appConfig.productSlogan}`}
           loading="eager"
-          // The logo is transparent with dark lettering: on the dark theme it sits on a white tile.
-          // The image has wide transparent margins, so it fills the header row to read at a useful size.
-          className="h-16 w-auto dark:rounded-lg dark:bg-white dark:px-2 dark:py-1"
+          // The trimmed logo (no empty margins) spans the sidebar's width. It is transparent with dark
+          // lettering: on the dark theme it sits on a white tile.
+          className="h-auto w-[250px] max-w-full dark:rounded-lg dark:bg-white dark:px-2 dark:py-1"
         />
       ) : (
         <BrandMark />

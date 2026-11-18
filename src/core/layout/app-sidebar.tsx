@@ -10,7 +10,7 @@ import { cn } from "@/core/utils/cn";
 import { useSidebar } from "./sidebar-context";
 
 /** The product the console is (fixed, unlike the organization the user works in, shown in the user menu). */
-const PRODUCT_NAME = "BizOne ERP";
+const PRODUCT_NAME = appConfig.productName;
 
 /** The product's square icon: the collapsed sidebar and the small-screen header. */
 export function BrandMark({ className }: { className?: string }) {
@@ -24,10 +24,11 @@ function SidebarBrand({ expanded }: { expanded: boolean }) {
       {expanded ? (
         <Image
           src={bizoneLogo}
-          alt={`${PRODUCT_NAME}: Connect. Manage. Grow`}
+          alt={`${PRODUCT_NAME}: ${appConfig.productSlogan}`}
           loading="eager"
           // The logo is transparent with dark lettering: on the dark theme it sits on a white tile.
-          className="h-11 w-auto dark:rounded-lg dark:bg-white dark:px-2 dark:py-1"
+          // The image has wide transparent margins, so it fills the header row to read at a useful size.
+          className="h-16 w-auto dark:rounded-lg dark:bg-white dark:px-2 dark:py-1"
         />
       ) : (
         <BrandMark />

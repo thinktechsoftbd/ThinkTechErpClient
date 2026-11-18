@@ -8,7 +8,6 @@ import { LucideIcon } from "@/core/ui/lucide-icon";
 import { cn } from "@/core/utils/cn";
 import { useSidebar } from "./sidebar-context";
 import {
-  SectionTitle,
   itemActive,
   itemBase,
   itemIdle,
@@ -171,8 +170,7 @@ export function ApiSidebarNav({ menus }: { menus: MenuNode[] }) {
   const activePath = findActivePath(menus, pathname);
 
   return (
-    <nav>
-      <SectionTitle showLabels={showLabels}>Menu</SectionTitle>
+    <nav aria-label="Menu">
       {menus.length === 0 ? (
         showLabels && <p className="px-3 text-sm text-gray-500 dark:text-gray-400">No menus are assigned to your account.</p>
       ) : (

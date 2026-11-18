@@ -1,4 +1,7 @@
+import Image from "next/image";
 import type { ReactNode } from "react";
+import bizoneIcon from "@/assets/brand/bizone-icon.webp";
+import bizoneLogo from "@/assets/brand/bizone-logo.webp";
 import { appConfig } from "@/core/config/app";
 import { ThemeToggle } from "@/core/theme/theme-toggle";
 import { modules } from "@/modules/registry";
@@ -9,12 +12,13 @@ export function AuthShell({ title, description, children }: { title: string; des
     <div className="relative flex min-h-screen bg-white dark:bg-gray-900">
       <div className="flex w-full flex-col justify-center px-6 py-12 lg:w-1/2 lg:px-16">
         <div className="mx-auto w-full max-w-md">
-          <div className="mb-8 flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-lg bg-brand-500 font-bold text-white">
-              {appConfig.shortName}
-            </span>
-            <span className="text-xl font-semibold text-gray-800 dark:text-white/90">{appConfig.name}</span>
-          </div>
+          <Image
+            src={bizoneLogo}
+            alt={`${appConfig.productName}: ${appConfig.productSlogan}`}
+            loading="eager"
+            // The logo is transparent with dark lettering: on the dark theme it sits on a white tile.
+            className="mb-8 h-14 w-auto dark:rounded-lg dark:bg-white dark:px-2 dark:py-1"
+          />
           <h1 className="mb-2 text-2xl font-semibold text-gray-800 sm:text-3xl dark:text-white/90">{title}</h1>
           <p className="mb-8 text-sm text-gray-500 dark:text-gray-400">{description}</p>
           {children}
@@ -32,10 +36,14 @@ export function AuthShell({ title, description, children }: { title: string; des
           aria-hidden
         />
         <div className="relative z-10 max-w-md px-10 text-center">
-          <span className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-brand-500 text-2xl font-bold text-white">
-            {appConfig.shortName}
-          </span>
-          <h2 className="mt-6 text-3xl font-semibold text-white">{appConfig.name}</h2>
+          {/* Only the icon: the title below names the product. */}
+          <Image
+            src={bizoneIcon}
+            alt=""
+            loading="eager"
+            className="mx-auto size-20 rounded-[22%] shadow-lg ring-1 shadow-black/30 ring-white/20"
+          />
+          <h2 className="mt-6 text-3xl font-semibold text-white">{appConfig.productName}</h2>
           <p className="mt-3 text-brand-200">One console for every part of your business.</p>
           <ul className="mt-8 flex flex-wrap justify-center gap-2">
             {modules.map((module) => (

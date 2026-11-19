@@ -63,6 +63,15 @@ export function CategoryFields({
 
   return (
     <>
+      {/* Name first (the popup starts in it), then where the category sits. */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Name" name="name" required hint="e.g. Urea, Insecticide, Pipe fittings.">
+          <Input id="name" name="name" maxLength={150} defaultValue={value?.name} required />
+        </Field>
+        <Field label="Local name" name="nameLocal" hint="Bangla name, e.g. ইউরিয়া.">
+          <Input id="nameLocal" name="nameLocal" maxLength={150} defaultValue={value?.nameLocal ?? ""} lang="bn" />
+        </Field>
+      </div>
       <Field label="Parent" name="parentCategoryId" hint="Leave empty for a top-level group, e.g. Fertilizer.">
         <Select id="parentCategoryId" name="parentCategoryId" defaultValue={parentId ? String(parentId) : ""}>
           <option value="">None (top level)</option>
@@ -75,12 +84,6 @@ export function CategoryFields({
         </Select>
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Name" name="name" required hint="e.g. Urea, Insecticide, Pipe fittings.">
-          <Input id="name" name="name" maxLength={150} defaultValue={value?.name} required />
-        </Field>
-        <Field label="Local name" name="nameLocal" hint="Bangla name, e.g. ইউরিয়া.">
-          <Input id="nameLocal" name="nameLocal" maxLength={150} defaultValue={value?.nameLocal ?? ""} lang="bn" />
-        </Field>
         <Field label="Code" name="code" hint="Optional short code.">
           <Input id="code" name="code" maxLength={30} defaultValue={value?.code ?? ""} />
         </Field>

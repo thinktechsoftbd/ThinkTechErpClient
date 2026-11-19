@@ -2,7 +2,7 @@
 
 import { LoaderCircle, Pencil } from "lucide-react";
 import { startTransition, useState } from "react";
-import { rowAction } from "@/core/crud/row-action";
+import { rowIconAction } from "@/core/crud/row-action";
 import { ActionForm, FormMessage, SubmitButton } from "@/core/forms/action-form";
 import type { FormAction } from "@/core/forms/action-state";
 import { Alert } from "@/core/ui/alert";
@@ -15,7 +15,7 @@ import { ProductForm, type ProductFormOptions } from "./product-form";
 export type ProductLoadResult = { status: "success"; product: Product } | { status: "error"; message: string };
 
 /**
- * Row "Edit" action for a product. List rows don't carry packs and barcodes, so the modal loads
+ * Row Edit action (an icon) for a product. List rows don't carry packs and barcodes, so the modal loads
  * the full product first (loadProductAction), then shows the form bound to saveProductAction.
  */
 export function ProductEditButton({
@@ -48,9 +48,8 @@ export function ProductEditButton({
 
   return (
     <>
-      <button type="button" onClick={openEditor} className={rowAction("edit")}>
+      <button type="button" onClick={openEditor} className={rowIconAction("edit")} title={`Edit ${productLabel}`} aria-label={`Edit ${productLabel}`}>
         <Pencil className="size-4" aria-hidden />
-        Edit
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title="Edit product" description={productLabel} size="xl" compact>
         {!result ? (

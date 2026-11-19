@@ -7,7 +7,7 @@ import { Alert } from "@/core/ui/alert";
 import { Button, buttonClasses } from "@/core/ui/button";
 import { Modal } from "@/core/ui/modal";
 import { cn } from "@/core/utils/cn";
-import { rowAction } from "./row-action";
+import { rowAction, rowIconAction } from "./row-action";
 
 /**
  * Row "Delete" action that asks for confirmation in a modal, then runs the Server Action.
@@ -17,11 +17,14 @@ export function ConfirmDeleteButton({
   action,
   itemLabel,
   message,
+  iconOnly = false,
 }: {
   action: () => Promise<ActionState>;
   /** What is being deleted, e.g. `lookup table "Currency"`. */
   itemLabel: string;
   message?: ReactNode;
+  /** Only the bin icon (its tooltip and accessible name say what it deletes). */
+  iconOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string>();
@@ -35,9 +38,12 @@ export function ConfirmDeleteButton({
           setError(undefined);
           setOpen(true);
         }}
-        className={rowAction("delete")}
+        className={iconOnly ? rowIconAction("delete") : rowAction("delete")}
+        title={iconOnly ? `Delete ${itemLabel}` : undefined}
+        aria-label={iconOnly ? `Delete ${itemLabel}` : undefined}
       >
-        <Trash2 className="size-4" aria-hidden /> Delete
+        <Trash2 className="size-4" aria-hidden />
+        {!iconOnly && " Delete"}
       </button>
       <Modal open={open} onClose={() => !pending && setOpen(false)} title="Confirm delete" size="sm">
         <div className="space-y-5">

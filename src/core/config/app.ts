@@ -1,11 +1,12 @@
 /** Client-safe application constants. Never put secrets here. */
 export const appConfig = {
-  name: "ThinkTechErp",
-  shortName: "TT",
+  /** The app's name in browser tab titles ("Dashboard | BizOneErp"). */
+  name: "BizOneErp",
+  shortName: "BE",
   /** The product the console is, as its logo shows it (src/assets/brand). */
   productName: "BizOne ERP",
   productSlogan: "Connect. Manage. Grow",
-  description: "ThinkTech ERP administration console",
+  description: "BizOne ERP administration console",
   loginPath: "/login",
   homePath: "/dashboard",
 } as const;

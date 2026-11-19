@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { ConfirmDeleteButton } from "@/core/crud/confirm-delete-button";
 import { FormModalButton } from "@/core/crud/form-modal-button";
+import { SortHeader, type SortDirection } from "@/core/crud/sort-header";
 import { Badge, StatusBadge } from "@/core/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatDateTime, formatNumber } from "@/core/utils/format";
@@ -51,18 +52,33 @@ const usedByMessage = (count: number) => `${formatNumber(count)} product(s) use 
 
 // ---- Units
 
-export function UnitsTable({ rows, canManage }: { rows: Unit[]; canManage: boolean }) {
+export function UnitsTable({
+  rows,
+  canManage,
+  sorting,
+}: {
+  rows: Unit[];
+  canManage: boolean;
+  /** Headers that sort the list on the server (code, name, type, decimals, products, status). */
+  sorting?: { sort: string; direction: SortDirection; basePath: string; query: Record<string, string | undefined> };
+}) {
+  const header = (label: string, column: string, className?: string) =>
+    sorting ? (
+      <SortHeader label={label} column={column} className={className} {...sorting} />
+    ) : (
+      <TH className={className}>{label}</TH>
+    );
   return (
     <Table>
       <THead>
         <tr>
-          <TH>Code</TH>
-          <TH>Name</TH>
-          <TH>Type</TH>
-          <TH>Fractions</TH>
+          {header("Code", "code")}
+          {header("Name", "name")}
+          {header("Type", "type")}
+          {header("Fractions", "decimals")}
           <TH>ISO</TH>
-          <TH className="text-right">Products</TH>
-          <TH>Status</TH>
+          {header("Products", "products", "text-right")}
+          {header("Status", "status")}
           {canManage && <TH className="text-right">Actions</TH>}
         </tr>
       </THead>
@@ -86,10 +102,18 @@ export function UnitsTable({ rows, canManage }: { rows: Unit[]; canManage: boole
             {canManage && (
               <TD className="text-right">
                 <span className="inline-flex items-center gap-1">
-                  <FormModalButton mode="edit" label="Edit" title="Edit unit" action={saveUnitAction.bind(null, row.id)} submitLabel="Save changes">
+                  <FormModalButton
+                    mode="edit"
+                    iconOnly
+                    label={`Edit ${row.code}`}
+                    title="Edit unit"
+                    action={saveUnitAction.bind(null, row.id)}
+                    submitLabel="Save changes"
+                  >
                     <UnitFields value={row} />
                   </FormModalButton>
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deleteUnitAction.bind(null, row.id)}
                     itemLabel={`unit "${row.code}"`}
                     message={row.productCount > 0 ? usedByMessage(row.productCount) : inUseMessage("A unit")}
@@ -127,23 +151,32 @@ export function CategoriesTable({
   rows,
   categories,
   canManage,
+  sorting,
 }: {
   rows: Category[];
   /** Every category, for the edit modal's parent picker. */
   categories: Pick<Category, "id" | "path" | "isActive">[];
   canManage: boolean;
+  /** Headers that sort the list on the server (category, code, sort, products, status, updated). */
+  sorting?: { sort: string; direction: SortDirection; basePath: string; query: Record<string, string | undefined> };
 }) {
+  const header = (label: string, column: string, className?: string) =>
+    sorting ? (
+      <SortHeader label={label} column={column} className={className} {...sorting} />
+    ) : (
+      <TH className={className}>{label}</TH>
+    );
   return (
     <Table>
       <THead>
         <tr>
-          <TH>Category</TH>
-          <TH>Code</TH>
+          {header("Category", "category")}
+          {header("Code", "code")}
           <TH>Ledger head</TH>
-          <TH className="text-right">Sort</TH>
-          <TH className="text-right">Products</TH>
-          <TH>Status</TH>
-          <TH>Updated</TH>
+          {header("Sort", "sort", "text-right")}
+          {header("Products", "products", "text-right")}
+          {header("Status", "status")}
+          {header("Updated", "updated")}
           {canManage && <TH className="text-right">Actions</TH>}
         </tr>
       </THead>
@@ -171,7 +204,8 @@ export function CategoriesTable({
                 <span className="inline-flex items-center gap-1">
                   <FormModalButton
                     mode="edit"
-                    label="Edit"
+                    iconOnly
+                    label={`Edit ${row.path || row.name}`}
                     title="Edit category"
                     action={saveCategoryAction.bind(null, row.id)}
                     submitLabel="Save changes"
@@ -179,6 +213,7 @@ export function CategoriesTable({
                     <CategoryFields value={row} categories={categories} />
                   </FormModalButton>
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deleteCategoryAction.bind(null, row.id)}
                     itemLabel={`category "${row.path || row.name}"`}
                     message="A category with products or sub-categories can't be deleted. Deactivate it instead to hide it."
@@ -195,15 +230,30 @@ export function CategoriesTable({
 
 // ---- Brands
 
-export function BrandsTable({ rows, canManage }: { rows: Brand[]; canManage: boolean }) {
+export function BrandsTable({
+  rows,
+  canManage,
+  sorting,
+}: {
+  rows: Brand[];
+  canManage: boolean;
+  /** Headers that sort the list on the server (brand, products, status, updated). */
+  sorting?: { sort: string; direction: SortDirection; basePath: string; query: Record<string, string | undefined> };
+}) {
+  const header = (label: string, column: string, className?: string) =>
+    sorting ? (
+      <SortHeader label={label} column={column} className={className} {...sorting} />
+    ) : (
+      <TH className={className}>{label}</TH>
+    );
   return (
     <Table>
       <THead>
         <tr>
-          <TH>Brand</TH>
-          <TH className="text-right">Products</TH>
-          <TH>Status</TH>
-          <TH>Updated</TH>
+          {header("Brand", "brand")}
+          {header("Products", "products", "text-right")}
+          {header("Status", "status")}
+          {header("Updated", "updated")}
           {canManage && <TH className="text-right">Actions</TH>}
         </tr>
       </THead>
@@ -224,10 +274,18 @@ export function BrandsTable({ rows, canManage }: { rows: Brand[]; canManage: boo
             {canManage && (
               <TD className="text-right">
                 <span className="inline-flex items-center gap-1">
-                  <FormModalButton mode="edit" label="Edit" title="Edit brand" action={saveBrandAction.bind(null, row.id)} submitLabel="Save changes">
+                  <FormModalButton
+                    mode="edit"
+                    iconOnly
+                    label={`Edit ${row.name}`}
+                    title="Edit brand"
+                    action={saveBrandAction.bind(null, row.id)}
+                    submitLabel="Save changes"
+                  >
                     <BrandFields value={row} />
                   </FormModalButton>
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deleteBrandAction.bind(null, row.id)}
                     itemLabel={`brand "${row.name}"`}
                     message={row.productCount > 0 ? usedByMessage(row.productCount) : undefined}
@@ -244,17 +302,34 @@ export function BrandsTable({ rows, canManage }: { rows: Brand[]; canManage: boo
 
 // ---- Warehouses
 
-export function WarehousesTable({ rows, currency, canManage }: { rows: Warehouse[]; currency: string | null; canManage: boolean }) {
+export function WarehousesTable({
+  rows,
+  currency,
+  canManage,
+  sorting,
+}: {
+  rows: Warehouse[];
+  currency: string | null;
+  canManage: boolean;
+  /** Headers that sort the list on the server (code, name, type, stock, status). */
+  sorting?: { sort: string; direction: SortDirection; basePath: string; query: Record<string, string | undefined> };
+}) {
+  const header = (label: string, column: string, className?: string) =>
+    sorting ? (
+      <SortHeader label={label} column={column} className={className} {...sorting} />
+    ) : (
+      <TH className={className}>{label}</TH>
+    );
   return (
     <Table>
       <THead>
         <tr>
-          <TH>Code</TH>
-          <TH>Name</TH>
-          <TH>Type</TH>
+          {header("Code", "code")}
+          {header("Name", "name")}
+          {header("Type", "type")}
           <TH>Contact</TH>
-          <TH className="text-right">Stock value{currency ? ` (${currency})` : ""}</TH>
-          <TH>Status</TH>
+          {header(`Stock value${currency ? ` (${currency})` : ""}`, "stock", "text-right")}
+          {header("Status", "status")}
           {canManage && <TH className="text-right">Actions</TH>}
         </tr>
       </THead>
@@ -284,7 +359,8 @@ export function WarehousesTable({ rows, currency, canManage }: { rows: Warehouse
                 <span className="inline-flex items-center gap-1">
                   <FormModalButton
                     mode="edit"
-                    label="Edit"
+                    iconOnly
+                    label={`Edit ${row.name}`}
                     title="Edit warehouse"
                     action={saveWarehouseAction.bind(null, row.id)}
                     submitLabel="Save changes"
@@ -292,6 +368,7 @@ export function WarehousesTable({ rows, currency, canManage }: { rows: Warehouse
                     <WarehouseFields value={row} />
                   </FormModalButton>
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deleteWarehouseAction.bind(null, row.id)}
                     itemLabel={`warehouse "${row.name}"`}
                     message={
@@ -327,25 +404,34 @@ export function ProductsTable({
   rows,
   formOptions,
   canManage,
+  sorting,
 }: {
   rows: Product[];
   /** For the edit modal (one shared object for every row); null hides Edit (options didn't load). */
   formOptions: ProductFormOptions | null;
   canManage: boolean;
+  /** Headers that sort the list on the server (code, name, category, unit, tracking, stock, cost, price, status). */
+  sorting?: { sort: string; direction: SortDirection; basePath: string; query: Record<string, string | undefined> };
 }) {
+  const header = (label: string, column: string, className?: string) =>
+    sorting ? (
+      <SortHeader label={label} column={column} className={className} {...sorting} />
+    ) : (
+      <TH className={className}>{label}</TH>
+    );
   return (
     <Table>
       <THead>
         <tr>
-          <TH>Code</TH>
-          <TH>Name</TH>
-          <TH>Category</TH>
-          <TH>Unit</TH>
-          <TH>Tracking</TH>
-          <TH className="text-right">Stock</TH>
-          <TH className="text-right">Last cost</TH>
-          <TH className="text-right">Sale price</TH>
-          <TH>Status</TH>
+          {header("Code", "code")}
+          {header("Name", "name")}
+          {header("Category", "category")}
+          {header("Unit", "unit")}
+          {header("Tracking", "tracking")}
+          {header("Stock", "stock", "text-right")}
+          {header("Last cost", "cost", "text-right")}
+          {header("Sale price", "price", "text-right")}
+          {header("Status", "status")}
           {canManage && <TH className="text-right">Actions</TH>}
         </tr>
       </THead>
@@ -392,6 +478,7 @@ export function ProductsTable({
                     />
                   )}
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deleteProductAction.bind(null, row.id)}
                     itemLabel={`product "${row.name}"`}
                     message={

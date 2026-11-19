@@ -27,7 +27,15 @@ type Query = Record<string, string | number | boolean | undefined>;
 
 export const warrantyApi = {
   policies: {
-    list: (query: { search?: string; isActive?: boolean; limit: number; offset: number }) =>
+    /** A page of policies; sort by name, period, products, status or updated (default: period, then name). */
+    list: (query: {
+      search?: string;
+      isActive?: boolean;
+      sort?: "name" | "period" | "products" | "status" | "updated";
+      direction?: "asc" | "desc";
+      limit: number;
+      offset: number;
+    }) =>
       apiFetch<PagedResult<WarrantyPolicy>>(`${base}/policies`, { query }),
     options: (includeInactive = false) =>
       apiFetch<WarrantyPolicyOption[]>(`${base}/policies/options`, { query: { includeInactive } }),

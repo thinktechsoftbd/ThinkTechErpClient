@@ -146,28 +146,40 @@ export function OrganizationFields({ organization }: { organization?: Organizati
   );
 }
 
+/**
+ * A permission's fields, as items of a two-column grid the caller provides: the permission page's form and the
+ * add / edit popups on the permissions list.
+ */
+export function PermissionFields({ permission }: { permission?: SecurityPermission }) {
+  return (
+    <>
+      <Field label="Code" name="code" required hint="Uppercase MODULE.ACTION, e.g. PATIENT.V (view) or PATIENT.M (manage).">
+        <Input
+          id="code"
+          name="code"
+          maxLength={100}
+          defaultValue={permission?.code}
+          className="font-mono uppercase"
+          autoComplete="off"
+          required
+        />
+      </Field>
+      <Field label="Name" name="name" required>
+        <Input id="name" name="name" maxLength={200} defaultValue={permission?.name} required />
+      </Field>
+      <Field label="Description" name="description" className="md:col-span-2">
+        <Textarea id="description" name="description" rows={3} maxLength={500} defaultValue={permission?.description ?? ""} />
+      </Field>
+    </>
+  );
+}
+
 export function PermissionForm({ permission, readOnly }: { permission?: SecurityPermission; readOnly?: boolean }) {
   return (
     <ActionForm action={savePermissionAction.bind(null, permission?.id ?? null)}>
       <fieldset disabled={readOnly} className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <FormMessage className="md:col-span-2" />
-        <Field label="Code" name="code" required hint="Uppercase MODULE.ACTION, e.g. PATIENT.V (view) or PATIENT.M (manage).">
-          <Input
-            id="code"
-            name="code"
-            maxLength={100}
-            defaultValue={permission?.code}
-            className="font-mono uppercase"
-            autoComplete="off"
-            required
-          />
-        </Field>
-        <Field label="Name" name="name" required>
-          <Input id="name" name="name" maxLength={200} defaultValue={permission?.name} required />
-        </Field>
-        <Field label="Description" name="description" className="md:col-span-2">
-          <Textarea id="description" name="description" rows={3} maxLength={500} defaultValue={permission?.description ?? ""} />
-        </Field>
+        <PermissionFields permission={permission} />
         <FormActions
           readOnly={readOnly}
           submitLabel={permission ? "Save permission" : "Create permission"}

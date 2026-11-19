@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { Suspense, type ReactNode } from "react";
 import { tryApi } from "@/core/api/client";
+import { LinkButton } from "@/core/ui/button";
 import { requireSession } from "@/core/auth/session";
 import { ApiErrorState } from "@/core/ui/api-error-state";
 import { StatusBadge } from "@/core/ui/badge";
@@ -65,13 +67,19 @@ async function UserDetail({ params, searchParams }: Props) {
             {user.name} <StatusBadge active={user.status === "ACTIVE"} />
           </span>
         }
-        description={`${user.email} · created ${formatDateTime(user.createdAt)} · updated ${formatDateTime(user.updatedAt)}`}
+        description={`${user.email}${user.cellphoneNo ? ` · ${user.cellphoneNo}` : ""} · created ${formatDateTime(user.createdAt)} · updated ${formatDateTime(user.updatedAt)}`}
+        compact
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
           { label: "Security", href: "/security" },
           { label: "Users", href: "/security/users" },
           { label: user.name },
         ]}
+        actions={
+          <LinkButton href="/security/users" variant="outline">
+            <ArrowLeft className="size-4" aria-hidden /> Back to list
+          </LinkButton>
+        }
       />
       <Card className="mb-6">
         <LinkTabs
@@ -95,8 +103,9 @@ async function UserDetail({ params, searchParams }: Props) {
 async function ProfileTab({ user, readOnly }: { user: SecurityUser; readOnly: boolean }) {
   const roles = await tryApi(() => securityApi.getRoles());
   return (
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-      <Card className="xl:col-span-2">
+    <div className="space-y-6">
+      {/* Full width: the form has three fields per row plus the photo column. */}
+      <Card>
         <CardHeader title="Profile and roles" />
         <CardBody>
           {roles.ok ? (
@@ -106,7 +115,7 @@ async function ProfileTab({ user, readOnly }: { user: SecurityUser; readOnly: bo
           )}
         </CardBody>
       </Card>
-      <div className="space-y-6">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
         {!readOnly && (
           <Card>
             <CardHeader title="Password" description="Sets a new password for this user." />

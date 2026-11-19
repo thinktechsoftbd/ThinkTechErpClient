@@ -50,7 +50,10 @@ async function signInWithApi(email: string, password: string): Promise<SignInRes
     };
   }
   if (response.status === 403) {
-    return { ok: false, message: "This account is inactive. Contact your administrator." };
+    // Inactive or locked: the API says which.
+    const data = (await response.json().catch(() => null)) as { error?: string } | null;
+    const reason = typeof data?.error === "string" && data.error ? data.error : "This account is inactive.";
+    return { ok: false, message: reason.includes("administrator") ? reason : `${reason} Contact your administrator.` };
   }
   if (response.status === 400 || response.status === 401) {
     return { ok: false, message: "Invalid email or password." };

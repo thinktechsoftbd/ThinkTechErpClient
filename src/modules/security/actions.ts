@@ -170,21 +170,40 @@ export async function createOrganizationFromListAction(_previous: ActionState, f
 // ---- Permissions
 
 /** Creates (id = null) or updates a permission. */
+function permissionBody(formData: FormData, fieldErrors: FieldErrors) {
+  const code = formString(formData, "code").toUpperCase();
+  if (!PERMISSION_CODE_PATTERN.test(code) || code.length > 100) {
+    fieldErrors.code = "Use uppercase MODULE.ACTION, e.g. PATIENT.V.";
+  }
+  return {
+    code,
+    name: requiredText(formData, "name", 200, fieldErrors),
+    description: text(formData, "description", 500, fieldErrors),
+  };
+}
+
+/** New permission from the permissions list's popup: stays on the list, which refreshes. */
+export async function createPermissionFromListAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const fieldErrors: FieldErrors = {};
+  const body = permissionBody(formData, fieldErrors);
+  if (hasErrors(fieldErrors)) return invalid(fieldErrors);
+  try {
+    await requireModuleAccess(securityModule);
+    await securityApi.createPermission(body);
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess(`Permission ${body.code} created.`);
+}
+
 export async function savePermissionAction(
   id: number | null,
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   const fieldErrors: FieldErrors = {};
-  const code = formString(formData, "code").toUpperCase();
-  if (!PERMISSION_CODE_PATTERN.test(code) || code.length > 100) {
-    fieldErrors.code = "Use uppercase MODULE.ACTION, e.g. PATIENT.V.";
-  }
-  const body = {
-    code,
-    name: requiredText(formData, "name", 200, fieldErrors),
-    description: text(formData, "description", 500, fieldErrors),
-  };
+  const body = permissionBody(formData, fieldErrors);
   if (hasErrors(fieldErrors)) return invalid(fieldErrors);
 
   let createdId: number;
@@ -200,6 +219,18 @@ export async function savePermissionAction(
     return toActionError(error);
   }
   redirect(`/security/permissions/${createdId}`);
+}
+
+/** Delete from the permissions list: stays on the list (its search and page), which refreshes. */
+export async function deletePermissionFromListAction(id: number): Promise<ActionState> {
+  try {
+    await requireModuleAccess(securityModule);
+    await securityApi.deletePermission(id);
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess("Permission deleted.");
 }
 
 export async function deletePermissionAction(id: number): Promise<ActionState> {
@@ -251,12 +282,26 @@ export async function deleteRoleAction(id: number): Promise<ActionState> {
 
 // ---- Users
 
+// Same rule as the API's SecurityRules.PhonePattern.
+const PHONE_PATTERN = /^\+?[0-9][0-9 ()-]{5,19}$/;
+
 function userProfile(formData: FormData, fieldErrors: FieldErrors) {
+  const cellphoneNo = requiredText(formData, "cellphoneNo", 20, fieldErrors);
+  if (cellphoneNo && !PHONE_PATTERN.test(cellphoneNo)) fieldErrors.cellphoneNo = "Enter a valid phone number, e.g. 01711-000000.";
   return {
     name: requiredText(formData, "name", 200, fieldErrors),
+    lastName: text(formData, "lastName", 150, fieldErrors),
+    fullName: text(formData, "fullName", 300, fieldErrors),
     email: email(formData, "email", 256, fieldErrors, true) ?? "",
+    cellphoneNo,
     photoUrl: text(formData, "photoUrl", 500, fieldErrors),
+    addressLine1: text(formData, "addressLine1", 255, fieldErrors),
+    addressLine2: text(formData, "addressLine2", 255, fieldErrors),
+    shortBio: text(formData, "shortBio", 500, fieldErrors),
     status: status(formData),
+    isEmailVerified: formData.get("isEmailVerified") === "on",
+    isPhoneVerified: formData.get("isPhoneVerified") === "on",
+    isLocked: formData.get("isLocked") === "on",
     roleIds: ids(formData, "roleIds"),
   };
 }
@@ -290,6 +335,18 @@ export async function updateUserAction(id: number, _previous: ActionState, formD
   }
   refresh();
   return actionSuccess("User saved.");
+}
+
+/** The users list's Activate / Deactivate icon. */
+export async function setUserStatusAction(id: number, status: "ACTIVE" | "INACTIVE"): Promise<ActionState> {
+  try {
+    await requireModuleAccess(securityModule);
+    await securityApi.setUserStatus(id, status);
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess(status === "ACTIVE" ? "User activated." : "User deactivated.");
 }
 
 export async function setPasswordAction(id: number, _previous: ActionState, formData: FormData): Promise<ActionState> {
@@ -383,9 +440,36 @@ function optionalId(formData: FormData, name: string) {
   return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
-/** Creates (id = null) or updates a menu row (security."Menu"). */
-export async function saveMenuAction(id: number | null, _previous: ActionState, formData: FormData): Promise<ActionState> {
+/** New menu or submenu from a popup on the menus list (or a menu's page): stays there, which refreshes. */
+export async function createMenuFromListAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const fieldErrors: FieldErrors = {};
+  const body = menuBody(null, formData, fieldErrors);
+  if (!body) return invalid(fieldErrors);
+  try {
+    await requireModuleAccess(securityModule);
+    await securityApi.createMenu(body);
+  } catch (error) {
+    return toActionError(error);
+  }
+  // Also re-renders the sidebar, which is built from the menu table.
+  refresh();
+  return actionSuccess(`Menu "${body.title}" created.`);
+}
+
+/** Delete from the menus list: stays on the list, which refreshes. */
+export async function deleteMenuFromListAction(id: number): Promise<ActionState> {
+  try {
+    await requireModuleAccess(securityModule);
+    await securityApi.deleteMenu(id);
+  } catch (error) {
+    return toActionError(error);
+  }
+  refresh();
+  return actionSuccess("Menu deleted.");
+}
+
+/** The menu form's values, or null (with `fieldErrors` filled) when they aren't valid. */
+function menuBody(id: number | null, formData: FormData, fieldErrors: FieldErrors): MenuUpsertRequest | null {
   const title = requiredText(formData, "title", 100, fieldErrors);
   const path = requiredText(formData, "path", 300, fieldErrors);
   if (path && path !== MENU_GROUP_PATH && !/^\/[^\s]*$/.test(path)) {
@@ -397,9 +481,8 @@ export async function saveMenuAction(id: number | null, _previous: ActionState, 
   if (!/^-?\d+$/.test(sortOrderRaw) || !Number.isSafeInteger(sortOrder)) fieldErrors.sortOrder = "Enter a whole number.";
   const parentId = optionalId(formData, "parentId");
   if (id !== null && parentId === id) fieldErrors.parentId = "A menu cannot be its own parent.";
-  if (hasErrors(fieldErrors)) return invalid(fieldErrors);
-
-  const body: MenuUpsertRequest = {
+  if (hasErrors(fieldErrors)) return null;
+  return {
     title,
     path,
     // Store Lucide names in kebab-case ("LayoutDashboard" → "layout-dashboard").
@@ -409,6 +492,13 @@ export async function saveMenuAction(id: number | null, _previous: ActionState, 
     roleId: optionalId(formData, "roleId"),
     isActive: formData.get("isActive") === "on",
   };
+}
+
+/** Creates (id = null) or updates a menu row (security."Menu"). */
+export async function saveMenuAction(id: number | null, _previous: ActionState, formData: FormData): Promise<ActionState> {
+  const fieldErrors: FieldErrors = {};
+  const body = menuBody(id, formData, fieldErrors);
+  if (!body) return invalid(fieldErrors);
 
   let createdId: number;
   try {

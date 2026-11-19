@@ -32,7 +32,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               </Suspense>
             }
           />
-          <main className="mx-auto w-full max-w-screen-2xl flex-1 p-4 md:p-6">{children}</main>
+          {/* Full width on every screen (no centred max width, which left empty bands on wide monitors). */}
+          <main className="w-full flex-1 p-4 md:px-5 md:py-6">{children}</main>
         </AdminMain>
       </div>
     </SidebarProvider>

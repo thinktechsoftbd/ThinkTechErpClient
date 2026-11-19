@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
 import { requireSession } from "@/core/auth/session";
 import { ConfirmActionButton } from "@/core/forms/confirm-action-button";
 import { ApiErrorState } from "@/core/ui/api-error-state";
+import { LinkButton } from "@/core/ui/button";
 import { Card, CardBody, CardHeader } from "@/core/ui/card";
 import { PageSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
@@ -65,15 +66,21 @@ async function RoleDetail({ params }: Pick<Props, "params">) {
           { label: "Roles", href: "/security/roles" },
           { label: role.name },
         ]}
+        compact
         actions={
-          canManage && (
-            <ConfirmActionButton
-              action={deleteRoleAction.bind(null, role.id)}
-              confirmMessage={`Delete the role "${role.name}"? This only works while no user holds it.`}
-            >
-              <Trash2 className="size-4" aria-hidden /> Delete role
-            </ConfirmActionButton>
-          )
+          <>
+            <LinkButton href="/security/roles" variant="outline">
+              <ArrowLeft className="size-4" aria-hidden /> Back to list
+            </LinkButton>
+            {canManage && (
+              <ConfirmActionButton
+                action={deleteRoleAction.bind(null, role.id)}
+                confirmMessage={`Delete the role "${role.name}"? This only works while no user holds it.`}
+              >
+                <Trash2 className="size-4" aria-hidden /> Delete role
+              </ConfirmActionButton>
+            )}
+          </>
         }
       />
       <Card>

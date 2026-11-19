@@ -117,10 +117,24 @@ export type RoleSummary = { id: number; name: string };
 
 export type SecurityUser = {
   id: number;
+  /** The first name. */
   name: string;
+  lastName: string | null;
+  /** First and last name unless set otherwise. */
+  fullName: string | null;
   email: string;
+  cellphoneNo: string | null;
   photoUrl: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  shortBio: string | null;
   status: UserStatus;
+  isEmailVerified: boolean;
+  isPhoneVerified: boolean;
+  /** Locked users can't sign in, whatever the status. */
+  isLocked: boolean;
+  lastLoginAt: string | null;
+  passwordChangedAt: string | null;
   createdAt: string;
   updatedAt: string;
   roles: RoleSummary[];
@@ -128,10 +142,19 @@ export type SecurityUser = {
 
 export type UserCreateRequest = {
   name: string;
+  lastName: string | null;
+  fullName: string | null;
   email: string;
+  cellphoneNo: string;
   password: string;
   photoUrl: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  shortBio: string | null;
   status: UserStatus;
+  isEmailVerified: boolean;
+  isPhoneVerified: boolean;
+  isLocked: boolean;
   roleIds: number[];
 };
 

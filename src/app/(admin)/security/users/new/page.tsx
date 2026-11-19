@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { ArrowLeft } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
 import { ApiErrorState } from "@/core/ui/api-error-state";
+import { LinkButton } from "@/core/ui/button";
 import { Card, CardBody, CardHeader } from "@/core/ui/card";
 import { TableSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
@@ -15,14 +17,20 @@ export default function NewUserPage() {
     <>
       <PageHeader
         title="New user"
+        compact
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
           { label: "Security", href: "/security" },
           { label: "Users", href: "/security/users" },
           { label: "New" },
         ]}
+        actions={
+          <LinkButton href="/security/users" variant="outline">
+            <ArrowLeft className="size-4" aria-hidden /> Back to list
+          </LinkButton>
+        }
       />
-      <Card className="max-w-3xl">
+      <Card>
         <CardHeader title="Account" />
         <CardBody>
           <Suspense fallback={<TableSkeleton rows={4} columns={2} />}>

@@ -62,6 +62,14 @@ export const securityApi = {
     apiFetch<Organization>(organization(id), { method: "PUT", body }),
 
   getPermissions: () => apiFetch<SecurityPermission[]>(`${base}/permissions`),
+  /** One page of the permissions whose code or name contains `search`, sorted by code, name or description. */
+  searchPermissions: (query: {
+    search?: string;
+    sort: "code" | "name" | "description";
+    direction: "asc" | "desc";
+    limit: number;
+    offset: number;
+  }) => apiFetch<PagedResult<SecurityPermission>>(`${base}/permissions/page`, { query }),
   getPermission: (id: number) => apiFetch<SecurityPermission>(permission(id)),
   createPermission: (body: PermissionUpsertRequest) =>
     apiFetch<SecurityPermission>(`${base}/permissions`, { method: "POST", body }),
@@ -80,6 +88,9 @@ export const securityApi = {
   getUser: (id: number) => apiFetch<SecurityUser>(user(id)),
   createUser: (body: UserCreateRequest) => apiFetch<SecurityUser>(`${base}/users`, { method: "POST", body }),
   updateUser: (id: number, body: UserUpdateRequest) => apiFetch<SecurityUser>(user(id), { method: "PUT", body }),
+  /** Activates or deactivates a user, leaving the rest of the profile as it is. */
+  setUserStatus: (id: number, status: UserStatus) =>
+    apiFetch<SecurityUser>(`${user(id)}/status`, { method: "PUT", body: { status } }),
   setPassword: (id: number, newPassword: string) =>
     apiFetch<void>(`${user(id)}/password`, { method: "PUT", body: { newPassword } }),
   getUserPermissions: (id: number) => apiFetch<UserPermissionSet>(`${user(id)}/permissions`),

@@ -7,7 +7,7 @@ import type { FormAction } from "@/core/forms/action-state";
 import { Button, buttonClasses } from "@/core/ui/button";
 import { Modal } from "@/core/ui/modal";
 import { cn } from "@/core/utils/cn";
-import { rowAction, type RowActionTone } from "./row-action";
+import { rowAction, rowIconAction, type RowActionTone } from "./row-action";
 
 /**
  * A button that opens a modal holding a form bound to a Server Action ("add" or "edit").
@@ -27,8 +27,14 @@ export function FormModalButton({
   icon,
   variant = "primary",
   buttonSize = "md",
+  iconOnly = false,
+  triggerClassName,
   children,
 }: {
+  /** The trigger's own look instead of a button's, e.g. a link-styled code in a table cell (with icon={null}). */
+  triggerClassName?: string;
+  /** Mode "edit": only the icon (the label becomes its tooltip and accessible name). */
+  iconOnly?: boolean;
   /** "create": primary toolbar button; "edit": compact row action. */
   mode: "create" | "edit";
   /** The row action's colour (mode "edit"), e.g. "add" for a row action that adds something. */
@@ -38,7 +44,7 @@ export function FormModalButton({
   description?: ReactNode;
   action: FormAction;
   submitLabel?: string;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   /** Open the modal when the button first renders, e.g. for a page linked with ?new=1. */
   defaultOpen?: boolean;
   /** The button's icon, e.g. <Wrench className="size-4" /> (default: Plus for "create", Pencil for "edit"); null for none. */
@@ -61,14 +67,18 @@ export function FormModalButton({
           setVersion((value) => value + 1);
           setOpen(true);
         }}
-        className={mode === "create" ? buttonClasses(variant, buttonSize) : rowAction(tone)}
+        className={
+          triggerClassName ?? (mode === "create" ? buttonClasses(variant, buttonSize) : iconOnly ? rowIconAction(tone) : rowAction(tone))
+        }
+        title={iconOnly ? label : undefined}
+        aria-label={iconOnly ? label : undefined}
       >
         {icon === undefined ? (
           mode === "create" ? <Plus className="size-4" aria-hidden /> : <Pencil className="size-4" aria-hidden />
         ) : (
           icon
         )}
-        {label}
+        {!iconOnly && label}
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title={title} description={description} size={size}>
         <ActionForm key={version} action={action} onSuccess={() => setOpen(false)} className="space-y-5">

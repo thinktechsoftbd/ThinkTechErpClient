@@ -17,13 +17,20 @@ export function ImageUpload({
   defaultValue,
   id,
   alt = "Image",
+  layout = "row",
+  round = false,
 }: {
   name: string;
   folder: FileFolder;
   defaultValue?: string | null;
   id?: string;
   alt?: string;
+  /** "row": a small box beside the buttons; "stacked": a large centred box with the buttons under it. */
+  layout?: "row" | "stacked";
+  /** A round box (a person's photo). */
+  round?: boolean;
 }) {
+  const stacked = layout === "stacked";
   const [url, setUrl] = useState(defaultValue ?? "");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string>();
@@ -65,7 +72,7 @@ export function ImageUpload({
   }
 
   return (
-    <div className="flex items-start gap-4">
+    <div className={stacked ? "flex flex-col items-center gap-4 text-center" : "flex items-start gap-4"}>
       <div
         onDragOver={(event) => {
           event.preventDefault();
@@ -75,16 +82,18 @@ export function ImageUpload({
         onDrop={drop}
         title="Drop an image here"
         className={cn(
-          "relative flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-gray-50 dark:bg-white/[0.03]",
+          "relative flex shrink-0 items-center justify-center overflow-hidden border bg-gray-50 dark:bg-white/[0.03]",
+          stacked ? "size-40" : "size-24",
+          round ? "rounded-full" : stacked ? "rounded-2xl" : "rounded-lg",
           dragging ? "border-brand-500 ring-3 ring-brand-500/10" : "border-gray-200 dark:border-gray-800",
         )}
       >
         {url && !broken ? (
           // A file on the API (or another site): next/image would need each host configured.
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt={alt} className="size-full object-contain" onError={() => setBroken(true)} />
+          <img src={url} alt={alt} className={cn("size-full", round ? "object-cover" : "object-contain")} onError={() => setBroken(true)} />
         ) : (
-          <ImageIcon className="size-8 text-gray-300 dark:text-gray-600" aria-hidden />
+          <ImageIcon className={cn("text-gray-300 dark:text-gray-600", stacked ? "size-12" : "size-8")} aria-hidden />
         )}
         {uploading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-gray-900/70">
@@ -93,8 +102,8 @@ export function ImageUpload({
         )}
       </div>
 
-      <div className="min-w-0 flex-1 space-y-2">
-        <div className="flex flex-wrap gap-2">
+      <div className={cn("min-w-0 space-y-2", !stacked && "flex-1")}>
+        <div className={cn("flex flex-wrap gap-2", stacked && "justify-center")}>
           <Button id={id} variant="outline" size="sm" onClick={() => fileInput.current?.click()} disabled={uploading}>
             <Upload className="size-4" aria-hidden />
             {uploading ? "Uploading…" : url ? "Change image" : "Upload image"}

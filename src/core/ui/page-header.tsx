@@ -9,14 +9,17 @@ export function PageHeader({
   description,
   breadcrumbs,
   actions,
+  compact = false,
 }: {
   title: ReactNode;
   description?: ReactNode;
   breadcrumbs?: Crumb[];
   actions?: ReactNode;
+  /** Less space under the header (forms that should start right away). */
+  compact?: boolean;
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className={`${compact ? "mb-4" : "mb-6"} flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between`}>
       <div className="min-w-0">
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav aria-label="Breadcrumb" className="mb-2">

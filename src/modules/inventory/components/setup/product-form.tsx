@@ -1,14 +1,16 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
-import { useState, type KeyboardEvent, type ReactNode } from "react";
-import { FieldError, FormMessage } from "@/core/forms/action-form";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { flushSync } from "react-dom";
+import { FieldError, useFormState } from "@/core/forms/action-form";
 import { Checkbox, Field, Input, Select } from "@/core/forms/fields";
-import { ImageUpload } from "@/core/forms/image-upload";
 import { Button } from "@/core/ui/button";
 import { cn } from "@/core/utils/cn";
 import { formatAmount, formatQuantity } from "@/core/utils/number";
 import { PRODUCT_TYPES, label, type Product, type ProductType, type TrackingType } from "../../types";
+import { ProductImages } from "./product-images";
+import { TagPicker, type TagChoice } from "./tag-picker";
 
 /** What the product form picks from (a slim copy of the inventory options). */
 export type ProductFormOptions = {
@@ -17,6 +19,8 @@ export type ProductFormOptions = {
   brands: { id: number; name: string; isActive: boolean }[];
   /** `label` includes the rates, e.g. "VAT 15% (VAT 15%)". */
   taxGroups: { id: number; label: string; isActive: boolean }[];
+  /** Website badges and the tags the organization's products use. */
+  tags: TagChoice[];
 };
 
 type PackRow = { key: string; unitId: string; conversionFactor: string; salePrice: string };
@@ -25,6 +29,34 @@ type AttributeRow = { key: string; name: string; value: string };
 
 /** "base" or the key of the pack row that is the default unit. */
 type DefaultPick = string;
+
+/**
+ * The form is split into tabs so nothing needs scrolling; `fields` are the names whose server-side errors
+ * mark the tab (and open it when the current tab has none). The images panel stays beside every tab.
+ */
+const TABS = [
+  {
+    key: "general",
+    label: "General",
+    fields: ["name", "nameLocal", "categoryId", "brandId", "code", "productType", "baseUnitId", "salePrice", "mrp", "isActive", "tags"],
+  },
+  { key: "units", label: "Units & barcodes", fields: ["units", "barcodes"] },
+  {
+    key: "stock",
+    label: "Stock & tax",
+    fields: ["trackingType", "hasExpiry", "shelfLifeDays", "reorderLevel", "reorderQuantity", "purchaseTaxGroupId", "saleTaxGroupId"],
+  },
+  { key: "regulatory", label: "Regulatory", fields: ["genericName", "registrationNo", "hsCode", "countryOfOrigin", "attributes"] },
+] as const;
+
+type TabKey = (typeof TABS)[number]["key"];
+
+const isTabKey = (value: string | undefined): value is TabKey => TABS.some((tab) => tab.key === value);
+
+function tabHasErrors(key: TabKey, fieldErrors: Record<string, string> | undefined) {
+  const tab = TABS.find((item) => item.key === key);
+  return Boolean(fieldErrors && tab?.fields.some((field) => fieldErrors[field]));
+}
 
 const TRACKING_LABELS: Record<TrackingType, string> = {
   None: "None",
@@ -42,8 +74,10 @@ let rowSeed = 0;
 const newKey = (prefix: string) => `${prefix}-new-${++rowSeed}`;
 
 const smallControl = "h-9 px-3";
-const headCell = "px-3 py-2 text-left text-xs font-medium whitespace-nowrap text-gray-500 dark:text-gray-400";
-const bodyCell = "px-3 py-2 align-middle";
+const headCell = "px-2.5 py-2 text-left text-xs font-medium whitespace-nowrap text-gray-500 dark:text-gray-400";
+const bodyCell = "px-2.5 py-1.5 align-middle";
+const subLabel = "mb-1.5 text-sm font-medium text-gray-700 dark:text-gray-400";
+const note = "text-xs text-gray-500 dark:text-gray-400";
 
 function unitLabel(unit: ProductFormOptions["units"][number]) {
   return `${unit.code} · ${unit.name}${unit.nameLocal ? ` (${unit.nameLocal})` : ""}${unit.isActive ? "" : " (inactive)"}`;
@@ -83,16 +117,15 @@ function initialAttributes(value: Product | undefined): AttributeRow[] {
   return Object.entries(value.attributes ?? {}).map(([name, text], index) => ({ key: `attribute-${index}`, name, value: text }));
 }
 
-function Section({ title, description, children }: { title: string; description?: ReactNode; children: ReactNode }) {
-  return (
-    <section className="space-y-4 border-t border-gray-100 pt-5 first:border-t-0 first:pt-0 dark:border-gray-800">
-      <div>
-        <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90">{title}</h3>
-        {description && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{description}</p>}
-      </div>
-      {children}
-    </section>
-  );
+/**
+ * The main picture is product.imageUrl (or the primary product_image row of an older record); every other
+ * picture not tied to a size is a related one, so none is dropped on save.
+ */
+function initialImages(value: Product | undefined) {
+  const images = value?.images ?? [];
+  const main = value?.imageUrl ?? images.find((image) => image.isPrimary)?.url ?? null;
+  const related = [...new Set(images.map((image) => image.url))].filter((url) => url !== main);
+  return { main, related };
 }
 
 function RemoveButton({ onClick, label: text }: { onClick: () => void; label: string }) {
@@ -118,10 +151,14 @@ function AddRowButton({ onClick, children }: { onClick: () => void; children: Re
 }
 
 /**
- * Fields of the add/edit product modal (rendered inside its <ActionForm>). The pack, barcode and
- * attribute rows are kept in state and submitted as JSON in hidden inputs that saveProductAction parses.
+ * Fields of the add/edit product modal (rendered inside its <ActionForm>), in tabs beside the images
+ * panel. Every tab stays mounted (hidden ones too), so all fields submit together. The pack, barcode,
+ * attribute, image and tag rows are kept in state and submitted as JSON in hidden inputs that
+ * saveProductAction parses.
  */
 export function ProductForm({ value, options }: { value?: Product; options: ProductFormOptions }) {
+  const { state } = useFormState();
+  const [tab, setTab] = useState<TabKey>("general");
   const [productType, setProductType] = useState<ProductType>(value?.productType ?? "Stock");
   const [trackingType, setTrackingType] = useState<TrackingType>(value?.trackingType ?? "None");
   const [hasExpiry, setHasExpiry] = useState(value?.hasExpiry ?? false);
@@ -131,8 +168,33 @@ export function ProductForm({ value, options }: { value?: Product; options: Prod
   const [saleDefault, setSaleDefault] = useState<DefaultPick>(() => initialDefault(value, "isSaleDefault"));
   const [barcodes, setBarcodes] = useState<BarcodeRow[]>(() => initialBarcodes(value));
   const [attributes, setAttributes] = useState<AttributeRow[]>(() => initialAttributes(value));
+  const [images] = useState(() => initialImages(value));
   /** A row added from the keyboard (Enter in a barcode) takes the focus. */
   const [focusKey, setFocusKey] = useState<string | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // A save came back with field errors: if none is on the open tab, open the first tab that has one.
+  const [seenState, setSeenState] = useState(state);
+  if (state !== seenState) {
+    setSeenState(state);
+    if (!tabHasErrors(tab, state.fieldErrors)) {
+      const withErrors = TABS.find((item) => tabHasErrors(item.key, state.fieldErrors));
+      if (withErrors) setTab(withErrors.key);
+    }
+  }
+
+  // The browser's own check (e.g. a required field) can't point at a field in a hidden tab: open that
+  // tab first. The capture listener runs before the browser looks for the field to focus.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const onInvalid = (event: Event) => {
+      const key = (event.target as HTMLElement).closest<HTMLElement>("[data-tab]")?.dataset.tab;
+      if (isTabKey(key)) flushSync(() => setTab(key));
+    };
+    root.addEventListener("invalid", onInvalid, true);
+    return () => root.removeEventListener("invalid", onInvalid, true);
+  }, []);
 
   const isStock = productType === "Stock";
   const effectiveTracking: TrackingType = isStock ? trackingType : "None";
@@ -182,6 +244,17 @@ export function ProductForm({ value, options }: { value?: Product; options: Prod
     if (isLast && row.barcode.trim()) addBarcode(true);
   }
 
+  /** Arrow keys move between tabs (the tab list is one stop for Tab). */
+  function onTabKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    if (!step) return;
+    event.preventDefault();
+    const index = TABS.findIndex((item) => item.key === tab);
+    const next = TABS[(index + step + TABS.length) % TABS.length].key;
+    setTab(next);
+    document.getElementById(`product-tab-${next}`)?.focus();
+  }
+
   // ---- Serialized rows
 
   const packsJson = JSON.stringify(
@@ -199,445 +272,532 @@ export function ProductForm({ value, options }: { value?: Product; options: Prod
   const baseUnitChoices = options.units.filter((unit) => unit.isActive || String(unit.id) === baseUnitId);
   const packedUnits = packs.filter((row) => row.unitId);
 
+  const panel = (key: TabKey) => ({
+    role: "tabpanel" as const,
+    id: `product-panel-${key}`,
+    "aria-labelledby": `product-tab-${key}`,
+    "data-tab": key,
+    hidden: tab !== key,
+  });
+
   return (
-    <div className="space-y-5">
-      <Section title="Basics">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Name" name="name" required className="sm:col-span-2">
-            <Input id="name" name="name" maxLength={250} defaultValue={value?.name} required />
-          </Field>
-          <Field label="Local name" name="nameLocal" hint="Bangla name for receipts and search." className="sm:col-span-2">
-            <Input id="nameLocal" name="nameLocal" maxLength={250} defaultValue={value?.nameLocal ?? ""} lang="bn" />
-          </Field>
-          <Field label="Category" name="categoryId">
-            <Select id="categoryId" name="categoryId" defaultValue={value?.categoryId ? String(value.categoryId) : ""}>
-              <option value="">No category</option>
-              {options.categories
-                .filter((category) => category.isActive || category.id === value?.categoryId)
-                .map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.path}
-                    {category.isActive ? "" : " (inactive)"}
-                  </option>
-                ))}
-            </Select>
-          </Field>
-          <Field label="Brand" name="brandId">
-            <Select id="brandId" name="brandId" defaultValue={value?.brandId ? String(value.brandId) : ""}>
-              <option value="">No brand</option>
-              {options.brands
-                .filter((brand) => brand.isActive || brand.id === value?.brandId)
-                .map((brand) => (
-                  <option key={brand.id} value={brand.id}>
-                    {brand.name}
-                    {brand.isActive ? "" : " (inactive)"}
-                  </option>
-                ))}
-            </Select>
-          </Field>
-          <Field
-            label="Code"
-            name="code"
-            hint={value ? "Unique, e.g. FERT-UREA-50. Leave empty to keep the current code." : "Optional: leave empty to number it P-00001, P-00002, …"}
-          >
-            <Input id="code" name="code" maxLength={50} defaultValue={value?.code} />
-          </Field>
-          <Field label="Type" name="productType" required>
-            <Select
-              id="productType"
-              name="productType"
-              value={productType}
-              onChange={(event) => {
-                const next = event.target.value as ProductType;
-                setProductType(next);
-                if (next !== "Stock") {
-                  setTrackingType("None");
-                  setHasExpiry(false);
-                }
-              }}
-              required
-            >
-              {PRODUCT_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type === "Stock" ? "Stock item" : label(type)}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Image" name="imageUrl" className="sm:col-span-2">
-            <ImageUpload id="imageUrl" name="imageUrl" folder="product" defaultValue={value?.imageUrl} alt={value?.name ?? "Product image"} />
-          </Field>
+    <div ref={rootRef} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_19rem]">
+      <div className="min-w-0">
+        <div role="tablist" aria-label="Product details" className="no-scrollbar mb-3 flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-800">
+          {TABS.map((item) => {
+            const selected = item.key === tab;
+            const hasErrors = tabHasErrors(item.key, state.fieldErrors);
+            return (
+              <button
+                key={item.key}
+                type="button"
+                role="tab"
+                id={`product-tab-${item.key}`}
+                aria-selected={selected}
+                aria-controls={`product-panel-${item.key}`}
+                tabIndex={selected ? 0 : -1}
+                onClick={() => setTab(item.key)}
+                onKeyDown={onTabKeyDown}
+                className={cn(
+                  "-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium whitespace-nowrap transition",
+                  selected
+                    ? "border-brand-500 text-brand-600 dark:text-brand-300"
+                    : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
+                )}
+              >
+                {item.label}
+                {hasErrors && (
+                  <span className="size-1.5 rounded-full bg-red-500" title="Has errors">
+                    <span className="sr-only">(has errors)</span>
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
-        <Checkbox name="isActive" defaultChecked={value?.isActive ?? true} label="Active (can be bought and sold)" />
-      </Section>
 
-      <Section
-        title="Units & barcodes"
-        description="Stock is kept in the base unit. Add packs that hold several base units, e.g. 1 bag = 50 kg, 1 box = 12 pcs."
-      >
-        <Field
-          label="Base unit"
-          name="baseUnitId"
-          required
-          hint={value ? "Can't change once the product has stock movements." : "The smallest unit you count, e.g. kg, pcs, feet."}
-          className="sm:max-w-xs"
-        >
-          <Select id="baseUnitId" name="baseUnitId" value={baseUnitId} onChange={(event) => changeBaseUnit(event.target.value)} required>
-            <option value="" disabled>
-              Choose a unit
-            </option>
-            {baseUnitChoices.map((unit) => (
-              <option key={unit.id} value={unit.id}>
-                {unitLabel(unit)}
-              </option>
-            ))}
-          </Select>
-        </Field>
-
-        <div>
-          <div className="custom-scrollbar overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
-            <table className="w-full min-w-[600px] text-sm">
-              <thead className="border-b border-gray-100 bg-gray-50/60 dark:border-gray-800 dark:bg-white/[0.02]">
-                <tr>
-                  <th className={headCell}>Pack unit</th>
-                  <th className={headCell}>{baseCode} in 1 pack</th>
-                  <th className={headCell}>Pack sale price</th>
-                  <th className={cn(headCell, "text-center")}>Buy default</th>
-                  <th className={cn(headCell, "text-center")}>Sell default</th>
-                  <th className={headCell}>
-                    <span className="sr-only">Remove</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                <tr>
-                  <td className={cn(bodyCell, "font-medium text-gray-800 dark:text-white/90")}>
-                    {baseUnit ? baseUnit.code : "—"} <span className="text-xs font-normal text-gray-500">(base)</span>
-                  </td>
-                  <td className={cn(bodyCell, "text-gray-500 dark:text-gray-400")}>1</td>
-                  <td className={cn(bodyCell, "text-xs text-gray-500 dark:text-gray-400")}>The product&apos;s sale price</td>
-                  <td className={cn(bodyCell, "text-center")}>
-                    <input
-                      type="radio"
-                      name="purchaseDefaultPick"
-                      checked={purchaseDefault === "base"}
-                      onChange={() => setPurchaseDefault("base")}
-                      aria-label="Buy in the base unit by default"
-                      className="size-4 accent-brand-500"
-                    />
-                  </td>
-                  <td className={cn(bodyCell, "text-center")}>
-                    <input
-                      type="radio"
-                      name="saleDefaultPick"
-                      checked={saleDefault === "base"}
-                      onChange={() => setSaleDefault("base")}
-                      aria-label="Sell in the base unit by default"
-                      className="size-4 accent-brand-500"
-                    />
-                  </td>
-                  <td className={bodyCell} />
-                </tr>
-                {packs.map((row) => {
-                  const choices = options.units.filter(
-                    (unit) =>
-                      String(unit.id) !== baseUnitId &&
-                      (unit.isActive || String(unit.id) === row.unitId) &&
-                      !packs.some((other) => other.key !== row.key && other.unitId === String(unit.id)),
-                  );
-                  return (
-                    <tr key={row.key}>
-                      <td className={cn(bodyCell, "w-48")}>
-                        <Select
-                          value={row.unitId}
-                          onChange={(event) => updatePack(row.key, { unitId: event.target.value })}
-                          aria-label="Pack unit"
-                          className={smallControl}
-                        >
-                          <option value="">Choose</option>
-                          {choices.map((unit) => (
-                            <option key={unit.id} value={unit.id}>
-                              {unitLabel(unit)}
-                            </option>
-                          ))}
-                        </Select>
-                      </td>
-                      <td className={cn(bodyCell, "w-36")}>
-                        <Input
-                          value={row.conversionFactor}
-                          onChange={(event) => updatePack(row.key, { conversionFactor: event.target.value })}
-                          inputMode="decimal"
-                          placeholder="e.g. 50"
-                          aria-label={`${baseCode} in one ${packCode(row.unitId)}`}
-                          className={smallControl}
-                        />
-                      </td>
-                      <td className={cn(bodyCell, "w-36")}>
-                        <Input
-                          value={row.salePrice}
-                          onChange={(event) => updatePack(row.key, { salePrice: event.target.value })}
-                          inputMode="decimal"
-                          placeholder="Optional"
-                          aria-label={`Sale price of one ${packCode(row.unitId)}`}
-                          className={smallControl}
-                        />
-                      </td>
-                      <td className={cn(bodyCell, "text-center")}>
-                        <input
-                          type="radio"
-                          name="purchaseDefaultPick"
-                          checked={purchaseDefault === row.key}
-                          onChange={() => setPurchaseDefault(row.key)}
-                          aria-label={`Buy in ${packCode(row.unitId)} by default`}
-                          className="size-4 accent-brand-500"
-                        />
-                      </td>
-                      <td className={cn(bodyCell, "text-center")}>
-                        <input
-                          type="radio"
-                          name="saleDefaultPick"
-                          checked={saleDefault === row.key}
-                          onChange={() => setSaleDefault(row.key)}
-                          aria-label={`Sell in ${packCode(row.unitId)} by default`}
-                          className="size-4 accent-brand-500"
-                        />
-                      </td>
-                      <td className={cn(bodyCell, "w-10 text-right")}>
-                        <RemoveButton onClick={() => removePack(row.key)} label="Remove pack" />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        <div className="@container min-h-[21rem]">
+          {/* ---- General */}
+          <div {...panel("general")}>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 @2xl:grid-cols-4">
+              <Field label="Name" name="name" required className="col-span-2">
+                <Input id="name" name="name" maxLength={250} defaultValue={value?.name} required />
+              </Field>
+              <Field label="Local name" name="nameLocal" className="col-span-2">
+                <Input
+                  id="nameLocal"
+                  name="nameLocal"
+                  maxLength={250}
+                  defaultValue={value?.nameLocal ?? ""}
+                  lang="bn"
+                  placeholder="Bangla name for receipts and search"
+                />
+              </Field>
+              <Field label="Category" name="categoryId">
+                <Select id="categoryId" name="categoryId" defaultValue={value?.categoryId ? String(value.categoryId) : ""}>
+                  <option value="">No category</option>
+                  {options.categories
+                    .filter((category) => category.isActive || category.id === value?.categoryId)
+                    .map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.path}
+                        {category.isActive ? "" : " (inactive)"}
+                      </option>
+                    ))}
+                </Select>
+              </Field>
+              <Field label="Brand" name="brandId">
+                <Select id="brandId" name="brandId" defaultValue={value?.brandId ? String(value.brandId) : ""}>
+                  <option value="">No brand</option>
+                  {options.brands
+                    .filter((brand) => brand.isActive || brand.id === value?.brandId)
+                    .map((brand) => (
+                      <option key={brand.id} value={brand.id}>
+                        {brand.name}
+                        {brand.isActive ? "" : " (inactive)"}
+                      </option>
+                    ))}
+                </Select>
+              </Field>
+              <Field label="Code" name="code">
+                <Input
+                  id="code"
+                  name="code"
+                  maxLength={50}
+                  defaultValue={value?.code}
+                  placeholder={value ? "Empty keeps the current code" : "Auto: P-00001, P-00002, …"}
+                  title={value ? "Unique, e.g. FERT-UREA-50. Leave empty to keep the current code." : "Optional: leave empty to number it P-00001, P-00002, …"}
+                />
+              </Field>
+              <Field label="Type" name="productType" required>
+                <Select
+                  id="productType"
+                  name="productType"
+                  value={productType}
+                  onChange={(event) => {
+                    const next = event.target.value as ProductType;
+                    setProductType(next);
+                    if (next !== "Stock") {
+                      setTrackingType("None");
+                      setHasExpiry(false);
+                    }
+                  }}
+                  required
+                >
+                  {PRODUCT_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {type === "Stock" ? "Stock item" : label(type)}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field
+                label="Base unit"
+                name="baseUnitId"
+                required
+                hint={value ? "Can't change once the product has stock movements." : undefined}
+              >
+                <Select
+                  id="baseUnitId"
+                  name="baseUnitId"
+                  value={baseUnitId}
+                  onChange={(event) => changeBaseUnit(event.target.value)}
+                  required
+                  title="The smallest unit you count, e.g. kg, pcs, feet."
+                >
+                  <option value="" disabled>
+                    Choose a unit
+                  </option>
+                  {baseUnitChoices.map((unit) => (
+                    <option key={unit.id} value={unit.id}>
+                      {unitLabel(unit)}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label={`Sale price per ${baseCode}`} name="salePrice">
+                <Input id="salePrice" name="salePrice" inputMode="decimal" defaultValue={value ? String(value.salePrice) : ""} placeholder="0.00" />
+              </Field>
+              <Field label="MRP" name="mrp">
+                <Input id="mrp" name="mrp" inputMode="decimal" defaultValue={value?.mrp ?? ""} placeholder="Printed price (optional)" />
+              </Field>
+              <div className="flex items-end pb-2">
+                <Checkbox name="isActive" defaultChecked={value?.isActive ?? true} label="Active (can be bought and sold)" />
+              </div>
+              <Field label="Tags" name="tags" className="col-span-2 @2xl:col-span-4">
+                <TagPicker id="tags" name="tags" options={options.tags} defaultValue={value?.tags ?? []} />
+              </Field>
+            </div>
           </div>
-          {packedUnits.length > 0 && (
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              {packedUnits
-                .map((row) => {
-                  const factor = Number(row.conversionFactor.replace(/,/g, ""));
-                  return `1 ${packCode(row.unitId)} = ${Number.isFinite(factor) && factor > 0 ? formatQuantity(factor) : "?"} ${baseCode}`;
-                })
-                .join(" · ")}
+
+          {/* ---- Units & barcodes */}
+          <div {...panel("units")}>
+            <p className={cn(note, "mb-3")}>
+              Stock is kept in the base unit{baseUnit ? ` (${baseUnit.code})` : ", chosen on the General tab"}. Add packs that hold several base units, e.g. 1
+              bag = 50 kg, 1 box = 12 pcs.
             </p>
-          )}
-          <FieldError name="units" />
-          <div className="mt-3">
-            <AddRowButton onClick={() => setPacks((rows) => [...rows, { key: newKey("pack"), unitId: "", conversionFactor: "", salePrice: "" }])}>
-              Add pack
-            </AddRowButton>
-          </div>
-        </div>
-
-        <div>
-          <p className="mb-1.5 text-sm font-medium text-gray-700 dark:text-gray-400">Barcodes</p>
-          {barcodes.length > 0 && (
-            <div className="space-y-2">
-              {barcodes.map((row, index) => (
-                <div key={row.key} className="flex items-center gap-2">
-                  <Input
-                    value={row.barcode}
-                    onChange={(event) => setBarcodes((rows) => rows.map((item) => (item.key === row.key ? { ...item, barcode: event.target.value } : item)))}
-                    onKeyDown={(event) => onBarcodeKeyDown(event, row, index === barcodes.length - 1)}
-                    maxLength={64}
-                    placeholder="Scan or type"
-                    aria-label={`Barcode ${index + 1}`}
-                    autoFocus={row.key === focusKey}
-                    className={cn(smallControl, "min-w-0 flex-1 font-mono")}
-                  />
-                  <div className="w-40 shrink-0">
-                    <Select
-                      value={row.unitId}
-                      onChange={(event) => setBarcodes((rows) => rows.map((item) => (item.key === row.key ? { ...item, unitId: event.target.value } : item)))}
-                      aria-label={`Unit of barcode ${index + 1}`}
-                      className={smallControl}
-                    >
-                      <option value="">{baseUnit ? `${baseUnit.code} (base)` : "Base unit"}</option>
-                      {packedUnits.map((pack) => (
-                        <option key={pack.key} value={pack.unitId}>
-                          {packCode(pack.unitId)}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                  <RemoveButton onClick={() => setBarcodes((rows) => rows.filter((item) => item.key !== row.key))} label="Remove barcode" />
+            <div className="grid gap-x-6 gap-y-4 @3xl:grid-cols-[minmax(0,1fr)_18rem]">
+              <div className="min-w-0">
+                <p className={subLabel}>Packs</p>
+                <div className="custom-scrollbar overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
+                  <table className="w-full min-w-[29rem] text-sm">
+                    <thead className="border-b border-gray-100 bg-gray-50/60 dark:border-gray-800 dark:bg-white/[0.02]">
+                      <tr>
+                        <th className={headCell}>Pack unit</th>
+                        <th className={headCell}>{baseCode} in 1 pack</th>
+                        <th className={headCell}>Pack price</th>
+                        <th className={cn(headCell, "text-center")} title="The unit picked by default on purchases">
+                          Buy<span className="sr-only"> default</span>
+                        </th>
+                        <th className={cn(headCell, "text-center")} title="The unit picked by default on sales">
+                          Sell<span className="sr-only"> default</span>
+                        </th>
+                        <th className={headCell}>
+                          <span className="sr-only">Remove</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                      <tr>
+                        <td className={cn(bodyCell, "h-12 font-medium text-gray-800 dark:text-white/90")}>
+                          {baseUnit ? baseUnit.code : "—"} <span className="text-xs font-normal text-gray-500">(base)</span>
+                        </td>
+                        <td className={cn(bodyCell, "text-gray-500 dark:text-gray-400")}>1</td>
+                        <td className={cn(bodyCell, "text-xs text-gray-500 dark:text-gray-400")}>Sale price</td>
+                        <td className={cn(bodyCell, "text-center")}>
+                          <input
+                            type="radio"
+                            name="purchaseDefaultPick"
+                            checked={purchaseDefault === "base"}
+                            onChange={() => setPurchaseDefault("base")}
+                            aria-label="Buy in the base unit by default"
+                            className="size-4 accent-brand-500"
+                          />
+                        </td>
+                        <td className={cn(bodyCell, "text-center")}>
+                          <input
+                            type="radio"
+                            name="saleDefaultPick"
+                            checked={saleDefault === "base"}
+                            onChange={() => setSaleDefault("base")}
+                            aria-label="Sell in the base unit by default"
+                            className="size-4 accent-brand-500"
+                          />
+                        </td>
+                        <td className={bodyCell} />
+                      </tr>
+                      {packs.map((row) => {
+                        const choices = options.units.filter(
+                          (unit) =>
+                            String(unit.id) !== baseUnitId &&
+                            (unit.isActive || String(unit.id) === row.unitId) &&
+                            !packs.some((other) => other.key !== row.key && other.unitId === String(unit.id)),
+                        );
+                        return (
+                          <tr key={row.key}>
+                            <td className={cn(bodyCell, "w-40")}>
+                              <Select
+                                value={row.unitId}
+                                onChange={(event) => updatePack(row.key, { unitId: event.target.value })}
+                                aria-label="Pack unit"
+                                className={smallControl}
+                              >
+                                <option value="">Choose</option>
+                                {choices.map((unit) => (
+                                  <option key={unit.id} value={unit.id}>
+                                    {unitLabel(unit)}
+                                  </option>
+                                ))}
+                              </Select>
+                            </td>
+                            <td className={cn(bodyCell, "w-28")}>
+                              <Input
+                                value={row.conversionFactor}
+                                onChange={(event) => updatePack(row.key, { conversionFactor: event.target.value })}
+                                inputMode="decimal"
+                                placeholder="e.g. 50"
+                                aria-label={`${baseCode} in one ${packCode(row.unitId)}`}
+                                className={smallControl}
+                              />
+                            </td>
+                            <td className={cn(bodyCell, "w-28")}>
+                              <Input
+                                value={row.salePrice}
+                                onChange={(event) => updatePack(row.key, { salePrice: event.target.value })}
+                                inputMode="decimal"
+                                placeholder="Optional"
+                                aria-label={`Sale price of one ${packCode(row.unitId)}`}
+                                className={smallControl}
+                              />
+                            </td>
+                            <td className={cn(bodyCell, "text-center")}>
+                              <input
+                                type="radio"
+                                name="purchaseDefaultPick"
+                                checked={purchaseDefault === row.key}
+                                onChange={() => setPurchaseDefault(row.key)}
+                                aria-label={`Buy in ${packCode(row.unitId)} by default`}
+                                className="size-4 accent-brand-500"
+                              />
+                            </td>
+                            <td className={cn(bodyCell, "text-center")}>
+                              <input
+                                type="radio"
+                                name="saleDefaultPick"
+                                checked={saleDefault === row.key}
+                                onChange={() => setSaleDefault(row.key)}
+                                aria-label={`Sell in ${packCode(row.unitId)} by default`}
+                                className="size-4 accent-brand-500"
+                              />
+                            </td>
+                            <td className={cn(bodyCell, "w-10 text-right")}>
+                              <RemoveButton onClick={() => removePack(row.key)} label="Remove pack" />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              ))}
-            </div>
-          )}
-          <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">A pack can have its own barcode, e.g. the carton of 12.</p>
-          <FieldError name="barcodes" />
-          <div className="mt-3">
-            <AddRowButton onClick={() => addBarcode(false)}>Add barcode</AddRowButton>
-          </div>
-        </div>
-      </Section>
-
-      <Section title="Stock & tracking" description={isStock ? undefined : "Only stock items are tracked by batch or serial number."}>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Tracking"
-            name="trackingType"
-            hint={value ? "Can't change once the product has stock movements." : "Batch for fertilizer, seed and pesticide; serial for machines."}
-          >
-            <Select
-              id="trackingType"
-              value={effectiveTracking}
-              disabled={!isStock}
-              onChange={(event) => {
-                const next = event.target.value as TrackingType;
-                setTrackingType(next);
-                if (next !== "Batch") setHasExpiry(false);
-              }}
-            >
-              {(Object.keys(TRACKING_LABELS) as TrackingType[]).map((type) => (
-                <option key={type} value={type}>
-                  {TRACKING_LABELS[type]}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <div className="flex flex-col justify-center gap-1 pt-1 sm:pt-7">
-            <Checkbox
-              checked={effectiveExpiry}
-              disabled={effectiveTracking !== "Batch"}
-              onChange={(event) => setHasExpiry(event.target.checked)}
-              label="Has expiry date"
-            />
-            <FieldError name="hasExpiry" />
-          </div>
-          <Field label="Shelf life (days)" name="shelfLifeDays" hint="Optional, e.g. 730 for two years.">
-            <Input
-              id="shelfLifeDays"
-              name="shelfLifeDays"
-              inputMode="numeric"
-              disabled={!effectiveExpiry}
-              defaultValue={value?.shelfLifeDays ?? ""}
-            />
-          </Field>
-          <div className="hidden sm:block" />
-          <Field label={`Reorder level (${baseCode})`} name="reorderLevel" hint="Reorder Alert lists it at or below this.">
-            <Input id="reorderLevel" name="reorderLevel" inputMode="decimal" defaultValue={value ? String(value.reorderLevel) : ""} placeholder="0" />
-          </Field>
-          <Field label={`Reorder quantity (${baseCode})`} name="reorderQuantity" hint="How much to buy each time.">
-            <Input id="reorderQuantity" name="reorderQuantity" inputMode="decimal" defaultValue={value ? String(value.reorderQuantity) : ""} placeholder="0" />
-          </Field>
-        </div>
-      </Section>
-
-      <Section title="Pricing & tax">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={`Sale price per ${baseCode}`} name="salePrice">
-            <Input id="salePrice" name="salePrice" inputMode="decimal" defaultValue={value ? String(value.salePrice) : ""} placeholder="0.00" />
-          </Field>
-          <Field label="MRP" name="mrp" hint="Printed maximum retail price (optional).">
-            <Input id="mrp" name="mrp" inputMode="decimal" defaultValue={value?.mrp ?? ""} />
-          </Field>
-          <Field label="Purchase tax" name="purchaseTaxGroupId">
-            <Select id="purchaseTaxGroupId" name="purchaseTaxGroupId" defaultValue={value?.purchaseTaxGroupId ? String(value.purchaseTaxGroupId) : ""}>
-              <option value="">No tax</option>
-              {options.taxGroups
-                .filter((group) => group.isActive || group.id === value?.purchaseTaxGroupId)
-                .map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.label}
-                  </option>
-                ))}
-            </Select>
-          </Field>
-          <Field label="Sale tax" name="saleTaxGroupId">
-            <Select id="saleTaxGroupId" name="saleTaxGroupId" defaultValue={value?.saleTaxGroupId ? String(value.saleTaxGroupId) : ""}>
-              <option value="">No tax</option>
-              {options.taxGroups
-                .filter((group) => group.isActive || group.id === value?.saleTaxGroupId)
-                .map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.label}
-                  </option>
-                ))}
-            </Select>
-          </Field>
-        </div>
-        {value && (
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Last purchase cost: <span className="font-medium tabular-nums text-gray-700 dark:text-gray-300">{formatAmount(value.lastPurchaseCost)}</span>{" "}
-            per {value.baseUnitCode} (set by purchases).
-          </p>
-        )}
-      </Section>
-
-      <Section title="Regulatory" description="For fertilizer, pesticide, seed and imported goods.">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Generic name" name="genericName" hint="e.g. Urea, Imidacloprid 20% SL." className="sm:col-span-2">
-            <Input id="genericName" name="genericName" maxLength={250} defaultValue={value?.genericName ?? ""} />
-          </Field>
-          <Field label="Registration no." name="registrationNo" hint="Government registration, if any.">
-            <Input id="registrationNo" name="registrationNo" maxLength={100} defaultValue={value?.registrationNo ?? ""} />
-          </Field>
-          <Field label="HS code" name="hsCode" hint="Customs code for imports.">
-            <Input id="hsCode" name="hsCode" maxLength={20} defaultValue={value?.hsCode ?? ""} />
-          </Field>
-          <Field label="Country of origin" name="countryOfOrigin" hint="2-letter code, e.g. BD, CN, IN.">
-            <Input
-              id="countryOfOrigin"
-              name="countryOfOrigin"
-              maxLength={2}
-              defaultValue={value?.countryOfOrigin ?? ""}
-              className="uppercase"
-              autoCapitalize="characters"
-            />
-          </Field>
-        </div>
-
-        <div>
-          <p className="mb-1.5 text-sm font-medium text-gray-700 dark:text-gray-400">Attributes</p>
-          {attributes.length > 0 && (
-            <div className="space-y-2">
-              {attributes.map((row, index) => (
-                <div key={row.key} className="flex items-center gap-2">
-                  <div className="w-44 shrink-0">
-                    <Input
-                      value={row.name}
-                      onChange={(event) => setAttributes((rows) => rows.map((item) => (item.key === row.key ? { ...item, name: event.target.value } : item)))}
-                      list={ATTRIBUTE_LIST_ID}
-                      maxLength={100}
-                      placeholder="Name, e.g. npk"
-                      aria-label={`Attribute ${index + 1} name`}
-                      className={smallControl}
-                    />
-                  </div>
-                  <Input
-                    value={row.value}
-                    onChange={(event) => setAttributes((rows) => rows.map((item) => (item.key === row.key ? { ...item, value: event.target.value } : item)))}
-                    maxLength={500}
-                    placeholder="Value, e.g. 46-0-0"
-                    aria-label={`Attribute ${index + 1} value`}
-                    className={cn(smallControl, "min-w-0 flex-1")}
-                  />
-                  <RemoveButton onClick={() => setAttributes((rows) => rows.filter((item) => item.key !== row.key))} label="Remove attribute" />
+                {packedUnits.length > 0 && (
+                  <p className={cn(note, "mt-2")}>
+                    {packedUnits
+                      .map((row) => {
+                        const factor = Number(row.conversionFactor.replace(/,/g, ""));
+                        return `1 ${packCode(row.unitId)} = ${Number.isFinite(factor) && factor > 0 ? formatQuantity(factor) : "?"} ${baseCode}`;
+                      })
+                      .join(" · ")}
+                  </p>
+                )}
+                <FieldError name="units" />
+                <div className="mt-3">
+                  <AddRowButton onClick={() => setPacks((rows) => [...rows, { key: newKey("pack"), unitId: "", conversionFactor: "", salePrice: "" }])}>
+                    Add pack
+                  </AddRowButton>
                 </div>
-              ))}
+              </div>
+
+              <div className="min-w-0">
+                <p className={subLabel}>Barcodes</p>
+                {barcodes.length > 0 && (
+                  <div className="space-y-2">
+                    {barcodes.map((row, index) => (
+                      <div key={row.key} className="flex items-center gap-2">
+                        <Input
+                          value={row.barcode}
+                          onChange={(event) =>
+                            setBarcodes((rows) => rows.map((item) => (item.key === row.key ? { ...item, barcode: event.target.value } : item)))
+                          }
+                          onKeyDown={(event) => onBarcodeKeyDown(event, row, index === barcodes.length - 1)}
+                          maxLength={64}
+                          placeholder="Scan or type"
+                          aria-label={`Barcode ${index + 1}`}
+                          autoFocus={row.key === focusKey}
+                          className={cn(smallControl, "min-w-0 flex-1 font-mono")}
+                        />
+                        <div className="w-24 shrink-0">
+                          <Select
+                            value={row.unitId}
+                            onChange={(event) =>
+                              setBarcodes((rows) => rows.map((item) => (item.key === row.key ? { ...item, unitId: event.target.value } : item)))
+                            }
+                            aria-label={`Unit of barcode ${index + 1}`}
+                            className="h-9 px-2"
+                          >
+                            <option value="">{baseUnit ? `${baseUnit.code} (base)` : "Base unit"}</option>
+                            {packedUnits.map((pack) => (
+                              <option key={pack.key} value={pack.unitId}>
+                                {packCode(pack.unitId)}
+                              </option>
+                            ))}
+                          </Select>
+                        </div>
+                        <RemoveButton onClick={() => setBarcodes((rows) => rows.filter((item) => item.key !== row.key))} label="Remove barcode" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className={cn(note, "mt-1.5")}>A pack can have its own barcode, e.g. the carton of 12.</p>
+                <FieldError name="barcodes" />
+                <div className="mt-3">
+                  <AddRowButton onClick={() => addBarcode(false)}>Add barcode</AddRowButton>
+                </div>
+              </div>
             </div>
-          )}
-          <datalist id={ATTRIBUTE_LIST_ID}>
-            {ATTRIBUTE_SUGGESTIONS.map((suggestion) => (
-              <option key={suggestion} value={suggestion} />
-            ))}
-          </datalist>
-          <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-            Free details, e.g. npk = 46-0-0 for fertilizer, toxicity class for pesticide, size for hardware.
-          </p>
-          <FieldError name="attributes" />
-          <div className="mt-3">
-            <AddRowButton onClick={() => setAttributes((rows) => [...rows, { key: newKey("attribute"), name: "", value: "" }])}>
-              Add attribute
-            </AddRowButton>
+          </div>
+
+          {/* ---- Stock & tax */}
+          <div {...panel("stock")}>
+            {!isStock && <p className={cn(note, "mb-3")}>Only stock items are tracked by batch or serial number.</p>}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 @2xl:grid-cols-4">
+              <Field
+                label="Tracking"
+                name="trackingType"
+                hint={value ? "Can't change once the product has stock movements." : "Batch for fertilizer, seed, pesticide; serial for machines."}
+              >
+                <Select
+                  id="trackingType"
+                  value={effectiveTracking}
+                  disabled={!isStock}
+                  onChange={(event) => {
+                    const next = event.target.value as TrackingType;
+                    setTrackingType(next);
+                    if (next !== "Batch") setHasExpiry(false);
+                  }}
+                >
+                  {(Object.keys(TRACKING_LABELS) as TrackingType[]).map((type) => (
+                    <option key={type} value={type}>
+                      {TRACKING_LABELS[type]}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <div className="flex flex-col gap-1 pt-1 @2xl:pt-8">
+                <Checkbox
+                  checked={effectiveExpiry}
+                  disabled={effectiveTracking !== "Batch"}
+                  onChange={(event) => setHasExpiry(event.target.checked)}
+                  label="Has expiry date"
+                />
+                <FieldError name="hasExpiry" />
+              </div>
+              <Field label="Shelf life (days)" name="shelfLifeDays" hint="Optional, e.g. 730 for two years.">
+                <Input id="shelfLifeDays" name="shelfLifeDays" inputMode="numeric" disabled={!effectiveExpiry} defaultValue={value?.shelfLifeDays ?? ""} />
+              </Field>
+              <div className="hidden @2xl:block" />
+              <Field label={`Reorder level (${baseCode})`} name="reorderLevel" hint="Reorder Alert lists it at or below this.">
+                <Input id="reorderLevel" name="reorderLevel" inputMode="decimal" defaultValue={value ? String(value.reorderLevel) : ""} placeholder="0" />
+              </Field>
+              <Field label={`Reorder quantity (${baseCode})`} name="reorderQuantity" hint="How much to buy each time.">
+                <Input
+                  id="reorderQuantity"
+                  name="reorderQuantity"
+                  inputMode="decimal"
+                  defaultValue={value ? String(value.reorderQuantity) : ""}
+                  placeholder="0"
+                />
+              </Field>
+              <Field label="Purchase tax" name="purchaseTaxGroupId">
+                <Select id="purchaseTaxGroupId" name="purchaseTaxGroupId" defaultValue={value?.purchaseTaxGroupId ? String(value.purchaseTaxGroupId) : ""}>
+                  <option value="">No tax</option>
+                  {options.taxGroups
+                    .filter((group) => group.isActive || group.id === value?.purchaseTaxGroupId)
+                    .map((group) => (
+                      <option key={group.id} value={group.id}>
+                        {group.label}
+                      </option>
+                    ))}
+                </Select>
+              </Field>
+              <Field label="Sale tax" name="saleTaxGroupId">
+                <Select id="saleTaxGroupId" name="saleTaxGroupId" defaultValue={value?.saleTaxGroupId ? String(value.saleTaxGroupId) : ""}>
+                  <option value="">No tax</option>
+                  {options.taxGroups
+                    .filter((group) => group.isActive || group.id === value?.saleTaxGroupId)
+                    .map((group) => (
+                      <option key={group.id} value={group.id}>
+                        {group.label}
+                      </option>
+                    ))}
+                </Select>
+              </Field>
+            </div>
+            {value && (
+              <p className={cn(note, "mt-3")}>
+                Last purchase cost:{" "}
+                <span className="font-medium text-gray-700 tabular-nums dark:text-gray-300">{formatAmount(value.lastPurchaseCost)}</span> per{" "}
+                {value.baseUnitCode} (set by purchases).
+              </p>
+            )}
+          </div>
+
+          {/* ---- Regulatory */}
+          <div {...panel("regulatory")}>
+            <p className={cn(note, "mb-3")}>For fertilizer, pesticide, seed and imported goods.</p>
+            <div className="grid gap-x-6 gap-y-4 @3xl:grid-cols-2">
+              <div className="grid grid-cols-2 content-start gap-x-4 gap-y-3">
+                <Field label="Generic name" name="genericName" hint="e.g. Urea, Imidacloprid 20% SL." className="col-span-2">
+                  <Input id="genericName" name="genericName" maxLength={250} defaultValue={value?.genericName ?? ""} />
+                </Field>
+                <Field label="Registration no." name="registrationNo" hint="Government registration, if any.">
+                  <Input id="registrationNo" name="registrationNo" maxLength={100} defaultValue={value?.registrationNo ?? ""} />
+                </Field>
+                <Field label="HS code" name="hsCode" hint="Customs code for imports.">
+                  <Input id="hsCode" name="hsCode" maxLength={20} defaultValue={value?.hsCode ?? ""} />
+                </Field>
+                <Field label="Country of origin" name="countryOfOrigin" hint="2-letter code, e.g. BD, CN, IN.">
+                  <Input
+                    id="countryOfOrigin"
+                    name="countryOfOrigin"
+                    maxLength={2}
+                    defaultValue={value?.countryOfOrigin ?? ""}
+                    className="uppercase"
+                    autoCapitalize="characters"
+                  />
+                </Field>
+              </div>
+
+              <div className="min-w-0">
+                <p className={subLabel}>Attributes</p>
+                {attributes.length > 0 && (
+                  <div className="space-y-2">
+                    {attributes.map((row, index) => (
+                      <div key={row.key} className="flex items-center gap-2">
+                        <div className="w-36 shrink-0">
+                          <Input
+                            value={row.name}
+                            onChange={(event) =>
+                              setAttributes((rows) => rows.map((item) => (item.key === row.key ? { ...item, name: event.target.value } : item)))
+                            }
+                            list={ATTRIBUTE_LIST_ID}
+                            maxLength={100}
+                            placeholder="Name, e.g. npk"
+                            aria-label={`Attribute ${index + 1} name`}
+                            className={smallControl}
+                          />
+                        </div>
+                        <Input
+                          value={row.value}
+                          onChange={(event) =>
+                            setAttributes((rows) => rows.map((item) => (item.key === row.key ? { ...item, value: event.target.value } : item)))
+                          }
+                          maxLength={500}
+                          placeholder="Value, e.g. 46-0-0"
+                          aria-label={`Attribute ${index + 1} value`}
+                          className={cn(smallControl, "min-w-0 flex-1")}
+                        />
+                        <RemoveButton onClick={() => setAttributes((rows) => rows.filter((item) => item.key !== row.key))} label="Remove attribute" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <datalist id={ATTRIBUTE_LIST_ID}>
+                  {ATTRIBUTE_SUGGESTIONS.map((suggestion) => (
+                    <option key={suggestion} value={suggestion} />
+                  ))}
+                </datalist>
+                <p className={cn(note, "mt-1.5")}>Free details, e.g. npk = 46-0-0 for fertilizer, toxicity class for pesticide, size for hardware.</p>
+                <FieldError name="attributes" />
+                <div className="mt-3">
+                  <AddRowButton onClick={() => setAttributes((rows) => [...rows, { key: newKey("attribute"), name: "", value: "" }])}>
+                    Add attribute
+                  </AddRowButton>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </Section>
+      </div>
 
-      {/* The form is long: repeat the result next to the buttons too. */}
-      <FormMessage />
+      {/* Beside every tab on wide screens; it fills the column's height and its related images scroll. */}
+      <div className="relative min-h-0">
+        <ProductImages
+          defaultMain={images.main}
+          defaultRelated={images.related}
+          alt={value?.name ?? "Product image"}
+          className="lg:absolute lg:inset-0"
+        />
+      </div>
 
       <input type="hidden" name="units" value={packsJson} />
       <input type="hidden" name="barcodes" value={barcodesJson} />

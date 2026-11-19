@@ -8,6 +8,12 @@
       "port": 3000
     },
     {
+      "name": "thinktecherp-api",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "../ThinkTechErp/ThinkTechErpAPI/ThinkTechErpAPI", "--launch-profile", "http"],
+      "port": 5291
+    },
+    {
       "name": "thinktecherp-storage-test",
       "runtimeExecutable": "node",
       "runtimeArgs": [

@@ -8,8 +8,13 @@ const sizes = {
   sm: "max-w-md",
   md: "max-w-xl",
   lg: "max-w-3xl",
+<<<<<<< HEAD
   /** Wide forms: three fields per row plus a side column (e.g. the user popup). */
   xl: "max-w-5xl",
+=======
+  /** Nearly the whole screen, for a form laid out in columns (e.g. a product with its images). */
+  xl: "max-w-[96rem]",
+>>>>>>> 26a266bbb55001d97b565be6f3d620e9021cbc60
 };
 
 /**
@@ -23,6 +28,7 @@ export function Modal({
   title,
   description,
   size = "md",
+  compact = false,
   children,
 }: {
   open: boolean;
@@ -30,6 +36,8 @@ export function Modal({
   title: ReactNode;
   description?: ReactNode;
   size?: keyof typeof sizes;
+  /** Tighter header and body padding, so a big form fits on a laptop screen without scrolling. */
+  compact?: boolean;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -73,21 +81,29 @@ export function Modal({
     >
       {open && (
         <div className="flex max-h-[calc(100dvh-2rem)] flex-col">
-          <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-6 py-4 dark:border-gray-800">
-            <div className="min-w-0">
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">{title}</h2>
-              {description && <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>}
+          <div
+            className={cn(
+              "flex justify-between gap-4 border-b border-gray-100 dark:border-gray-800",
+              compact ? "items-center px-5 py-2.5" : "items-start px-6 py-4",
+            )}
+          >
+            <div className={cn("min-w-0", compact && "flex flex-wrap items-baseline gap-x-3")}>
+              <h2 className={cn("font-semibold text-gray-800 dark:text-white/90", compact ? "text-base" : "text-lg")}>{title}</h2>
+              {description && <p className={cn("text-sm text-gray-500 dark:text-gray-400", !compact && "mt-1")}>{description}</p>}
             </div>
             <button
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="-mr-2 rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5"
+              className={cn(
+                "-mr-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5",
+                compact ? "p-1.5" : "p-2",
+              )}
             >
               <X className="size-5" aria-hidden />
             </button>
           </div>
-          <div ref={bodyRef} className="custom-scrollbar overflow-y-auto px-6 py-5">
+          <div ref={bodyRef} className={cn("custom-scrollbar overflow-y-auto", compact ? "px-5 py-3" : "px-6 py-5")}>
             {children}
           </div>
         </div>

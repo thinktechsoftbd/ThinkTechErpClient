@@ -144,6 +144,17 @@ export type ProductUnit = {
 
 export type ProductBarcode = { unitId: number | null; unitCode: string | null; barcode: string };
 
+/** A product_image row not tied to a size; the primary one is the main picture (product.imageUrl). */
+export type ProductImage = { url: string; altText: string | null; isPrimary: boolean; sortOrder: number };
+
+/** public.tag: "badge" tags are the website's card ribbons (Best Selling, New Arrival, ...). */
+export type TagOption = { id: number; name: string; slug: string; tagType: "tag" | "badge"; color: string | null };
+
+/** The API's InventoryRules limits. */
+export const MAX_RELATED_IMAGES = 12;
+export const MAX_PRODUCT_TAGS = 20;
+export const MAX_TAG_NAME_LENGTH = 50;
+
 export type Product = {
   id: number;
   objectId: string;
@@ -183,6 +194,10 @@ export type Product = {
   /** Base unit first (factor 1). */
   units: ProductUnit[];
   barcodes: ProductBarcode[];
+  /** Single product only (empty on list rows): pictures not tied to a size, the primary first. */
+  images?: ProductImage[];
+  /** Single product only (empty on list rows). */
+  tags?: TagOption[];
 };
 
 export type ProductUpsertRequest = {
@@ -213,6 +228,12 @@ export type ProductUpsertRequest = {
   /** Packs other than the base unit. */
   units: { unitId: number; conversionFactor: number; salePrice: number | null; isPurchaseDefault: boolean; isSaleDefault: boolean }[];
   barcodes: { unitId: number | null; barcode: string }[];
+  /** Pictures besides the main one (imageUrl), in display order. */
+  relatedImageUrls: string[];
+  /** Existing tags; the product's tags become these plus newTags. */
+  tagIds: number[];
+  /** Tag names to create (or match by slug) and attach. */
+  newTags: string[];
 };
 
 /** A product as a document line picks it (GET /api/inventory/products/lookup). */
@@ -272,6 +293,8 @@ export type InventoryOptions = {
   brands: Brand[];
   warehouses: Warehouse[];
   taxGroups: TaxGroupOption[];
+  /** Website badges and the tags this organization's products use (missing on an older API). */
+  tags?: TagOption[];
 };
 
 // ---- Stock documents

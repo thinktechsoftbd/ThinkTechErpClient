@@ -9,6 +9,9 @@ import { inventoryApi } from "../api";
 import type { ProductLoadResult } from "../components/setup/product-edit-button";
 import { inventoryModule } from "../module";
 import {
+  MAX_PRODUCT_TAGS,
+  MAX_RELATED_IMAGES,
+  MAX_TAG_NAME_LENGTH,
   PRODUCT_TYPES,
   TRACKING_TYPES,
   UNIT_TYPES,
@@ -225,6 +228,8 @@ export async function deleteWarehouseAction(id: number): Promise<ActionState> {
 type PackDraft = { unitId?: unknown; conversionFactor?: unknown; salePrice?: unknown; isPurchaseDefault?: unknown; isSaleDefault?: unknown };
 type BarcodeDraft = { unitId?: unknown; barcode?: unknown };
 type AttributeDraft = { name?: unknown; value?: unknown };
+type ImageDraft = { url?: unknown };
+type TagDraft = { id?: unknown; name?: unknown };
 
 function readRows<T>(formData: FormData, name: string): T[] | null {
   const raw = formData.get(name);
@@ -330,6 +335,43 @@ function readAttributes(rows: AttributeDraft[], fieldErrors: FieldErrors) {
   return attributes;
 }
 
+/** Uploaded pictures besides the main one, in order, without blanks, repeats or the main picture. */
+function readRelatedImages(rows: ImageDraft[], mainUrl: string | null, fieldErrors: FieldErrors) {
+  const urls: string[] = [];
+  for (const row of rows) {
+    const url = cell(row.url);
+    if (!url || url === mainUrl || urls.includes(url)) continue;
+    if (url.length > 500 || !/^(https?:\/\/|\/)/i.test(url)) {
+      fieldErrors.relatedImages = "An image address is not valid. Remove it and upload it again.";
+      break;
+    }
+    urls.push(url);
+  }
+  if (urls.length > MAX_RELATED_IMAGES) fieldErrors.relatedImages = `Keep up to ${MAX_RELATED_IMAGES} related images.`;
+  return urls;
+}
+
+/** Picked tags: an id is an existing tag, a name alone is a new one (the API matches it by slug). */
+function readTags(rows: TagDraft[], fieldErrors: FieldErrors) {
+  const tagIds: number[] = [];
+  const newTags: string[] = [];
+  for (const row of rows) {
+    const id = Number(cell(row.id));
+    const name = cell(row.name).replace(/\s+/g, " ");
+    if (Number.isSafeInteger(id) && id > 0) {
+      if (!tagIds.includes(id)) tagIds.push(id);
+    } else if (name) {
+      if (name.length > MAX_TAG_NAME_LENGTH) {
+        fieldErrors.tags = `A tag can be at most ${MAX_TAG_NAME_LENGTH} characters.`;
+        break;
+      }
+      if (!newTags.some((tag) => tag.toLowerCase() === name.toLowerCase())) newTags.push(name);
+    }
+  }
+  if (tagIds.length + newTags.length > MAX_PRODUCT_TAGS) fieldErrors.tags = `Keep up to ${MAX_PRODUCT_TAGS} tags.`;
+  return { tagIds, newTags };
+}
+
 /** Creates (id = null) or updates a product with its packs, barcodes and attributes. */
 export async function saveProductAction(id: number | null, _previous: ActionState, formData: FormData): Promise<ActionState> {
   const fieldErrors: FieldErrors = {};
@@ -351,10 +393,17 @@ export async function saveProductAction(id: number | null, _previous: ActionStat
   const packRows = readRows<PackDraft>(formData, "units");
   const barcodeRows = readRows<BarcodeDraft>(formData, "barcodes");
   const attributeRows = readRows<AttributeDraft>(formData, "attributes");
-  if (!packRows || !barcodeRows || !attributeRows) return actionError("The form couldn't be read. Close it and try again.");
+  const imageRows = readRows<ImageDraft>(formData, "relatedImages");
+  const tagRows = readRows<TagDraft>(formData, "tags");
+  if (!packRows || !barcodeRows || !attributeRows || !imageRows || !tagRows) {
+    return actionError("The form couldn't be read. Close it and try again.");
+  }
   const units = readPacks(packRows, baseUnitId ?? 0, fieldErrors);
   const barcodes = readBarcodes(barcodeRows, baseUnitId ?? 0, units, fieldErrors);
   const attributes = readAttributes(attributeRows, fieldErrors);
+  const imageUrl = optionalText(formData, "imageUrl", 500, fieldErrors);
+  const relatedImageUrls = readRelatedImages(imageRows, imageUrl, fieldErrors);
+  const { tagIds, newTags } = readTags(tagRows, fieldErrors);
 
   const body: ProductUpsertRequest = {
     code: optionalText(formData, "code", 50, fieldErrors),
@@ -378,10 +427,13 @@ export async function saveProductAction(id: number | null, _previous: ActionStat
     reorderLevel: readAmount(formData, "reorderLevel", 0, fieldErrors),
     reorderQuantity: readAmount(formData, "reorderQuantity", 0, fieldErrors),
     attributes,
-    imageUrl: optionalText(formData, "imageUrl", 500, fieldErrors),
+    imageUrl,
     isActive: checked(formData, "isActive"),
     units,
     barcodes,
+    relatedImageUrls,
+    tagIds,
+    newTags,
   };
   if (hasErrors(fieldErrors)) return invalid(fieldErrors);
 

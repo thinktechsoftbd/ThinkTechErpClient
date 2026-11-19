@@ -7,6 +7,29 @@ import { Button } from "@/core/ui/button";
 import { cn } from "@/core/utils/cn";
 
 /**
+ * Checks and uploads one image to the API's file storage (through /api/files): its url to save on the
+ * record, or a message to show.
+ */
+export async function uploadImage(file: File, folder: FileFolder): Promise<{ url: string } | { error: string }> {
+  const extension = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase() : "";
+  if (!IMAGE_EXTENSIONS.includes(extension)) return { error: "Choose a JPG, PNG, WEBP, GIF or AVIF image." };
+  if (file.size > MAX_UPLOAD_MB * 1024 * 1024) return { error: `The image is larger than ${MAX_UPLOAD_MB} MB.` };
+  try {
+    const body = new FormData();
+    body.set("folder", folder);
+    body.set("file", file);
+    const response = await fetch("/api/files", { method: "POST", body });
+    // An expired session is redirected to the sign-in page.
+    if (response.redirected) return { error: "Your session has expired. Sign in again to upload." };
+    const data = (await response.json().catch(() => null)) as (Partial<StoredFile> & { error?: string }) | null;
+    if (!response.ok || !data?.url) return { error: data?.error ?? `The upload failed (HTTP ${response.status}).` };
+    return { url: data.url };
+  } catch {
+    return { error: "Could not reach the server. Please try again." };
+  }
+}
+
+/**
  * An image a record links to (a product's image_url, an organization's logo_url, a user's photoUrl): shows
  * the current one, uploads a new one to the API's file storage (button, or drop a file on the box) and
  * submits its url as `name` with the form. Remove only clears the link; the stored file stays.
@@ -32,29 +55,14 @@ export function ImageUpload({
   const fileInput = useRef<HTMLInputElement>(null);
 
   async function upload(file: File) {
-    const extension = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase() : "";
-    if (!IMAGE_EXTENSIONS.includes(extension)) return setError("Choose a JPG, PNG, WEBP, GIF or AVIF image.");
-    if (file.size > MAX_UPLOAD_MB * 1024 * 1024) return setError(`The image is larger than ${MAX_UPLOAD_MB} MB.`);
-
     setError(undefined);
     setUploading(true);
-    try {
-      const body = new FormData();
-      body.set("folder", folder);
-      body.set("file", file);
-      const response = await fetch("/api/files", { method: "POST", body });
-      // An expired session is redirected to the sign-in page.
-      if (response.redirected) return setError("Your session has expired. Sign in again to upload.");
-      const data = (await response.json().catch(() => null)) as (Partial<StoredFile> & { error?: string }) | null;
-      if (!response.ok || !data?.url) return setError(data?.error ?? `The upload failed (HTTP ${response.status}).`);
-      setUrl(data.url);
-      setBroken(false);
-    } catch {
-      setError("Could not reach the server. Please try again.");
-    } finally {
-      setUploading(false);
-      if (fileInput.current) fileInput.current.value = "";
-    }
+    const result = await uploadImage(file, folder);
+    setUploading(false);
+    if (fileInput.current) fileInput.current.value = "";
+    if ("error" in result) return setError(result.error);
+    setUrl(result.url);
+    setBroken(false);
   }
 
   function drop(event: DragEvent<HTMLDivElement>) {

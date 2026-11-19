@@ -52,7 +52,7 @@ export function ProductEditButton({
         <Pencil className="size-4" aria-hidden />
         Edit
       </button>
-      <Modal open={open} onClose={() => setOpen(false)} title="Edit product" description={productLabel} size="lg">
+      <Modal open={open} onClose={() => setOpen(false)} title="Edit product" description={productLabel} size="xl" compact>
         {!result ? (
           <p className="flex items-center justify-center gap-2 py-16 text-sm text-gray-500 dark:text-gray-400" aria-busy="true">
             <LoaderCircle className="size-4 animate-spin" aria-hidden /> Loading product…
@@ -67,10 +67,10 @@ export function ProductEditButton({
             </div>
           </div>
         ) : (
-          <ActionForm key={version} action={action} onSuccess={() => setOpen(false)} className="space-y-5">
+          <ActionForm key={version} action={action} onSuccess={() => setOpen(false)} className="space-y-3">
             <FormMessage />
             <ProductForm value={result.product} options={options} />
-            <div className="flex justify-end gap-3 border-t border-gray-100 pt-5 dark:border-gray-800">
+            <div className="flex justify-end gap-3 border-t border-gray-100 pt-3 dark:border-gray-800">
               <Button variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>

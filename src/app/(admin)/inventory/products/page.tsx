@@ -58,6 +58,7 @@ function toFormOptions(options: InventoryOptions): ProductFormOptions {
     categories: options.categories.map(({ id, path, isActive }) => ({ id, path, isActive })),
     brands: options.brands.map(({ id, name, isActive }) => ({ id, name, isActive })),
     taxGroups: options.taxGroups.map((group) => ({ id: group.id, label: taxGroupLabel(group), isActive: group.isActive })),
+    tags: (options.tags ?? []).map(({ id, name, tagType, color }) => ({ id, name, tagType, color })),
   };
 }
 
@@ -89,7 +90,15 @@ async function NewProductButton() {
   const options = await getInventoryOptions();
   if (!options.ok) return null;
   return (
-    <FormModalButton mode="create" label="New product" title="New product" action={saveProductAction.bind(null, null)} submitLabel="Create" size="lg">
+    <FormModalButton
+      mode="create"
+      label="New product"
+      title="New product"
+      action={saveProductAction.bind(null, null)}
+      submitLabel="Create"
+      size="xl"
+      compact
+    >
       <ProductForm options={toFormOptions(options.data)} />
     </FormModalButton>
   );

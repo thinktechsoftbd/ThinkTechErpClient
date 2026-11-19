@@ -22,6 +22,7 @@ export function FormModalButton({
   action,
   submitLabel = "Save",
   size,
+  compact = false,
   defaultOpen = false,
   tone = "edit",
   icon,
@@ -38,7 +39,9 @@ export function FormModalButton({
   description?: ReactNode;
   action: FormAction;
   submitLabel?: string;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
+  /** Tighter spacing (see Modal), for a big form that should fit without scrolling. */
+  compact?: boolean;
   /** Open the modal when the button first renders, e.g. for a page linked with ?new=1. */
   defaultOpen?: boolean;
   /** The button's icon, e.g. <Wrench className="size-4" /> (default: Plus for "create", Pencil for "edit"); null for none. */
@@ -70,11 +73,11 @@ export function FormModalButton({
         )}
         {label}
       </button>
-      <Modal open={open} onClose={() => setOpen(false)} title={title} description={description} size={size}>
-        <ActionForm key={version} action={action} onSuccess={() => setOpen(false)} className="space-y-5">
+      <Modal open={open} onClose={() => setOpen(false)} title={title} description={description} size={size} compact={compact}>
+        <ActionForm key={version} action={action} onSuccess={() => setOpen(false)} className={compact ? "space-y-3" : "space-y-5"}>
           <FormMessage />
           {children}
-          <div className="flex justify-end gap-3 border-t border-gray-100 pt-5 dark:border-gray-800">
+          <div className={cn("flex justify-end gap-3 border-t border-gray-100 dark:border-gray-800", compact ? "pt-3" : "pt-5")}>
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>

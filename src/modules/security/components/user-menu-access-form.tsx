@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ActionForm, FormMessage } from "@/core/forms/action-form";
 import type { FormAction } from "@/core/forms/action-state";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
-import type { SecurityMenu, UserMenuAccess } from "../types";
+import { menuAudience, type SecurityMenu, type UserMenuAccess } from "../types";
 import { FormActions } from "./form-parts";
 
 const FLAGS = [
@@ -105,7 +105,10 @@ export function UserMenuAccessForm({
                     </label>
                     {!isCustom && (
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Default: {menu.roleId ? `role ${roleNames[menu.roleId] ?? `#${menu.roleId}`}` : "everyone"}
+                        Default:{" "}
+                        {menu.roleIds.length === 0
+                          ? "everyone"
+                          : `${menu.roleIds.length === 1 ? "role" : "roles"} ${menuAudience(menu.roleIds, roleNames)}`}
                       </p>
                     )}
                   </TD>

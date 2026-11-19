@@ -3,7 +3,7 @@ import { Checkbox, Field, Input, Select } from "@/core/forms/fields";
 import { saveMenuAction } from "../actions";
 import { flattenMenuTree, menuAndDescendantIds } from "../menu-tree";
 import { MENU_GROUP_PATH, type RoleSummary, type SecurityMenu } from "../types";
-import { FormActions } from "./form-parts";
+import { FormActions, RolePicker } from "./form-parts";
 import { MenuIconField } from "./menu-icon-field";
 
 type MenuFieldsProps = {
@@ -71,18 +71,13 @@ export function MenuFields({ menu, menus, roles, defaultParentId }: MenuFieldsPr
       <Field label="Icon" name="icon" hint="Lucide icon name (lucide.dev/icons). Shown for top-level menus.">
         <MenuIconField defaultValue={menu?.icon} />
       </Field>
-      <Field label="Visible to" name="roleId" hint="Users can still be given or denied a menu under Users → Menu access.">
-        <Select id="roleId" name="roleId" defaultValue={menu?.roleId ? String(menu.roleId) : ""}>
-          <option value="">Everyone signed in</option>
-          {[...roles]
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .map((role) => (
-              <option key={role.id} value={role.id}>
-                Only role: {role.name}
-              </option>
-            ))}
-        </Select>
-      </Field>
+      <RolePicker
+        legend="Visible to"
+        roles={roles}
+        selected={menu?.roleIds ?? []}
+        hint="Users with any of the ticked roles see it; tick none for everyone signed in. Users can still be given or denied a menu under Users → Menu access."
+        className="md:col-span-2"
+      />
       <Checkbox
         name="isActive"
         defaultChecked={menu?.isActive ?? true}

@@ -338,7 +338,7 @@ export function UsersTable({
                     description={`${user.fullName || user.name} · ${user.email}`}
                     action={updateUserAction.bind(null, user.id)}
                     submitLabel="Save user"
-                    size="xl"
+                    size="wide"
                   >
                     <UserFields user={user} roles={roles} />
                   </FormModalButton>

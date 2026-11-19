@@ -45,12 +45,9 @@ export function FormModalButton({
   description?: ReactNode;
   action: FormAction;
   submitLabel?: string;
-  size?: "sm" | "md" | "lg" | "xl";
-<<<<<<< HEAD
-=======
+  size?: "sm" | "md" | "lg" | "wide" | "xl";
   /** Tighter spacing (see Modal), for a big form that should fit without scrolling. */
   compact?: boolean;
->>>>>>> 26a266bbb55001d97b565be6f3d620e9021cbc60
   /** Open the modal when the button first renders, e.g. for a page linked with ?new=1. */
   defaultOpen?: boolean;
   /** The button's icon, e.g. <Wrench className="size-4" /> (default: Plus for "create", Pencil for "edit"); null for none. */

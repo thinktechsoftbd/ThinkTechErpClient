@@ -8,13 +8,10 @@ const sizes = {
   sm: "max-w-md",
   md: "max-w-xl",
   lg: "max-w-3xl",
-<<<<<<< HEAD
   /** Wide forms: three fields per row plus a side column (e.g. the user popup). */
-  xl: "max-w-5xl",
-=======
+  wide: "max-w-5xl",
   /** Nearly the whole screen, for a form laid out in columns (e.g. a product with its images). */
   xl: "max-w-[96rem]",
->>>>>>> 26a266bbb55001d97b565be6f3d620e9021cbc60
 };
 
 /**

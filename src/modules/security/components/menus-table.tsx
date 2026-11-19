@@ -70,10 +70,16 @@ export function MenusTable({
             <TD className="font-mono text-xs">{menu.path === MENU_GROUP_PATH ? <Badge>Group</Badge> : menu.path}</TD>
             <TD className={`text-right ${muted}`}>{menu.sortOrder}</TD>
             <TD>
-              {menu.roleId === null ? (
+              {menu.roleIds.length === 0 ? (
                 <span className={muted}>Everyone</span>
               ) : (
-                <Badge tone="brand">{roleNames.get(menu.roleId) ?? `Role #${menu.roleId}`}</Badge>
+                <span className="flex flex-wrap gap-1">
+                  {menu.roleIds.map((roleId) => (
+                    <Badge key={roleId} tone="brand">
+                      {roleNames.get(roleId) ?? `Role #${roleId}`}
+                    </Badge>
+                  ))}
+                </span>
               )}
             </TD>
             <TD>

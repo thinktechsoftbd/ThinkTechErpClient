@@ -208,11 +208,19 @@ export type SecurityMenu = {
   icon: string | null;
   sortOrder: number;
   parentId: number | null;
-  roleId: number | null;
+  /** The roles that see the menu; empty = every signed-in user. */
+  roleIds: number[];
   isActive: boolean;
 };
 
 export type MenuUpsertRequest = Omit<SecurityMenu, "id">;
+
+/** "Super Admin, System Admin" for a menu's roles, or "Everyone" when it has none. */
+export function menuAudience(roleIds: readonly number[], roleNames: ReadonlyMap<number, string> | Record<number, string>) {
+  if (roleIds.length === 0) return "Everyone";
+  const name = (id: number) => (roleNames instanceof Map ? roleNames.get(id) : (roleNames as Record<number, string>)[id]);
+  return roleIds.map((id) => name(id) ?? `Role #${id}`).join(", ");
+}
 
 /** Path of a menu that only groups child menus (it has no page of its own). */
 export const MENU_GROUP_PATH = "#";

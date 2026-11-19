@@ -59,11 +59,24 @@ export function PermissionPicker({
   );
 }
 
-export function RolePicker({ roles, selected }: { roles: RoleSummary[]; selected: readonly number[] }) {
+export function RolePicker({
+  roles,
+  selected,
+  legend = "Roles",
+  hint,
+  className,
+}: {
+  roles: RoleSummary[];
+  selected: readonly number[];
+  legend?: string;
+  /** A line under the boxes, e.g. what choosing none means. */
+  hint?: string;
+  className?: string;
+}) {
   const checked = new Set(selected);
   return (
-    <fieldset>
-      <legend className={legendClass}>Roles</legend>
+    <fieldset className={className}>
+      <legend className={legendClass}>{legend}</legend>
       {roles.length === 0 ? (
         <p className={emptyText}>No roles defined yet. Create them under Security → Roles.</p>
       ) : (
@@ -75,6 +88,7 @@ export function RolePicker({ roles, selected }: { roles: RoleSummary[]; selected
             ))}
         </div>
       )}
+      {hint && <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{hint}</p>}
       <FieldError name="roleIds" />
     </fieldset>
   );

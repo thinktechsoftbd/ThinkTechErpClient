@@ -489,7 +489,8 @@ function menuBody(id: number | null, formData: FormData, fieldErrors: FieldError
     icon: icon ? icon.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase() : null,
     sortOrder,
     parentId,
-    roleId: optionalId(formData, "roleId"),
+    // Any number of roles; none = everyone signed in.
+    roleIds: ids(formData, "roleIds"),
     isActive: formData.get("isActive") === "on",
   };
 }

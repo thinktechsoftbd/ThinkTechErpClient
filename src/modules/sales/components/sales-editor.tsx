@@ -4,12 +4,13 @@ import Link from "next/link";
 import { showDate } from "@/core/utils/date";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { computeLine } from "@/core/documents/line-math";
 import { ProductSearch } from "@/core/documents/product-search";
 import { ActionForm, FormMessage } from "@/core/forms/action-form";
 import { actionError, type FormAction } from "@/core/forms/action-state";
 import { Field, Input, Label, Select, Textarea } from "@/core/forms/fields";
+import { SearchSelect } from "@/core/forms/search-select";
 import { buttonClasses } from "@/core/ui/button";
 import { Card, CardBody, CardHeader } from "@/core/ui/card";
 import { cn } from "@/core/utils/cn";
@@ -149,7 +150,7 @@ export function SalesEditor({
     saleType: initial.saleType ?? ("Cash" as SaleType),
     customerName: initial.customerName ?? "",
     customerMobile: initial.customerMobile ?? "",
-    warehouseId: initial.warehouseId ?? options.defaultWarehouseId ?? options.warehouses.find((w) => w.isActive)?.id ?? null,
+    warehouseId: initial.warehouseId ?? null,
     dueDate: initial.dueDate ?? "",
     extraDiscount: initial.extraDiscount ?? "",
     charge: initial.charge ?? "",
@@ -346,7 +347,19 @@ export function SalesEditor({
     };
   }
 
-  const warehouses = options.warehouses.filter((w) => w.isActive || w.id === header.warehouseId);
+  const warehouses = useMemo(
+    () => options.warehouses.filter((w) => w.isActive || w.id === header.warehouseId),
+    [options.warehouses, header.warehouseId],
+  );
+  const loadWarehouses = useCallback(
+    async (search: string, offset: number) => {
+      const query = search.trim().toLocaleLowerCase();
+      const filtered = warehouses.filter((warehouse) => !query || warehouse.name.toLocaleLowerCase().includes(query));
+      return { items: filtered.slice(offset, offset + 50), totalCount: filtered.length };
+    },
+    [warehouses],
+  );
+  const selectedWarehouse = warehouses.find((warehouse) => warehouse.id === header.warehouseId) ?? null;
   const dueHint = customer ? `Empty: ${customer.paymentTermsDays} day(s) after the sale date.` : "Empty: the customer's payment terms.";
 
   return (
@@ -376,24 +389,20 @@ export function SalesEditor({
                   <label htmlFor="warehouseId" className="sr-only">
                     Sell from warehouse
                   </label>
-                  <Select
+                  <SearchSelect
                     id="warehouseId"
-                    value={header.warehouseId ?? ""}
-                    onChange={(e) => {
-                      set("warehouseId", e.target.value ? Number(e.target.value) : null);
+                    value={selectedWarehouse}
+                    onChange={(warehouse) => {
+                      set("warehouseId", warehouse.id);
                       // Batches and serials are per warehouse; stock figures were for the old one.
                       setLines((current) => current.map((l) => ({ ...l, batchId: null, serialNos: [], stock: null })));
                     }}
-                  >
-                    <option value="" disabled>
-                      Choose a warehouse
-                    </option>
-                    {warehouses.map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {w.name}
-                      </option>
-                    ))}
-                  </Select>
+                    load={loadWarehouses}
+                    optionKey={(warehouse) => String(warehouse.id)}
+                    optionLabel={(warehouse) => warehouse.name}
+                    placeholder="Choose a warehouse"
+                    searchPlaceholder="Search warehouses…"
+                  />
                 </div>
                 <div>
                   <label htmlFor="date" className="sr-only">

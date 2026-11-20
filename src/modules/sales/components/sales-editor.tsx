@@ -250,15 +250,58 @@ export function SalesEditor({
     setLines((current) => current.map((line) => (line.key === key ? { ...line, ...patch } : line)));
   }
 
-  function addProduct(product: ProductLookupItem) {
+  async function addProduct(product: ProductLookupItem) {
+    let productForSale = product;
+
+    // Search shows total stock. For the first stock item, select a warehouse that has it so
+    // the quantity used by the sale and the batch/serial pickers are warehouse-specific.
+    if (product.productType === "Stock" && options.warehouses.length > 0) {
+      const lookupStock = async (warehouseId: number) => {
+        try {
+          const params = new URLSearchParams({ search: product.code, stockOnly: "false", warehouseId: String(warehouseId) });
+          const response = await fetch(`/api/lookup/products?${params}`, { headers: { Accept: "application/json" } });
+          const data: unknown = await response.json();
+          if (!response.ok || !Array.isArray(data)) return null;
+          const match = (data as ProductLookupItem[]).find((item) => item.id === product.id);
+          return match ? { warehouseId, stockQuantity: match.stockQuantity } : null;
+        } catch {
+          return null;
+        }
+      };
+
+      if (lines.length === 0) {
+        const warehouses = options.warehouses.filter((warehouse) => warehouse.isActive || warehouse.id === header.warehouseId);
+        const stockByWarehouse = await Promise.all(
+          warehouses.map(async (warehouse) => {
+            return lookupStock(warehouse.id);
+          }),
+        );
+
+        const available = stockByWarehouse.filter((item): item is { warehouseId: number; stockQuantity: number } => Boolean(item && item.stockQuantity > 0));
+        const currentStock = available.find((item) => item.warehouseId === header.warehouseId);
+        const defaultStock = available.find((item) => item.warehouseId === options.defaultWarehouseId);
+        const selectedStock = currentStock ?? defaultStock ?? available.sort((a, b) => b.stockQuantity - a.stockQuantity)[0];
+        if (selectedStock) {
+          set("warehouseId", selectedStock.warehouseId);
+          productForSale = { ...product, stockQuantity: selectedStock.stockQuantity };
+        } else {
+          // Don't treat the cross-warehouse total as stock available in the selected warehouse.
+          productForSale = { ...product, stockQuantity: 0 };
+        }
+      } else if (header.warehouseId) {
+        const selectedStock = await lookupStock(header.warehouseId);
+        if (selectedStock) productForSale = { ...product, stockQuantity: selectedStock.stockQuantity };
+      }
+    }
+
     setLines((current) => {
       // Scanning the same item again adds one more of it.
       const existing = current.find(
-        (l) => l.productId === product.id && l.trackingType === "None" && l.unitId === (product.matchedUnitId ?? l.unitId),
+        (l) => l.productId === productForSale.id && l.trackingType === "None" && l.unitId === (productForSale.matchedUnitId ?? l.unitId),
       );
-      if (existing && product.trackingType === "None")
+      if (existing && productForSale.trackingType === "None")
         return current.map((l) => (l.key === existing.key ? { ...l, quantity: String(num(l.quantity) + 1) } : l));
-      return [...current, saleLineFromProduct(product)];
+      return [...current, saleLineFromProduct(productForSale)];
     });
   }
 
@@ -328,7 +371,7 @@ export function SalesEditor({
             {/* Laid out by the box's own width: in the popup it is beside the totals, so narrower than the screen. */}
             <CardBody className="@container space-y-4">
               <div className="grid gap-3 @xl:grid-cols-[minmax(0,1fr)_11rem_9.5rem]">
-                <ProductSearch onPick={addProduct} warehouseId={header.warehouseId} />
+                <ProductSearch onPick={addProduct} warehouseId={header.warehouseId} showTotalStock />
                 <div>
                   <label htmlFor="warehouseId" className="sr-only">
                     Sell from warehouse

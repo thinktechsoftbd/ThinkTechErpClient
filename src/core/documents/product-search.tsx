@@ -15,12 +15,15 @@ export function ProductSearch({
   onPick,
   stockOnly = false,
   warehouseId,
+  showTotalStock = false,
   placeholder = "Search product by name, code or scan a barcode",
   disabled,
 }: {
   onPick: (product: ProductLookupItem) => void;
   stockOnly?: boolean;
   warehouseId?: number | null;
+  /** Search stock across every warehouse and label the quantity accordingly. */
+  showTotalStock?: boolean;
   placeholder?: string;
   disabled?: boolean;
 }) {
@@ -42,7 +45,7 @@ export function ProductSearch({
       setError(undefined);
       try {
         const params = new URLSearchParams({ search: text, stockOnly: String(stockOnly) });
-        if (warehouseId) params.set("warehouseId", String(warehouseId));
+        if (!showTotalStock && warehouseId) params.set("warehouseId", String(warehouseId));
         const response = await fetch(`/api/lookup/products?${params}`, { headers: { Accept: "application/json" } });
         const data = await response.json().catch(() => null);
         if (request !== requestRef.current) return;
@@ -61,7 +64,7 @@ export function ProductSearch({
       }
     }, 250);
     return () => clearTimeout(timer);
-  }, [query, stockOnly, warehouseId]);
+  }, [query, stockOnly, warehouseId, showTotalStock]);
 
   useEffect(() => {
     const close = (event: MouseEvent) => {
@@ -145,7 +148,7 @@ export function ProductSearch({
                   </span>
                   {product.productType === "Stock" && (
                     <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">
-                      {formatQuantity(product.stockQuantity)} {product.baseUnitCode}
+                      {formatQuantity(product.stockQuantity)} {product.baseUnitCode}{showTotalStock ? " total" : ""}
                     </span>
                   )}
                 </button>

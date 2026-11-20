@@ -23,8 +23,6 @@ export async function saveInvoiceAction(id: number | null, _previous: ActionStat
     });
   if (body.addSupplier && (!body.supplierName || !body.supplierMobile || !body.supplierAddressLine1))
     return actionError("Enter the new supplier's name, mobile and address line 1.", { supplierId: "Required." });
-  if (body.receivesStock && !body.warehouseId)
-    return actionError("Choose the warehouse the stock goes into.", { warehouseId: "Required." });
   if (!body.invPaymentSourceDId)
     return actionError("Choose the payment source and its type.", { invPaymentSourceDId: "Required." });
 

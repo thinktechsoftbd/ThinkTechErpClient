@@ -641,11 +641,12 @@ export function PurchaseDocumentEditor({
                 <Field
                   label={mode === "order" ? "Deliver to" : mode === "return" ? "Return from warehouse" : "Receive into warehouse"}
                   name="warehouseId"
-                  required
+                  required={mode !== "invoice"}
+                  hint={mode === "invoice" ? "Optional. If left blank, the default warehouse is used." : undefined}
                 >
-                  <Select id="warehouseId" value={header.warehouseId ?? ""} onChange={(e) => set("warehouseId", e.target.value ? Number(e.target.value) : null)} required>
-                    <option value="" disabled>
-                      Choose a warehouse
+                  <Select id="warehouseId" value={header.warehouseId ?? ""} onChange={(e) => set("warehouseId", e.target.value ? Number(e.target.value) : null)} required={mode !== "invoice"}>
+                    <option value="">
+                      {mode === "invoice" ? "Use default warehouse" : "Choose a warehouse"}
                     </option>
                     {activeWarehouses.map((w) => (
                       <option key={w.id} value={w.id}>

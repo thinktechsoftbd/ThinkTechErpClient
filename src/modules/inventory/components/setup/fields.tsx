@@ -65,14 +65,14 @@ export function CategoryFields({
     <>
       {/* Name first (the popup starts in it), then where the category sits. */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Name" name="name" required hint="e.g. Urea, Insecticide, Pipe fittings.">
+        <Field label="Name" name="name" required>
           <Input id="name" name="name" maxLength={150} defaultValue={value?.name} required />
         </Field>
-        <Field label="Local name" name="nameLocal" hint="Bangla name, e.g. ইউরিয়া.">
+        <Field label="Local name" name="nameLocal">
           <Input id="nameLocal" name="nameLocal" maxLength={150} defaultValue={value?.nameLocal ?? ""} lang="bn" />
         </Field>
       </div>
-      <Field label="Parent" name="parentCategoryId" hint="Leave empty for a top-level group, e.g. Fertilizer.">
+      <Field label="Parent" name="parentCategoryId">
         <Select id="parentCategoryId" name="parentCategoryId" defaultValue={parentId ? String(parentId) : ""}>
           <option value="">None (top level)</option>
           {parents.map((category) => (
@@ -84,14 +84,14 @@ export function CategoryFields({
         </Select>
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Code" name="code" hint="Optional short code.">
+        <Field label="Code" name="code">
           <Input id="code" name="code" maxLength={30} defaultValue={value?.code ?? ""} />
         </Field>
-        <Field label="Sort order" name="sortOrder" hint="Lower numbers come first.">
+        <Field label="Sort order" name="sortOrder">
           <Input id="sortOrder" name="sortOrder" inputMode="numeric" defaultValue={String(value?.sortOrder ?? 0)} />
         </Field>
       </div>
-      <Field label="Ledger head" name="accSubClassId" hint="Optional. The chart of accounts head (sub class) mapped to this category.">
+      <Field label="Ledger head" name="accSubClassId">
         <LedgerHeadField id="accSubClassId" name="accSubClassId" defaultValue={value ? mappedLedgerHead(value) : null} />
       </Field>
       <Checkbox name="isActive" defaultChecked={value?.isActive ?? true} label="Active (shown in pickers)" />

@@ -1,7 +1,9 @@
 import { ShieldAlert } from "lucide-react";
 import type { ReactNode } from "react";
+import { apiFetch, tryApi } from "@/core/api/client";
 import { canAccessModule } from "@/core/auth/roles";
 import { requireSession } from "@/core/auth/session";
+import { serverEnv } from "@/core/config/server-env";
 import type { ModuleDefinition } from "@/core/modules/types";
 import { getCurrentOrganization } from "@/core/org/organization";
 import { LinkButton } from "@/core/ui/button";
@@ -23,9 +25,16 @@ export async function SessionSidebarNav() {
   return <SidebarNav allowedModuleKeys={getAccessibleModules(session).map((module) => module.key)} />;
 }
 
-/** The account menu, pictured with the logo of the organization the user works in. */
+/** The signed-in user's own photo (GET /api/security/auth/me); null without one, for dev sign-in, or if the call fails. */
+async function getCurrentUserPhoto(): Promise<string | null> {
+  if (serverEnv.authMode === "dev") return null;
+  const result = await tryApi(() => apiFetch<{ photoUrl?: string | null }>("/api/security/auth/me"));
+  return result.ok ? (result.data.photoUrl ?? null) : null;
+}
+
+/** The account menu, pictured with the signed-in user's own photo (else their initials). */
 export async function SessionUserMenu() {
-  const [session, organization] = await Promise.all([requireSession(), getCurrentOrganization()]);
+  const [session, organization, photoUrl] = await Promise.all([requireSession(), getCurrentOrganization(), getCurrentUserPhoto()]);
   return (
     <UserMenu
       user={{
@@ -33,8 +42,9 @@ export async function SessionUserMenu() {
         userName: session.userName,
         email: session.email,
         roles: session.roles,
+        photoUrl,
       }}
-      organization={organization ? { name: organization.name, logoUrl: organization.logoUrl } : null}
+      organization={organization ? { name: organization.name } : null}
     />
   );
 }

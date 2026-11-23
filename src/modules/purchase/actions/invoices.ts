@@ -55,3 +55,8 @@ export async function cancelInvoiceAction(id: number): Promise<ActionState> {
 export async function deleteInvoiceAction(id: number): Promise<ActionState> {
   return runDocumentAction(purchaseModule, () => purchaseApi.invoices.remove(id), "Draft deleted.", "/purchase/invoices");
 }
+
+/** Deletes a draft from the list: the list reloads in place, keeping its filters, sort and page. */
+export async function deleteInvoiceFromListAction(id: number): Promise<ActionState> {
+  return runDocumentAction(purchaseModule, () => purchaseApi.invoices.remove(id), "Draft deleted.");
+}

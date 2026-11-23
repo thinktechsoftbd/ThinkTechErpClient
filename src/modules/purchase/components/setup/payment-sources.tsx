@@ -1,5 +1,6 @@
 import { ConfirmDeleteButton } from "@/core/crud/confirm-delete-button";
 import { FormModalButton } from "@/core/crud/form-modal-button";
+import { SortHeader, type SortDirection } from "@/core/crud/sort-header";
 import { Checkbox, Field, Input } from "@/core/forms/fields";
 import { StatusBadge } from "@/core/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
@@ -28,14 +29,29 @@ export function PaymentSourceFields({ value }: { value?: PaymentSource }) {
 }
 
 /** Each source (master) with its lines (detail): what the payment is for and the ledger head it posts to. */
-export function PaymentSourcesTable({ rows, canManage }: { rows: PaymentSource[]; canManage: boolean }) {
+export function PaymentSourcesTable({
+  rows,
+  canManage,
+  sorting,
+}: {
+  rows: PaymentSource[];
+  canManage: boolean;
+  /** Headers that sort the list on the server (name, lines, status). */
+  sorting?: { sort: string; direction: SortDirection; basePath: string; query: Record<string, string | undefined> };
+}) {
+  const header = (label: string, column: string, className?: string) =>
+    sorting ? (
+      <SortHeader label={label} column={column} className={className} {...sorting} />
+    ) : (
+      <TH className={className}>{label}</TH>
+    );
   return (
     <Table>
       <THead>
         <tr>
-          <TH>Payment source</TH>
-          <TH>Payment for → ledger head</TH>
-          <TH>Status</TH>
+          {header("Payment source", "name")}
+          {header("Payment for → ledger head", "lines")}
+          {header("Status", "status")}
           {canManage && <TH className="text-right">Actions</TH>}
         </tr>
       </THead>
@@ -73,7 +89,8 @@ export function PaymentSourcesTable({ rows, canManage }: { rows: PaymentSource[]
                 <span className="inline-flex items-center gap-1">
                   <FormModalButton
                     mode="edit"
-                    label="Edit"
+                    iconOnly
+                    label={`Edit ${row.nameEn}`}
                     title="Edit payment source"
                     description={row.nameEn}
                     action={savePaymentSourceAction.bind(null, row.id)}
@@ -83,6 +100,7 @@ export function PaymentSourcesTable({ rows, canManage }: { rows: PaymentSource[]
                     <PaymentSourceFields value={row} />
                   </FormModalButton>
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deletePaymentSourceAction.bind(null, row.id)}
                     itemLabel={`payment source "${row.nameEn}"`}
                     message="Its lines are deleted with it. A source used on documents can't be deleted; deactivate it instead."

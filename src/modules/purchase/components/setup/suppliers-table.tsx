@@ -2,7 +2,8 @@ import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import { ConfirmDeleteButton } from "@/core/crud/confirm-delete-button";
 import { FormModalButton } from "@/core/crud/form-modal-button";
-import { rowAction } from "@/core/crud/row-action";
+import { rowIconAction } from "@/core/crud/row-action";
+import { SortHeader, type SortDirection } from "@/core/crud/sort-header";
 import { StatusBadge } from "@/core/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatAmount } from "@/core/utils/number";
@@ -42,24 +43,33 @@ export function SuppliersTable({
   groups,
   currencies,
   canManage,
+  sorting,
 }: {
   rows: Supplier[];
   /** For the edit modal's pickers. */
   groups: LookupOption[];
   currencies: LookupOption[];
   canManage: boolean;
+  /** Headers that sort the list on the server (code, name, group, ledger, terms, balance, status). */
+  sorting?: { sort: string; direction: SortDirection; basePath: string; query: Record<string, string | undefined> };
 }) {
+  const header = (label: string, column: string, className?: string) =>
+    sorting ? (
+      <SortHeader label={label} column={column} className={className} {...sorting} />
+    ) : (
+      <TH className={className}>{label}</TH>
+    );
   return (
     <Table>
       <THead>
         <tr>
-          <TH>Code</TH>
-          <TH>Supplier</TH>
-          <TH>Group</TH>
-          <TH>Ledger head</TH>
-          <TH>Terms</TH>
-          <TH className="text-right">Balance</TH>
-          <TH>Status</TH>
+          {header("Code", "code")}
+          {header("Supplier", "name")}
+          {header("Group", "group")}
+          {header("Ledger head", "ledger")}
+          {header("Terms", "terms")}
+          {header("Balance", "balance", "text-right")}
+          {header("Status", "status")}
           <TH className="text-right">Actions</TH>
         </tr>
       </THead>
@@ -97,14 +107,20 @@ export function SuppliersTable({
             </TD>
             <TD className="text-right">
               <span className="inline-flex items-center gap-1">
-                <Link href={supplierLedgerHref(row.id)} className={rowAction("view")}>
-                  <BookOpen className="size-4" aria-hidden /> Ledger
+                <Link
+                  href={supplierLedgerHref(row.id)}
+                  className={rowIconAction("view")}
+                  title={`Open the ledger of ${row.name}`}
+                  aria-label={`Ledger of ${row.name}`}
+                >
+                  <BookOpen className="size-4" aria-hidden />
                 </Link>
                 {canManage && (
                   <>
                     <FormModalButton
                       mode="edit"
-                      label="Edit"
+                      iconOnly
+                      label={`Edit ${row.name}`}
                       title="Edit supplier"
                       description={`${row.code} · ${row.name}`}
                       action={saveSupplierAction.bind(null, row.id)}
@@ -114,6 +130,7 @@ export function SuppliersTable({
                       <SupplierFields value={row} groups={groups} currencies={currencies} />
                     </FormModalButton>
                     <ConfirmDeleteButton
+                      iconOnly
                       action={deleteSupplierAction.bind(null, row.id)}
                       itemLabel={`supplier "${row.name}"`}
                       message="A supplier used on purchases, returns or payments can't be deleted; deactivate it instead."

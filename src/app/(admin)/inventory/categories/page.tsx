@@ -118,9 +118,15 @@ async function CategoryList({ searchParams }: Pick<Props, "searchParams">) {
               name: "parent",
               label: "Parent",
               value: parent,
-              options: categories.map((category) => ({ value: String(category.id), label: `Under ${category.path}` })),
+              // The list shows (and searches) the path; the box shows the pick as "Under Mouse".
+              options: categories.map((category) => ({
+                value: String(category.id),
+                label: category.path,
+                shortLabel: `Under ${category.path.split(" > ").pop()}`,
+              })),
               allLabel: "All levels",
               className: "w-52",
+              searchable: true,
             },
             { name: "active", label: "Status", value: activeParam, options: ACTIVE_FILTER_OPTIONS, allLabel: "All statuses" },
           ]}

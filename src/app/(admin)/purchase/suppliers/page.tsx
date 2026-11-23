@@ -3,17 +3,13 @@ import { Truck } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
 import { requireSession } from "@/core/auth/session";
+import { AutoSearchToolbar } from "@/core/crud/auto-search-toolbar";
 import { FormModalButton } from "@/core/crud/form-modal-button";
-import {
-  ACTIVE_FILTER_OPTIONS,
-  CRUD_PAGE_SIZE,
-  FilterSelect,
-  ListToolbar,
-  parseActiveFilter,
-} from "@/core/crud/list-toolbar";
+import { ACTIVE_FILTER_OPTIONS, parseActiveFilter } from "@/core/crud/list-toolbar";
 import { PermissionOnly } from "@/core/crud/permission-only";
+import type { SortDirection } from "@/core/crud/sort-header";
 import { ApiErrorState } from "@/core/ui/api-error-state";
-import { Card, CardHeader } from "@/core/ui/card";
+import { Card } from "@/core/ui/card";
 import { EmptyState, TableSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
 import { Pagination, firstParam, parseOffset } from "@/core/ui/pagination";
@@ -31,6 +27,9 @@ import { PURCHASE_MANAGE_PERMISSION } from "@/modules/purchase/types";
 export const metadata: Metadata = { title: "Suppliers" };
 
 const basePath = "/purchase/suppliers";
+const PAGE_SIZE = 30;
+const SORTS = ["code", "name", "group", "ledger", "terms", "balance", "status", "updated"] as const;
+type Sort = (typeof SORTS)[number];
 type Props = PageProps<"/purchase/suppliers">;
 
 function groupFilter(value: string | string[] | undefined) {
@@ -43,7 +42,7 @@ export default function SuppliersPage({ searchParams }: Props) {
     <>
       <PageHeader
         title="Suppliers"
-        description="Who you buy from: contacts, tax and licence numbers, payment terms, opening balances and bank details."
+        compact
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Purchase", href: "/purchase" }, { label: "Suppliers" }]}
         actions={
           <Suspense>
@@ -78,44 +77,60 @@ async function NewSupplierButton() {
   );
 }
 
+// Server-side: the API filters (code, name, local name, mobile, phone or contact; group; status), sorts and pages;
+// 30 per page.
 async function SupplierList({ searchParams }: Pick<Props, "searchParams">) {
   const query = await searchParams;
-  const search = firstParam(query.q);
+  const search = firstParam(query.q)?.trim() || undefined;
   const groupId = groupFilter(query.group);
   const activeParam = firstParam(query.active);
   const isActive = parseActiveFilter(activeParam);
+  const sortParam = firstParam(query.sort);
+  const sort: Sort | undefined = SORTS.find((value) => value === sortParam);
+  const direction: SortDirection = firstParam(query.dir) === "desc" ? "desc" : "asc";
   const offset = parseOffset(query.offset);
 
   const [session, groups, currencies, result] = await Promise.all([
     requireSession(),
     getSupplierGroupOptions(),
     getCurrencyOptions(),
-    tryApi(() => purchaseApi.suppliers.list({ search, isActive, groupId, limit: CRUD_PAGE_SIZE, offset })),
+    tryApi(() => purchaseApi.suppliers.list({ search, isActive, groupId, sort, direction, limit: PAGE_SIZE, offset })),
   ]);
   const groupList = groups.ok ? groups.data : [];
   const filtered = Boolean(search) || groupId !== undefined || isActive !== undefined;
+  const filterQuery = {
+    q: search,
+    group: groupId === undefined ? undefined : String(groupId),
+    active: isActive === undefined ? undefined : String(isActive),
+  };
 
   return (
     <>
-      <CardHeader
-        title={result.ok ? `${formatNumber(result.data.totalCount)} supplier(s)` : "Suppliers"}
-        actions={
-          <ListToolbar basePath={basePath} search={search} placeholder="Code, name, mobile" filtered={filtered}>
-            <FilterSelect
-              name="group"
-              label="Supplier group"
-              value={groupId ? String(groupId) : undefined}
-              options={groupList.map((group) => ({ value: String(group.id), label: group.name }))}
-              allLabel="All groups"
-              className="w-44"
-            />
-            <FilterSelect name="active" label="Status" value={activeParam} options={ACTIVE_FILTER_OPTIONS} allLabel="All statuses" />
-          </ListToolbar>
-        }
-      />
+      {/* A slim header row: the count and the filters, which apply as you type or choose. */}
+      <div className="flex flex-col gap-3 border-b border-gray-100 px-5 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
+        <h2 className="text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-white/90">
+          {result.ok ? `${formatNumber(result.data.totalCount)} supplier${result.data.totalCount === 1 ? "" : "s"}` : "Suppliers"}
+        </h2>
+        <AutoSearchToolbar
+          basePath={basePath}
+          search={search}
+          placeholder="Code, name, mobile"
+          filters={[
+            {
+              name: "group",
+              label: "Supplier group",
+              value: filterQuery.group,
+              options: groupList.map((group) => ({ value: String(group.id), label: group.name })),
+              allLabel: "All groups",
+              className: "w-44",
+            },
+            { name: "active", label: "Status", value: activeParam, options: ACTIVE_FILTER_OPTIONS, allLabel: "All statuses" },
+          ]}
+        />
+      </div>
       {!result.ok ? (
         <ApiErrorState error={result.error} />
-      ) : result.data.items.length === 0 ? (
+      ) : result.data.items.length === 0 && offset === 0 ? (
         <EmptyState
           icon={Truck}
           title={filtered ? "No suppliers match these filters" : "No suppliers yet"}
@@ -128,12 +143,13 @@ async function SupplierList({ searchParams }: Pick<Props, "searchParams">) {
             groups={groupList}
             currencies={currencies.ok ? currencies.data : []}
             canManage={canManagePurchase(session)}
+            sorting={{ sort: sort ?? "", direction, basePath, query: filterQuery }}
           />
           <Pagination
             basePath={basePath}
-            query={{ q: search, group: groupId, active: isActive === undefined ? undefined : String(isActive) }}
+            query={{ ...filterQuery, sort, dir: direction === "asc" ? undefined : direction }}
             offset={offset}
-            limit={CRUD_PAGE_SIZE}
+            limit={PAGE_SIZE}
             count={result.data.items.length}
             total={result.data.totalCount}
           />

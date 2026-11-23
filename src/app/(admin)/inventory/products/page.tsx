@@ -159,9 +159,14 @@ async function ProductList({ searchParams }: Pick<Props, "searchParams">) {
               name: "category",
               label: "Category",
               value: filterQuery.category,
-              options: (options.ok ? options.data.categories : []).map((category) => ({ value: String(category.id), label: category.path })),
+              options: (options.ok ? options.data.categories : []).map((category) => ({
+                value: String(category.id),
+                label: category.path,
+                shortLabel: category.name,
+              })),
               allLabel: "All categories",
               className: "w-48",
+              searchable: true,
             },
             {
               name: "brand",
@@ -170,6 +175,7 @@ async function ProductList({ searchParams }: Pick<Props, "searchParams">) {
               options: (options.ok ? options.data.brands : []).map((brand) => ({ value: String(brand.id), label: brand.name })),
               allLabel: "All brands",
               className: "w-40",
+              searchable: true,
             },
             { name: "type", label: "Type", value: productType, options: TYPE_OPTIONS, allLabel: "All types", className: "w-36" },
             { name: "active", label: "Status", value: activeParam, options: ACTIVE_FILTER_OPTIONS, allLabel: "All statuses", className: "w-36" },

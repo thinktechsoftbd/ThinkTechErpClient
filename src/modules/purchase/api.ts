@@ -44,6 +44,12 @@ export type PurchaseListQuery = {
   to?: string;
   purchaseType?: string;
   paymentStatus?: string;
+  /**
+   * A column of the list (invoices: number, date, supplier, type, total, due, payment or status; orders: number,
+   * date, supplier, warehouse, expected, total or status); none = newest first.
+   */
+  sort?: string;
+  direction?: "asc" | "desc";
   limit: number;
   offset: number;
 };

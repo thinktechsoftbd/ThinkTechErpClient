@@ -22,16 +22,41 @@ export function computeTax(amount: number, rates: readonly RateLike[] | undefine
 
 export type LineAmounts = { gross: number; discount: number; net: number; tax: number; total: number };
 
+/**
+ * Shares `total` out over items in proportion to `weights` (e.g. a whole-bill discount over the line amounts),
+ * in whole paisa; the last item with a weight takes what rounding leaves, so the shares add up to `total`.
+ */
+export function shareOut(total: number, weights: readonly number[]): number[] {
+  const sum = weights.reduce((acc, weight) => acc + Math.max(weight, 0), 0);
+  if (total <= 0 || sum <= 0) return weights.map(() => 0);
+  const last = weights.reduce((found, weight, index) => (weight > 0 ? index : found), -1);
+  let left = round(total, 2);
+  return weights.map((weight, index) => {
+    if (weight <= 0) return 0;
+    if (index === last) return left;
+    const share = round((total * weight) / sum, 2);
+    left = round(left - share, 2);
+    return share;
+  });
+}
+
 export function computeLine(input: {
   quantity: number;
   unitPrice: number;
   discountPercent: number;
+  /** A fixed discount instead of the percentage (as the API takes a line's DiscountAmount). */
+  discountAmount?: number | null;
   rates?: readonly RateLike[];
   inclusive: boolean;
   withTax: boolean;
 }): LineAmounts {
   const gross = round(input.quantity * input.unitPrice);
-  const discount = Math.min(gross, round((gross * input.discountPercent) / 100));
+  const discount = Math.min(
+    gross,
+    input.discountAmount !== undefined && input.discountAmount !== null
+      ? round(input.discountAmount)
+      : round((gross * input.discountPercent) / 100),
+  );
   const net = gross - discount;
   const { tax } = input.withTax ? computeTax(net, input.rates, input.inclusive) : { tax: 0 };
   return { gross, discount, net, tax, total: input.withTax && !input.inclusive ? round(net + tax) : net };

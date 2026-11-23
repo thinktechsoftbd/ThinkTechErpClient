@@ -35,8 +35,16 @@ export type SalesListQuery = {
 
 export const salesApi = {
   customers: {
-    list: (query: { search?: string; isActive?: boolean; groupId?: number; limit: number; offset: number }) =>
-      apiFetch<PagedResult<Customer>>(`${base}/customers`, { query }),
+    list: (query: {
+      search?: string;
+      isActive?: boolean;
+      groupId?: number;
+      /** code, name, mobile, group, credit, balance, status or updated; the API's default is by name. */
+      sort?: string;
+      direction?: "asc" | "desc";
+      limit: number;
+      offset: number;
+    }) => apiFetch<PagedResult<Customer>>(`${base}/customers`, { query }),
     get: (id: number) => apiFetch<Customer>(`${base}/customers/${id}`),
     create: (body: CustomerUpsertRequest) => apiFetch<Customer>(`${base}/customers`, { method: "POST", body }),
     update: (id: number, body: CustomerUpsertRequest) => apiFetch<Customer>(`${base}/customers/${id}`, { method: "PUT", body }),

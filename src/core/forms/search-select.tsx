@@ -32,6 +32,7 @@ export function SearchSelect<T>({
   searchPlaceholder = "Search…",
   emptyText = "Nothing matches.",
   disabled,
+  panelMinWidth,
 }: {
   id?: string;
   name?: string;
@@ -48,6 +49,8 @@ export function SearchSelect<T>({
   searchPlaceholder?: string;
   emptyText?: string;
   disabled?: boolean;
+  /** The list's least width in pixels, for a narrow box with long options (e.g. a filter); the box's width when wider. */
+  panelMinWidth?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -100,7 +103,7 @@ export function SearchSelect<T>({
   const place = useCallback(() => {
     const rect = triggerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const width = Math.min(rect.width, window.innerWidth - 16);
+    const width = Math.min(Math.max(rect.width, panelMinWidth ?? 0), window.innerWidth - 16);
     const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
     const panelHeight = LIST_HEIGHT + 56;
     setPlacement(
@@ -108,7 +111,7 @@ export function SearchSelect<T>({
         ? { left, width, bottom: window.innerHeight - rect.top + 4 }
         : { left, width, top: rect.bottom + 4 },
     );
-  }, []);
+  }, [panelMinWidth]);
   useLayoutEffect(() => {
     if (!open) return;
     setPortalTarget(triggerRef.current?.closest("dialog") ?? document.body);

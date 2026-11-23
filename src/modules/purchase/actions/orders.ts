@@ -46,3 +46,8 @@ export async function cancelOrderAction(id: number): Promise<ActionState> {
 export async function deleteOrderAction(id: number): Promise<ActionState> {
   return runDocumentAction(purchaseModule, () => purchaseApi.orders.remove(id), "Draft deleted.", "/purchase/orders");
 }
+
+/** Deletes a draft from the list: the list reloads in place, keeping its filters, sort and page. */
+export async function deleteOrderFromListAction(id: number): Promise<ActionState> {
+  return runDocumentAction(purchaseModule, () => purchaseApi.orders.remove(id), "Draft deleted.");
+}

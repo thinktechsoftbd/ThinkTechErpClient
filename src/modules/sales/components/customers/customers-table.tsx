@@ -2,7 +2,8 @@ import Link from "next/link";
 import { BookOpen, HandCoins } from "lucide-react";
 import { ConfirmDeleteButton } from "@/core/crud/confirm-delete-button";
 import { FormModalButton } from "@/core/crud/form-modal-button";
-import { rowAction } from "@/core/crud/row-action";
+import { rowIconAction } from "@/core/crud/row-action";
+import { SortHeader, type SortDirection } from "@/core/crud/sort-header";
 import { StatusBadge } from "@/core/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatAmount } from "@/core/utils/number";
@@ -61,23 +62,32 @@ export function CustomersTable({
   rows,
   groups,
   canManage,
+  sorting,
 }: {
   rows: Customer[];
   /** For the edit modal's group picker. */
   groups: LookupOption[];
   canManage: boolean;
+  /** Headers that sort the list on the server (code, name, mobile, group, credit, balance, status). */
+  sorting?: { sort: string; direction: SortDirection; basePath: string; query: Record<string, string | undefined> };
 }) {
+  const header = (label: string, column: string, className?: string) =>
+    sorting ? (
+      <SortHeader label={label} column={column} className={className} {...sorting} />
+    ) : (
+      <TH className={className}>{label}</TH>
+    );
   return (
     <Table>
       <THead>
         <tr>
-          <TH>Code</TH>
-          <TH>Customer</TH>
-          <TH>Mobile</TH>
-          <TH>Group</TH>
-          <TH className="text-right">Credit limit</TH>
-          <TH className="text-right">Balance</TH>
-          <TH>Status</TH>
+          {header("Code", "code")}
+          {header("Customer", "name")}
+          {header("Mobile", "mobile")}
+          {header("Group", "group")}
+          {header("Credit limit", "credit", "text-right")}
+          {header("Balance", "balance", "text-right")}
+          {header("Status", "status")}
           <TH className="text-right">Actions</TH>
         </tr>
       </THead>
@@ -114,18 +124,29 @@ export function CustomersTable({
             <TD className="text-right">
               <span className="inline-flex items-center gap-1">
                 {canManage && row.balance > 0 && (
-                  <Link href={collectDuesHref(row.id)} className={rowAction("positive")} title={`Record a money receipt from ${row.name}`}>
-                    <HandCoins className="size-4" aria-hidden /> Collect
+                  <Link
+                    href={collectDuesHref(row.id)}
+                    className={rowIconAction("positive")}
+                    title={`Collect dues: record a money receipt from ${row.name}`}
+                    aria-label={`Collect dues from ${row.name}`}
+                  >
+                    <HandCoins className="size-4" aria-hidden />
                   </Link>
                 )}
-                <Link href={customerLedgerHref(row.id)} className={rowAction("view")}>
-                  <BookOpen className="size-4" aria-hidden /> Ledger
+                <Link
+                  href={customerLedgerHref(row.id)}
+                  className={rowIconAction("view")}
+                  title={`Open the ledger of ${row.name}`}
+                  aria-label={`Ledger of ${row.name}`}
+                >
+                  <BookOpen className="size-4" aria-hidden />
                 </Link>
                 {canManage && (
                   <>
                     <FormModalButton
                       mode="edit"
-                      label="Edit"
+                      iconOnly
+                      label={`Edit ${row.name}`}
                       title="Edit customer"
                       description={`${row.code} · ${row.name}`}
                       action={saveCustomerAction.bind(null, row.id)}
@@ -135,6 +156,7 @@ export function CustomersTable({
                       <CustomerFields value={row} groups={groups} />
                     </FormModalButton>
                     <ConfirmDeleteButton
+                      iconOnly
                       action={deleteCustomerAction.bind(null, row.id)}
                       itemLabel={`customer "${row.name}"`}
                       message="A customer with sales documents (invoices, returns or receipts) can't be deleted; deactivate it instead."

@@ -4,8 +4,8 @@ import Link from "next/link";
 import { showDate } from "@/core/utils/date";
 import { useRouter } from "next/navigation";
 import { Info, LoaderCircle, Plus, Trash2, X } from "lucide-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { computeLine } from "@/core/documents/line-math";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { computeLine, shareOut } from "@/core/documents/line-math";
 import { ProductSearch } from "@/core/documents/product-search";
 import { ActionForm, FieldError, FormMessage, useFormState } from "@/core/forms/action-form";
 import type { FormAction } from "@/core/forms/action-state";
@@ -220,6 +220,8 @@ export function PurchaseDocumentEditor({
     currencyId: initial.currencyId ?? options.baseCurrencyId,
     exchangeRate: initial.exchangeRate ?? "1",
     roundOff: initial.roundOff ?? "0",
+    // A discount on the whole bill (invoice), shared out over the items' discounts when saved; not stored apart.
+    billDiscount: "0",
     paidAmount: initial.paidAmount ?? "0",
     paymentMethod: initial.paymentMethod ?? "Cash",
     paymentProvider: initial.paymentProvider ?? "",
@@ -285,18 +287,40 @@ export function PurchaseDocumentEditor({
   const set = <K extends keyof typeof header>(key: K, value: (typeof header)[K]) =>
     setHeader((current) => ({ ...current, [key]: value }));
 
-  const amounts = lines.map((line) =>
+  const lineAmounts = (line: EditorLine, discountAmount?: number) =>
     computeLine({
       quantity: num(line.quantity),
       unitPrice: num(line.unitPrice),
       discountPercent: num(line.discountPercent),
+      discountAmount,
       rates: line.taxGroupId ? taxGroups.get(line.taxGroupId)?.rates : undefined,
       inclusive: options.pricesIncludeTax,
       withTax: hasTax,
-    }),
-  );
+    });
+  // The items with their own Discount %, then the invoice's Total discount amount shared out over them by
+  // what is left of each: a line saves its own discount plus its share as a fixed discount (the API has no
+  // discount on the whole bill), so stock cost and the bill voucher carry it.
+  const itemAmounts = lines.map((line) => lineAmounts(line));
+  const itemsNet = round(itemAmounts.reduce((sum, a) => sum + a.net, 0), 2);
+  const billDiscountTyped = mode === "invoice" && header.billDiscount.trim() ? parseDecimal(header.billDiscount) : 0;
+  const billDiscountProblem =
+    billDiscountTyped === null || billDiscountTyped < 0
+      ? "Enter an amount of 0 or more, e.g. 100."
+      : billDiscountTyped > itemsNet
+        ? `It can't be more than the items' total, ${formatAmount(itemsNet)}.`
+        : "";
+  const billDiscount = billDiscountProblem ? 0 : round(billDiscountTyped ?? 0, 2);
+  const billShares = shareOut(billDiscount, itemAmounts.map((a) => a.net));
+  const lineDiscounts = billDiscount > 0 ? itemAmounts.map((a, index) => round(a.discount + billShares[index], 4)) : null;
+  const amounts = lineDiscounts ? lines.map((line, index) => lineAmounts(line, lineDiscounts[index])) : itemAmounts;
   const subtotal = amounts.reduce((sum, a) => sum + a.gross, 0);
+  const itemDiscount = itemAmounts.reduce((sum, a) => sum + a.discount, 0);
   const discount = amounts.reduce((sum, a) => sum + a.discount, 0);
+  // The browser won't submit while the Total discount amount is wrong.
+  const billDiscountRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    billDiscountRef.current?.setCustomValidity(billDiscountProblem);
+  }, [billDiscountProblem]);
   const tax = amounts.reduce((sum, a) => sum + a.tax, 0);
   const linesTotal = amounts.reduce((sum, a) => sum + a.total, 0);
   const chargesOnBill =
@@ -316,7 +340,7 @@ export function PurchaseDocumentEditor({
     updateLine(line.key, { unitId, unitPrice: String(round((num(line.unitPrice) / from) * to, 4)) });
   }
 
-  function buildLine(line: EditorLine): PurchaseLineRequest {
+  function buildLine(line: EditorLine, index: number): PurchaseLineRequest {
     const receiving = receivesStock && line.productType === "Stock";
     return {
       productId: line.productId,
@@ -324,7 +348,8 @@ export function PurchaseDocumentEditor({
       quantity: num(line.quantity),
       unitPrice: num(line.unitPrice),
       discountPercent: num(line.discountPercent),
-      discountAmount: null,
+      // With a Total discount amount: the line's own discount plus its share, as a fixed amount.
+      discountAmount: lineDiscounts ? lineDiscounts[index] : null,
       taxGroupId: hasTax ? line.taxGroupId : null,
       description: orNull(line.description),
       purchaseOrderLineId: line.purchaseOrderLineId,
@@ -802,10 +827,8 @@ export function PurchaseDocumentEditor({
                       line={line}
                       amounts={amounts[index]}
                       mode={mode}
-                      hasTax={hasTax}
                       receiving={receivesStock && line.productType === "Stock"}
                       warehouseId={header.warehouseId}
-                      taxGroups={options.taxGroups}
                       lockedProduct={billsReceipt}
                       onChange={(patch) => updateLine(line.key, patch)}
                       onUnit={(unitId) => changeUnit(line, unitId)}
@@ -918,7 +941,6 @@ export function PurchaseDocumentEditor({
             <CardHeader title="Summary" />
             <CardBody className="space-y-2.5 text-sm">
               <SummaryRow label={`Items (${lines.length})`} value={subtotal} />
-              {discount > 0 && <SummaryRow label="Discount" value={-discount} />}
               {hasTax && <SummaryRow label={options.pricesIncludeTax ? "Tax (included)" : "Tax"} value={tax} />}
               {mode === "order" ? (
                 <div className="flex items-center justify-between gap-3">
@@ -931,8 +953,36 @@ export function PurchaseDocumentEditor({
               {mode === "invoice" && (
                 <div className="flex items-center justify-between gap-3">
                   <Label htmlFor="roundOff">Round off</Label>
-                  <Input id="roundOff" inputMode="decimal" className="h-9 w-28 text-right" value={header.roundOff} onChange={(e) => set("roundOff", e.target.value)} />
+                  {/* The width sits on a wrapper: the shared box is w-full, and cn doesn't merge w-28 over it. */}
+                  <div className="w-28 shrink-0">
+                    <Input id="roundOff" inputMode="decimal" className="h-9 text-right" value={header.roundOff} onChange={(e) => set("roundOff", e.target.value)} />
+                  </div>
                 </div>
+              )}
+              {mode === "invoice" ? (
+                <>
+                  {itemDiscount > 0 && <SummaryRow label="Item discounts" value={-itemDiscount} />}
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="billDiscount">Total discount amount</Label>
+                    <div className="w-28 shrink-0">
+                      <Input
+                        ref={billDiscountRef}
+                        id="billDiscount"
+                        inputMode="decimal"
+                        className="h-9 text-right"
+                        value={header.billDiscount}
+                        onChange={(e) => set("billDiscount", e.target.value)}
+                        onFocus={(e) => e.target.select()}
+                        aria-invalid={billDiscountProblem ? true : undefined}
+                        title="A discount on the whole bill, shared out over the items by their amounts"
+                      />
+                    </div>
+                  </div>
+                  {billDiscountProblem && <p className="text-right text-xs text-red-600 dark:text-red-400">{billDiscountProblem}</p>}
+                </>
+              ) : (
+                // The items' Discount % amounts added up (already taken off the line totals); 0.00 when none.
+                <SummaryRow label="Total discount" value={discount > 0 ? -discount : 0} />
               )}
               <div className="border-t border-gray-200 pt-2.5 dark:border-gray-800">
                 <SummaryRow label={mode === "receipt" ? "Value received" : "Total"} value={total} strong />
@@ -1070,10 +1120,8 @@ function LineRow({
   line,
   amounts,
   mode,
-  hasTax,
   receiving,
   warehouseId,
-  taxGroups,
   lockedProduct,
   onChange,
   onUnit,
@@ -1083,10 +1131,8 @@ function LineRow({
   line: EditorLine;
   amounts: { total: number; tax: number };
   mode: PurchaseEditorMode;
-  hasTax: boolean;
   receiving: boolean;
   warehouseId: number | null;
-  taxGroups: TaxGroupOption[];
   lockedProduct: boolean;
   onChange: (patch: Partial<EditorLine>) => void;
   onUnit: (unitId: number) => void;
@@ -1117,7 +1163,8 @@ function LineRow({
         </button>
       </div>
 
-      <div className={cn("mt-3 grid gap-3 sm:grid-cols-3", hasTax ? "lg:grid-cols-6" : "lg:grid-cols-5")}>
+      {/* No tax picker: a line takes its product's purchase tax (Inventory → Products → Stock & tax). */}
+      <div className="mt-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <div>
           <Label htmlFor={id("unit")}>Unit</Label>
           <Select id={id("unit")} value={line.unitId} disabled={lockedProduct} onChange={(e) => onUnit(Number(e.target.value))}>
@@ -1141,21 +1188,6 @@ function LineRow({
           <Label htmlFor={id("discount")}>Discount %</Label>
           <Input id={id("discount")} inputMode="decimal" value={line.discountPercent} onChange={(e) => onChange({ discountPercent: e.target.value })} />
         </div>
-        {hasTax && (
-          <div>
-            <Label htmlFor={id("tax")}>Tax</Label>
-            <Select id={id("tax")} value={line.taxGroupId ?? ""} onChange={(e) => onChange({ taxGroupId: e.target.value ? Number(e.target.value) : null })}>
-              <option value="">No tax</option>
-              {taxGroups
-                .filter((g) => g.isActive || g.id === line.taxGroupId)
-                .map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-            </Select>
-          </div>
-        )}
         <div className="text-right">
           <span className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Line total</span>
           <span className="block py-2.5 font-semibold text-gray-800 tabular-nums dark:text-white/90">{formatAmount(amounts.total)}</span>

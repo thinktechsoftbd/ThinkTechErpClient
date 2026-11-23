@@ -1,15 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ClipboardList, Plus } from "lucide-react";
+import { ClipboardList, Pencil, Plus } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
-import { CRUD_PAGE_SIZE, FilterSelect, ListToolbar } from "@/core/crud/list-toolbar";
+import { requireSession } from "@/core/auth/session";
+import { AutoSearchToolbar } from "@/core/crud/auto-search-toolbar";
+import { ConfirmDeleteButton } from "@/core/crud/confirm-delete-button";
+import { LockedRowActions } from "@/core/crud/locked-row-actions";
 import { PermissionOnly } from "@/core/crud/permission-only";
+import { rowIconAction } from "@/core/crud/row-action";
+import { SortHeader, type SortDirection } from "@/core/crud/sort-header";
 import { DocumentStatusBadge } from "@/core/documents/document-status";
-import { Input } from "@/core/forms/fields";
 import { ApiErrorState } from "@/core/ui/api-error-state";
 import { LinkButton } from "@/core/ui/button";
-import { Card, CardHeader } from "@/core/ui/card";
+import { Card } from "@/core/ui/card";
 import { EmptyState, TableSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
 import { Pagination, firstParam, parseOffset } from "@/core/ui/pagination";
@@ -18,6 +22,8 @@ import { formatDate, formatNumber } from "@/core/utils/format";
 import { formatAmount } from "@/core/utils/number";
 import { parseIdParam } from "@/core/utils/params";
 import { dateParam } from "@/modules/inventory/components/reports/report-parts";
+import { canManagePurchase } from "@/modules/purchase/access";
+import { deleteOrderFromListAction } from "@/modules/purchase/actions/orders";
 import { purchaseApi } from "@/modules/purchase/api";
 import { getSupplierOptions } from "@/modules/purchase/queries";
 import { PURCHASE_MANAGE_PERMISSION } from "@/modules/purchase/types";
@@ -25,6 +31,9 @@ import { PURCHASE_MANAGE_PERMISSION } from "@/modules/purchase/types";
 export const metadata: Metadata = { title: "Purchase Orders" };
 
 const basePath = "/purchase/orders";
+const PAGE_SIZE = 30;
+const SORTS = ["number", "date", "supplier", "warehouse", "expected", "total", "status"] as const;
+type Sort = (typeof SORTS)[number];
 type Props = PageProps<"/purchase/orders">;
 
 const STATUS_OPTIONS = [
@@ -41,7 +50,7 @@ export default function PurchaseOrdersPage({ searchParams }: Props) {
     <>
       <PageHeader
         title="Purchase Orders"
-        description="Optional: order from a supplier first, then receive the goods or buy against the order with an invoice."
+        compact
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Purchase", href: "/purchase" }, { label: "Purchase Orders" }]}
         actions={
           <Suspense>
@@ -54,7 +63,7 @@ export default function PurchaseOrdersPage({ searchParams }: Props) {
         }
       />
       <Card>
-        <Suspense fallback={<TableSkeleton columns={6} />}>
+        <Suspense fallback={<TableSkeleton columns={8} />}>
           <OrderList searchParams={searchParams} />
         </Suspense>
       </Card>
@@ -62,50 +71,65 @@ export default function PurchaseOrdersPage({ searchParams }: Props) {
   );
 }
 
+// Server-side: the API filters (order no, supplier, reference; supplier, status, dates), sorts and pages; 30 per
+// page, newest first unless a column is chosen.
 async function OrderList({ searchParams }: Pick<Props, "searchParams">) {
   const query = await searchParams;
-  const search = firstParam(query.q);
-  const status = firstParam(query.status);
+  const search = firstParam(query.q)?.trim() || undefined;
+  const statusParam = firstParam(query.status);
+  const status = STATUS_OPTIONS.some((option) => option.value === statusParam) ? statusParam : undefined;
   const supplierParam = firstParam(query.supplier);
   const supplierId = supplierParam ? (parseIdParam(supplierParam) ?? undefined) : undefined;
   // A malformed date in the URL is ignored rather than sent to the API (which refuses it).
   const from = dateParam(query.from);
   const to = dateParam(query.to);
+  const sortParam = firstParam(query.sort);
+  const sort: Sort | undefined = SORTS.find((value) => value === sortParam);
+  const direction: SortDirection = firstParam(query.dir) === "desc" ? "desc" : "asc";
   const offset = parseOffset(query.offset);
 
-  const [suppliers, result] = await Promise.all([
+  const [session, suppliers, result] = await Promise.all([
+    requireSession(),
     getSupplierOptions(),
-    tryApi(() => purchaseApi.orders.list({ search, status, supplierId, from, to, limit: CRUD_PAGE_SIZE, offset })),
+    tryApi(() => purchaseApi.orders.list({ search, status, supplierId, from, to, sort, direction, limit: PAGE_SIZE, offset })),
   ]);
   const filtered = Boolean(search || status || supplierId || from || to);
+  const canManage = canManagePurchase(session);
+  const filterQuery = { q: search, status, supplier: supplierId === undefined ? undefined : String(supplierId), from, to };
+  const sorting = { sort: sort ?? "", direction, basePath, query: filterQuery };
+  const header = (label: string, column: Sort, className?: string) => (
+    <SortHeader label={label} column={column} className={className} {...sorting} />
+  );
 
   return (
     <>
-      <CardHeader
-        title={result.ok ? `${formatNumber(result.data.totalCount)} order(s)` : "Orders"}
-        actions={
-          <ListToolbar basePath={basePath} search={search} placeholder="Order no, supplier, reference" filtered={filtered}>
-            <FilterSelect
-              name="supplier"
-              label="Supplier"
-              value={supplierId ? String(supplierId) : undefined}
-              options={(suppliers.ok ? suppliers.data : []).map((s) => ({ value: String(s.id), label: s.name }))}
-              allLabel="All suppliers"
-              className="w-44"
-            />
-            <FilterSelect name="status" label="Status" value={status} options={STATUS_OPTIONS} allLabel="All statuses" className="w-40" />
-            <div className="w-36">
-              <Input key={from ?? ""} type="date" name="from" defaultValue={from} aria-label="From date" title="From date" className="h-9 px-3" />
-            </div>
-            <div className="w-36">
-              <Input key={to ?? ""} type="date" name="to" defaultValue={to} aria-label="To date" title="To date" className="h-9 px-3" />
-            </div>
-          </ListToolbar>
-        }
-      />
+      {/* A slim header row: the count and the filters, which apply as you type or choose. */}
+      <div className="flex flex-col gap-3 border-b border-gray-100 px-5 py-3 xl:flex-row xl:items-center xl:justify-between dark:border-gray-800">
+        <h2 className="text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-white/90">
+          {result.ok ? `${formatNumber(result.data.totalCount)} order${result.data.totalCount === 1 ? "" : "s"}` : "Orders"}
+        </h2>
+        <AutoSearchToolbar
+          basePath={basePath}
+          search={search}
+          placeholder="Order no, supplier, reference"
+          filters={[
+            {
+              name: "supplier",
+              label: "Supplier",
+              value: filterQuery.supplier,
+              options: (suppliers.ok ? suppliers.data : []).map((supplier) => ({ value: String(supplier.id), label: supplier.name })),
+              allLabel: "All suppliers",
+              className: "w-44",
+              searchable: true,
+            },
+            { name: "status", label: "Status", value: status, options: STATUS_OPTIONS, allLabel: "All statuses", className: "w-40" },
+          ]}
+          dateRange={{ from, to }}
+        />
+      </div>
       {!result.ok ? (
         <ApiErrorState error={result.error} />
-      ) : result.data.items.length === 0 ? (
+      ) : result.data.items.length === 0 && offset === 0 ? (
         <EmptyState
           icon={ClipboardList}
           title={filtered ? "No orders match these filters" : "No purchase orders yet"}
@@ -116,13 +140,14 @@ async function OrderList({ searchParams }: Pick<Props, "searchParams">) {
           <Table>
             <THead>
               <tr>
-                <TH>Order</TH>
-                <TH>Date</TH>
-                <TH>Supplier</TH>
-                <TH>Deliver to</TH>
-                <TH>Expected</TH>
-                <TH className="text-right">Total</TH>
-                <TH>Status</TH>
+                {header("Order", "number")}
+                {header("Date", "date")}
+                {header("Supplier", "supplier")}
+                {header("Deliver to", "warehouse")}
+                {header("Expected", "expected")}
+                {header("Total", "total", "text-right")}
+                {header("Status", "status")}
+                {canManage && <TH className="text-right">Actions</TH>}
               </tr>
             </THead>
             <TBody>
@@ -145,15 +170,45 @@ async function OrderList({ searchParams }: Pick<Props, "searchParams">) {
                   <TD>
                     <DocumentStatusBadge status={order.status} />
                   </TD>
+                  {canManage && (
+                    <TD className="text-right">
+                      {/* Only a draft can be changed or deleted; an approved order is closed or cancelled from its page. */}
+                      {order.status !== "Draft" ? (
+                        <LockedRowActions
+                          reason={
+                            order.status === "Cancelled" || order.status === "Closed"
+                              ? `A ${order.status === "Closed" ? "closed" : "cancelled"} order can't be edited or deleted.`
+                              : "An approved order can't be edited or deleted. Open it to close or cancel it."
+                          }
+                        />
+                      ) : (
+                        <span className="inline-flex items-center gap-1">
+                          <Link
+                            href={`${basePath}/${order.id}/edit`}
+                            className={rowIconAction("edit")}
+                            title={`Edit ${order.orderNo}`}
+                            aria-label={`Edit ${order.orderNo}`}
+                          >
+                            <Pencil className="size-4" aria-hidden />
+                          </Link>
+                          <ConfirmDeleteButton
+                            iconOnly
+                            action={deleteOrderFromListAction.bind(null, order.id)}
+                            itemLabel={`draft order ${order.orderNo}`}
+                          />
+                        </span>
+                      )}
+                    </TD>
+                  )}
                 </TR>
               ))}
             </TBody>
           </Table>
           <Pagination
             basePath={basePath}
-            query={{ q: search, status, supplier: supplierId, from, to }}
+            query={{ ...filterQuery, sort, dir: direction === "asc" ? undefined : direction }}
             offset={offset}
-            limit={CRUD_PAGE_SIZE}
+            limit={PAGE_SIZE}
             count={result.data.items.length}
             total={result.data.totalCount}
           />

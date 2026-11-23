@@ -206,6 +206,7 @@ async function ProductList({ searchParams }: Pick<Props, "searchParams">) {
         <>
           <ProductsTable
             rows={result.data.items}
+            categories={options.ok ? options.data.categories : []}
             formOptions={formOptions}
             canManage={canManageInventory(session)}
             sorting={{ sort: sort ?? "", direction, basePath, query: filterQuery }}

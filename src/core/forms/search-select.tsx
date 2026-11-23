@@ -14,10 +14,32 @@ const LIST_HEIGHT = 280;
 type Placement = { left: number; width: number; top?: number; bottom?: number };
 
 /**
+ * A page of a list already in the browser for a SearchSelect's `load`: the options whose `text` holds every
+ * word of the search, in any order and case (e.g. "nvme sto" finds "Storage & Memory > NVMe SSD").
+ */
+export function searchOptions<T>(
+  options: readonly T[],
+  text: (option: T) => string,
+  search: string,
+  offset: number,
+  pageSize = 100,
+): SearchSelectPage<T> {
+  const words = search.toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  const matches =
+    words.length === 0
+      ? options
+      : options.filter((option) => {
+          const haystack = text(option).toLocaleLowerCase();
+          return words.every((word) => haystack.includes(word));
+        });
+  return { items: matches.slice(offset, offset + pageSize), totalCount: matches.length };
+}
+
+/**
  * A dropdown that looks like a select, with a search box at the top of its list: options come from the
- * server (`load`), a page at a time, with more loaded on scrolling. The list sits in a portal (inside the
- * dialog when in a popup) so cards and popups don't clip it. With `name`, the chosen key is posted in a
- * hidden input.
+ * server (`load`), a page at a time, with more loaded on scrolling. Typing on the closed box opens it with
+ * the typed text as the search. The list sits in a portal (inside the dialog when in a popup) so cards and
+ * popups don't clip it. With `name`, the chosen key is posted in a hidden input.
  */
 export function SearchSelect<T>({
   id,
@@ -33,9 +55,14 @@ export function SearchSelect<T>({
   emptyText = "Nothing matches.",
   disabled,
   panelMinWidth,
+  required,
+  requiredMessage = "Choose an option.",
 }: {
   id?: string;
   name?: string;
+  /** With `name`: the form isn't sent until an option is chosen, and `requiredMessage` shows under the box. */
+  required?: boolean;
+  requiredMessage?: string;
   value: T | null;
   onChange: (option: T) => void;
   /** A page of options for the search text, starting at `offset`. Throw to show an error. */
@@ -62,11 +89,15 @@ export function SearchSelect<T>({
   const [placement, setPlacement] = useState<Placement | null>(null);
   // Inside a modal <dialog> the panel must render in the dialog: the page outside it is inert and below the top layer.
   const [portalTarget, setPortalTarget] = useState<Element | null>(null);
+  // A required box the form was sent without.
+  const [missing, setMissing] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const requestRef = useRef(0);
+  // The search the panel opened with (typed on the closed box): loaded at once, not after the typing pause.
+  const openQueryRef = useRef("");
   const listId = useId();
 
   const fetchPage = useCallback(
@@ -95,7 +126,7 @@ export function SearchSelect<T>({
   // The first page as soon as the panel opens, then a new search 250 ms after the user stops typing.
   useEffect(() => {
     if (!open) return;
-    const timer = setTimeout(() => fetchPage(query.trim(), 0), query.trim() ? 250 : 0);
+    const timer = setTimeout(() => fetchPage(query.trim(), 0), query.trim() && query !== openQueryRef.current ? 250 : 0);
     return () => clearTimeout(timer);
   }, [open, query, fetchPage]);
 
@@ -133,14 +164,19 @@ export function SearchSelect<T>({
     };
   }, [open, place]);
 
-  // The search box takes the focus once the panel is in place.
+  // The search box takes the focus once the panel is in place, with the caret after any text typed to open it.
+  const ready = Boolean(open && placement && portalTarget);
   useEffect(() => {
-    if (open && placement && portalTarget) searchRef.current?.focus();
-  }, [open, placement, portalTarget]);
+    const search = searchRef.current;
+    if (!ready || !search) return;
+    search.focus();
+    search.setSelectionRange(search.value.length, search.value.length);
+  }, [ready]);
 
-  function openPanel() {
+  function openPanel(initialQuery = "") {
     if (disabled || open) return;
-    setQuery("");
+    openQueryRef.current = initialQuery;
+    setQuery(initialQuery);
     setOpen(true);
   }
 
@@ -153,6 +189,7 @@ export function SearchSelect<T>({
 
   function choose(option: T) {
     onChange(option);
+    setMissing(false);
     close();
   }
 
@@ -163,10 +200,32 @@ export function SearchSelect<T>({
   }
 
   const chosenKey = value ? optionKey(value) : null;
+  const showMissing = missing && !value;
 
   return (
     <>
-      {name && <input type="hidden" name={name} value={chosenKey ?? ""} />}
+      {name &&
+        (required ? (
+          // A hidden input isn't checked on submit, so this one is a real (invisible) input. The message shows
+          // under the box instead of the browser's bubble, which can't point at an invisible input.
+          <input
+            name={name}
+            value={chosenKey ?? ""}
+            onChange={() => {}}
+            required
+            tabIndex={-1}
+            aria-hidden
+            autoComplete="off"
+            className="sr-only"
+            onInvalid={(event) => {
+              event.preventDefault();
+              setMissing(true);
+              triggerRef.current?.focus();
+            }}
+          />
+        ) : (
+          <input type="hidden" name={name} value={chosenKey ?? ""} />
+        ))}
       <button
         ref={triggerRef}
         id={id}
@@ -175,11 +234,16 @@ export function SearchSelect<T>({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
+        aria-describedby={showMissing ? `${listId}-missing` : undefined}
         onClick={() => (open ? close() : openPanel())}
         onKeyDown={(event) => {
           if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
             event.preventDefault();
             openPanel();
+          } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+            // Typing on the closed box searches with what was typed.
+            event.preventDefault();
+            openPanel(event.key);
           }
         }}
         className={cn(controlClasses, "flex h-9 items-center justify-between gap-2 text-left")}
@@ -189,6 +253,11 @@ export function SearchSelect<T>({
         </span>
         <ChevronDown className={cn("size-4 shrink-0 text-gray-500 transition", open && "rotate-180")} aria-hidden />
       </button>
+      {showMissing && (
+        <p id={`${listId}-missing`} className="mt-1.5 text-xs text-red-600 dark:text-red-400">
+          {requiredMessage}
+        </p>
+      )}
 
       {open &&
         placement &&

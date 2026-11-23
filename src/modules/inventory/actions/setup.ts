@@ -386,6 +386,9 @@ export async function saveProductAction(id: number | null, _previous: ActionStat
 
   const baseUnitId = positiveInteger(formData, "baseUnitId");
   if (baseUnitId === null) fieldErrors.baseUnitId = "Choose the base unit.";
+  // Required here (the API takes none): every product sits in a category.
+  const categoryId = positiveInteger(formData, "categoryId");
+  if (categoryId === null) fieldErrors.categoryId = "Choose a category.";
 
   const countryOfOrigin = optionalText(formData, "countryOfOrigin", 2, fieldErrors)?.toUpperCase() ?? null;
   if (countryOfOrigin && !/^[A-Z]{2}$/.test(countryOfOrigin)) fieldErrors.countryOfOrigin = "Use the 2-letter code, e.g. BD.";
@@ -410,7 +413,7 @@ export async function saveProductAction(id: number | null, _previous: ActionStat
     name: requiredText(formData, "name", 250, fieldErrors),
     nameLocal: optionalText(formData, "nameLocal", 250, fieldErrors),
     productType: productType as ProductType,
-    categoryId: optionalId(formData, "categoryId", fieldErrors),
+    categoryId,
     brandId: optionalId(formData, "brandId", fieldErrors),
     baseUnitId: baseUnitId ?? 0,
     trackingType: trackingType as TrackingType,

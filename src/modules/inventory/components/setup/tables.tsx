@@ -7,7 +7,7 @@ import { Badge, StatusBadge } from "@/core/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatDateTime, formatNumber } from "@/core/utils/format";
 import { formatAmount, formatQuantity } from "@/core/utils/number";
-import { MappedLedgerHead } from "@/modules/accounting/components/pickers";
+import { MappedLedgerHead, ledgerHeadLabel, mappedLedgerHead } from "@/modules/accounting/components/pickers";
 import {
   deleteBrandAction,
   deleteCategoryAction,
@@ -22,6 +22,7 @@ import {
   saveWarehouseAction,
 } from "../../actions/setup";
 import { label, type Brand, type Category, type Product, type Unit, type Warehouse } from "../../types";
+import { CategoryEditButton } from "./category-edit-button";
 import { BrandFields, CategoryFields, UnitFields, WAREHOUSE_TYPE_LABELS, WarehouseFields } from "./fields";
 import { ProductEditButton } from "./product-edit-button";
 import type { ProductFormOptions } from "./product-form";
@@ -400,13 +401,27 @@ function TrackingCell({ product }: { product: Product }) {
   );
 }
 
+/** A product row's category ledger head: its name (code, name and classes on hover), or a warning when none is mapped. */
+function CategoryLedger({ category }: { category: Category }) {
+  const head = mappedLedgerHead(category);
+  if (!head) return <span className="block text-xs text-amber-600 dark:text-amber-400">No ledger head</span>;
+  return (
+    <span className={`block max-w-48 truncate text-xs ${muted}`} title={ledgerHeadLabel(head)}>
+      {head.name || head.code}
+    </span>
+  );
+}
+
 export function ProductsTable({
   rows,
+  categories,
   formOptions,
   canManage,
   sorting,
 }: {
   rows: Product[];
+  /** Every category (one shared array, from the options call): the rows' ledger heads and the edit-category modal. */
+  categories: Category[];
   /** For the edit modal (one shared object for every row); null hides Edit (options didn't load). */
   formOptions: ProductFormOptions | null;
   canManage: boolean;
@@ -419,6 +434,7 @@ export function ProductsTable({
     ) : (
       <TH className={className}>{label}</TH>
     );
+  const categoryById = new Map(categories.map((category) => [category.id, category]));
   return (
     <Table>
       <THead>
@@ -436,62 +452,79 @@ export function ProductsTable({
         </tr>
       </THead>
       <TBody>
-        {rows.map((row) => (
-          <TR key={row.id}>
-            <TD className={`font-mono whitespace-nowrap ${strong}`}>{row.code}</TD>
-            <TD className="min-w-48">
-              <span className={strong}>{row.name}</span>
-              <LocalName value={row.nameLocal} />
-              {row.brandName && <span className={`block text-xs ${muted}`}>{row.brandName}</span>}
-            </TD>
-            <TD className={row.categoryName ? undefined : muted}>{row.categoryName ?? "—"}</TD>
-            <TD className="font-mono">{row.baseUnitCode}</TD>
-            <TD>
-              <TrackingCell product={row} />
-            </TD>
-            <TD className="text-right whitespace-nowrap tabular-nums">
-              {row.productType === "Stock" ? (
-                <span className={row.reorderLevel > 0 && row.stockQuantity <= row.reorderLevel ? "font-medium text-amber-600 dark:text-amber-400" : undefined}>
-                  {formatQuantity(row.stockQuantity)} <span className={`text-xs ${muted}`}>{row.baseUnitCode}</span>
-                </span>
-              ) : (
-                <span className={muted}>—</span>
-              )}
-            </TD>
-            <TD className="text-right tabular-nums">{row.lastPurchaseCost > 0 ? formatAmount(row.lastPurchaseCost) : <span className={muted}>—</span>}</TD>
-            <TD className="text-right whitespace-nowrap tabular-nums">
-              {formatAmount(row.salePrice)}
-              {row.mrp !== null && <span className={`block text-xs ${muted}`}>MRP {formatAmount(row.mrp)}</span>}
-            </TD>
-            <TD>
-              <StatusBadge active={row.isActive} />
-            </TD>
-            {canManage && (
-              <TD className="text-right">
-                <span className="inline-flex items-center gap-1">
-                  {formOptions && (
-                    <ProductEditButton
-                      productLabel={`${row.code} · ${row.name}`}
-                      load={loadProductAction.bind(null, row.id)}
-                      action={saveProductAction.bind(null, row.id)}
-                      options={formOptions}
-                    />
-                  )}
-                  <ConfirmDeleteButton
-                    iconOnly
-                    action={deleteProductAction.bind(null, row.id)}
-                    itemLabel={`product "${row.name}"`}
-                    message={
-                      row.stockQuantity !== 0
-                        ? `It still has ${formatQuantity(row.stockQuantity)} ${row.baseUnitCode} in stock, so it can't be deleted. Deactivate it instead to hide it.`
-                        : inUseMessage("A product")
-                    }
-                  />
-                </span>
+        {rows.map((row) => {
+          const category = row.categoryId === null ? undefined : categoryById.get(row.categoryId);
+          return (
+            <TR key={row.id}>
+              <TD className={`font-mono whitespace-nowrap ${strong}`}>{row.code}</TD>
+              <TD className="min-w-48">
+                <span className={strong}>{row.name}</span>
+                <LocalName value={row.nameLocal} />
+                {row.brandName && <span className={`block text-xs ${muted}`}>{row.brandName}</span>}
               </TD>
-            )}
-          </TR>
-        ))}
+              <TD className="min-w-36">
+                {row.categoryName ? (
+                  <span className="flex items-start gap-1">
+                    <span className="min-w-0">
+                      <span className="block" title={category?.path}>
+                        {row.categoryName}
+                      </span>
+                      {category && <CategoryLedger category={category} />}
+                    </span>
+                    {canManage && category && <CategoryEditButton category={category} categories={categories} />}
+                  </span>
+                ) : (
+                  <span className={muted}>—</span>
+                )}
+              </TD>
+              <TD className="font-mono">{row.baseUnitCode}</TD>
+              <TD>
+                <TrackingCell product={row} />
+              </TD>
+              <TD className="text-right whitespace-nowrap tabular-nums">
+                {row.productType === "Stock" ? (
+                  <span className={row.reorderLevel > 0 && row.stockQuantity <= row.reorderLevel ? "font-medium text-amber-600 dark:text-amber-400" : undefined}>
+                    {formatQuantity(row.stockQuantity)} <span className={`text-xs ${muted}`}>{row.baseUnitCode}</span>
+                  </span>
+                ) : (
+                  <span className={muted}>—</span>
+                )}
+              </TD>
+              <TD className="text-right tabular-nums">{row.lastPurchaseCost > 0 ? formatAmount(row.lastPurchaseCost) : <span className={muted}>—</span>}</TD>
+              <TD className="text-right whitespace-nowrap tabular-nums">
+                {formatAmount(row.salePrice)}
+                {row.mrp !== null && <span className={`block text-xs ${muted}`}>MRP {formatAmount(row.mrp)}</span>}
+              </TD>
+              <TD>
+                <StatusBadge active={row.isActive} />
+              </TD>
+              {canManage && (
+                <TD className="text-right">
+                  <span className="inline-flex items-center gap-1">
+                    {formOptions && (
+                      <ProductEditButton
+                        productLabel={`${row.code} · ${row.name}`}
+                        load={loadProductAction.bind(null, row.id)}
+                        action={saveProductAction.bind(null, row.id)}
+                        options={formOptions}
+                      />
+                    )}
+                    <ConfirmDeleteButton
+                      iconOnly
+                      action={deleteProductAction.bind(null, row.id)}
+                      itemLabel={`product "${row.name}"`}
+                      message={
+                        row.stockQuantity !== 0
+                          ? `It still has ${formatQuantity(row.stockQuantity)} ${row.baseUnitCode} in stock, so it can't be deleted. Deactivate it instead to hide it.`
+                          : inUseMessage("A product")
+                      }
+                    />
+                  </span>
+                </TD>
+              )}
+            </TR>
+          );
+        })}
       </TBody>
     </Table>
   );

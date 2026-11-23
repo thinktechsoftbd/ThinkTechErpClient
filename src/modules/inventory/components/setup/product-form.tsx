@@ -1,10 +1,11 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { FieldError, useFormState } from "@/core/forms/action-form";
 import { Checkbox, Field, Input, Select } from "@/core/forms/fields";
+import { SearchSelect, searchOptions } from "@/core/forms/search-select";
 import { Button } from "@/core/ui/button";
 import { cn } from "@/core/utils/cn";
 import { formatAmount, formatQuantity } from "@/core/utils/number";
@@ -92,9 +93,20 @@ const bodyCell = "px-2.5 py-1.5 align-middle";
 const subLabel = "mb-1.5 text-sm font-medium text-gray-700 dark:text-gray-400";
 const note = "text-xs text-gray-500 dark:text-gray-400";
 
-function unitLabel(unit: ProductFormOptions["units"][number]) {
+type CategoryChoice = ProductFormOptions["categories"][number];
+type BrandChoice = ProductFormOptions["brands"][number];
+type UnitChoice = ProductFormOptions["units"][number];
+
+function unitLabel(unit: UnitChoice) {
   return `${unit.code} · ${unit.name}${unit.nameLocal ? ` (${unit.nameLocal})` : ""}${unit.isActive ? "" : " (inactive)"}`;
 }
+
+const categoryLabel = (category: CategoryChoice) => `${category.path}${category.isActive ? "" : " (inactive)"}`;
+const brandLabel = (brand: BrandChoice) => `${brand.name}${brand.isActive ? "" : " (inactive)"}`;
+const choiceKey = (choice: { id: number }) => (choice.id ? String(choice.id) : "");
+
+/** The brand list's first row, which clears the brand (posted as ""). */
+const NO_BRAND: BrandChoice = { id: 0, name: "No brand", isActive: true };
 
 function initialPacks(value: Product | undefined): PackRow[] {
   if (!value) return [];
@@ -177,6 +189,8 @@ export function ProductForm({ value, options }: { value?: Product; options: Prod
   const [trackingType, setTrackingType] = useState<TrackingType>(value?.trackingType ?? "None");
   const [hasExpiry, setHasExpiry] = useState(value?.hasExpiry ?? false);
   const [baseUnitId, setBaseUnitId] = useState(value ? String(value.baseUnitId) : "");
+  const [categoryId, setCategoryId] = useState(value?.categoryId ? String(value.categoryId) : "");
+  const [brandId, setBrandId] = useState(value?.brandId ? String(value.brandId) : "");
   const [packs, setPacks] = useState<PackRow[]>(() => initialPacks(value));
   const [purchaseDefault, setPurchaseDefault] = useState<DefaultPick>(() => initialDefault(value, "isPurchaseDefault"));
   const [saleDefault, setSaleDefault] = useState<DefaultPick>(() => initialDefault(value, "isSaleDefault"));
@@ -216,6 +230,28 @@ export function ProductForm({ value, options }: { value?: Product; options: Prod
   const baseUnit = unitById.get(baseUnitId);
   const baseCode = baseUnit?.code ?? "base unit";
   const packCode = (unitId: string) => unitById.get(unitId)?.code ?? "pack";
+
+  // Category, brand and base unit are searched as you type: active ones, plus the product's own if inactive.
+  const savedCategoryId = value?.categoryId;
+  const savedBrandId = value?.brandId;
+  const savedUnitId = value?.baseUnitId;
+  const categoryChoices = useMemo(
+    () => options.categories.filter((category) => category.isActive || category.id === savedCategoryId),
+    [options.categories, savedCategoryId],
+  );
+  const brandChoices = useMemo(() => options.brands.filter((brand) => brand.isActive || brand.id === savedBrandId), [options.brands, savedBrandId]);
+  const baseUnitChoices = useMemo(() => options.units.filter((unit) => unit.isActive || unit.id === savedUnitId), [options.units, savedUnitId]);
+  const loadCategories = useCallback(
+    async (search: string, offset: number) => searchOptions(categoryChoices, categoryLabel, search, offset),
+    [categoryChoices],
+  );
+  const loadBrands = useCallback(
+    async (search: string, offset: number) => searchOptions(search.trim() ? brandChoices : [NO_BRAND, ...brandChoices], brandLabel, search, offset),
+    [brandChoices],
+  );
+  const loadUnits = useCallback(async (search: string, offset: number) => searchOptions(baseUnitChoices, unitLabel, search, offset), [baseUnitChoices]);
+  const category = categoryChoices.find((item) => String(item.id) === categoryId) ?? null;
+  const brand = brandChoices.find((item) => String(item.id) === brandId) ?? null;
 
   // ---- Row updates (all in event handlers)
 
@@ -277,7 +313,6 @@ export function ProductForm({ value, options }: { value?: Product; options: Prod
   const barcodesJson = JSON.stringify(barcodes.map((row) => ({ unitId: row.unitId, barcode: row.barcode })));
   const attributesJson = JSON.stringify(attributes.map((row) => ({ name: row.name, value: row.value })));
 
-  const baseUnitChoices = options.units.filter((unit) => unit.isActive || String(unit.id) === baseUnitId);
   const packedUnits = packs.filter((row) => row.unitId);
 
   const panel = (key: TabKey) => ({
@@ -386,31 +421,37 @@ export function ProductForm({ value, options }: { value?: Product; options: Prod
                   title="Bangla name for receipts and search"
                 />
               </Field>
-              <Field label="Category" name="categoryId">
-                <Select id="categoryId" name="categoryId" defaultValue={value?.categoryId ? String(value.categoryId) : ""}>
-                  <option value="">No category</option>
-                  {options.categories
-                    .filter((category) => category.isActive || category.id === value?.categoryId)
-                    .map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.path}
-                        {category.isActive ? "" : " (inactive)"}
-                      </option>
-                    ))}
-                </Select>
+              <Field label="Category" name="categoryId" required>
+                <SearchSelect
+                  id="categoryId"
+                  name="categoryId"
+                  required
+                  requiredMessage="Choose a category."
+                  value={category}
+                  onChange={(next) => setCategoryId(String(next.id))}
+                  load={loadCategories}
+                  optionKey={choiceKey}
+                  optionLabel={categoryLabel}
+                  placeholder="Choose a category"
+                  searchPlaceholder="Type to search categories…"
+                  emptyText="No category matches."
+                  panelMinWidth={320}
+                />
               </Field>
               <Field label="Brand" name="brandId">
-                <Select id="brandId" name="brandId" defaultValue={value?.brandId ? String(value.brandId) : ""}>
-                  <option value="">No brand</option>
-                  {options.brands
-                    .filter((brand) => brand.isActive || brand.id === value?.brandId)
-                    .map((brand) => (
-                      <option key={brand.id} value={brand.id}>
-                        {brand.name}
-                        {brand.isActive ? "" : " (inactive)"}
-                      </option>
-                    ))}
-                </Select>
+                <SearchSelect
+                  id="brandId"
+                  name="brandId"
+                  value={brand}
+                  onChange={(next) => setBrandId(choiceKey(next))}
+                  load={loadBrands}
+                  optionKey={choiceKey}
+                  optionLabel={brandLabel}
+                  placeholder="No brand"
+                  searchPlaceholder="Type to search brands…"
+                  emptyText="No brand matches."
+                  panelMinWidth={240}
+                />
               </Field>
               <Field label="Code" name="code">
                 <Input
@@ -450,23 +491,21 @@ export function ProductForm({ value, options }: { value?: Product; options: Prod
                 required
                 hint={value ? "Can't change once the product has stock movements." : undefined}
               >
-                <Select
+                <SearchSelect
                   id="baseUnitId"
                   name="baseUnitId"
-                  value={baseUnitId}
-                  onChange={(event) => changeBaseUnit(event.target.value)}
                   required
-                  title="The smallest unit you count, e.g. kg, pcs, feet."
-                >
-                  <option value="" disabled>
-                    Choose a unit
-                  </option>
-                  {baseUnitChoices.map((unit) => (
-                    <option key={unit.id} value={unit.id}>
-                      {unitLabel(unit)}
-                    </option>
-                  ))}
-                </Select>
+                  requiredMessage="Choose the base unit: the smallest unit you count, e.g. kg, pcs, feet."
+                  value={baseUnit ?? null}
+                  onChange={(next) => changeBaseUnit(String(next.id))}
+                  load={loadUnits}
+                  optionKey={choiceKey}
+                  optionLabel={unitLabel}
+                  placeholder="Choose a unit"
+                  searchPlaceholder="Type to search units…"
+                  emptyText="No unit matches."
+                  panelMinWidth={260}
+                />
               </Field>
               <Field label={`Sale price per ${baseCode}`} name="salePrice">
                 <Input id="salePrice" name="salePrice" inputMode="decimal" defaultValue={value ? String(value.salePrice) : ""} placeholder="0.00" />

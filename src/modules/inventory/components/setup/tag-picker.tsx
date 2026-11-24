@@ -26,8 +26,9 @@ const cleanName = (raw: string) => raw.replace(/\s+/g, " ").trim().slice(0, MAX_
 const safeColor = (color: string | null) => (color && /^(#[0-9a-f]{3,8}|[a-z]{3,20})$/i.test(color) ? color : null);
 
 /**
- * Tags as chips with a text box: pick a suggestion, or type a name and press Enter (or a comma) to add a
- * new tag. Website badges are marked. Submits `name` as JSON: [{ id, name }], id null for new tags.
+ * Tags as chips with a text box: pick a suggestion, or type a name and press Space, Enter or a comma to add
+ * it (leaving the box adds it too). Website badges are marked. Submits `name` as JSON: [{ id, name }], id null
+ * for new tags.
  */
 export function TagPicker({ id, name, options, defaultValue }: { id: string; name: string; options: TagChoice[]; defaultValue: TagChoice[] }) {
   const listId = useId();
@@ -74,8 +75,10 @@ export function TagPicker({ id, name, options, defaultValue }: { id: string; nam
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Enter") {
-      // Never submit the form from here.
+    // Space ends a tag like Enter (multi-word tags are picked from the suggestions or pasted), except while an
+    // input method (e.g. Bangla) is composing a word, where Space often confirms it.
+    if (event.key === "Enter" || (event.key === " " && !event.nativeEvent.isComposing)) {
+      // Never submit the form, or type a space, from here.
       event.preventDefault();
       if (text.trim()) {
         add([text]);
@@ -142,7 +145,7 @@ export function TagPicker({ id, name, options, defaultValue }: { id: string; nam
           maxLength={MAX_TAG_NAME_LENGTH}
           disabled={full}
           autoComplete="off"
-          placeholder={full ? `Up to ${MAX_PRODUCT_TAGS} tags` : picked.length ? "Add another…" : "Type a tag and press Enter, or pick one"}
+          placeholder={full ? `Up to ${MAX_PRODUCT_TAGS} tags` : picked.length ? "Add another…" : "Type a tag and press Space, or pick one"}
           className="h-7 min-w-40 flex-1 border-0 bg-transparent px-1.5 text-sm text-gray-800 outline-none placeholder:text-gray-400 disabled:cursor-not-allowed dark:text-white/90 dark:placeholder:text-white/30"
         />
       </div>

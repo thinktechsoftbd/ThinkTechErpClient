@@ -17,6 +17,7 @@ import { cn } from "@/core/utils/cn";
 import { formatAmount, formatQuantity, parseDecimal, round, todayIso } from "@/core/utils/number";
 import { IntentSubmit, useLookupList, useSubmitIntent } from "@/modules/inventory/components/documents/intent-submit";
 import type { BatchStockItem, ProductLookupItem, SerialStockItem, TaxGroupOption } from "@/modules/inventory/types";
+import { PaymentSourceFields } from "@/modules/purchase/components/payment-source-fields";
 import { COUNTER_METHODS, salesLabel, type CustomerOption, type SaleType, type SalesInvoiceUpsertRequest, type SalesLineRequest } from "../types";
 import { CustomerPicker } from "./customer-picker";
 
@@ -71,6 +72,11 @@ export type SalesEditorInitial = {
   paymentMethod?: string;
   paymentProvider?: string;
   paymentReferenceNo?: string;
+  /** The payment source line (its "source type") the money taken goes to. */
+  paymentSourceDId?: number | null;
+  /** Editing: the saved source's header id, so its types load. */
+  paymentSourceId?: number | null;
+  paymentSourceName?: string;
   remarks?: string;
   lines?: SaleEditorLine[];
 };
@@ -159,6 +165,7 @@ export function SalesEditor({
     paymentMethod: initial.paymentMethod ?? "Cash",
     paymentProvider: initial.paymentProvider ?? "",
     paymentReferenceNo: initial.paymentReferenceNo ?? "",
+    paymentSourceDId: initial.paymentSourceDId ?? null,
     tendered: "",
     remarks: initial.remarks ?? "",
   }));
@@ -216,6 +223,7 @@ export function SalesEditor({
   if (less > linesTotal + charge) problems.push("The bill discount is more than the bill.");
   if (total < 0) problems.push("The total can't be negative.");
   if (credit && (paid < 0 || paid > total)) problems.push("The amount paid now must be between 0 and the total.");
+  if (!header.paymentSourceDId) problems.push("Choose the payment source and its type.");
 
   // Warnings only: the API has the last word (stock may have changed, limits may be raised).
   const creditWarning =
@@ -342,6 +350,7 @@ export function SalesEditor({
       paymentMethod: takesPayment ? header.paymentMethod : null,
       paymentProvider: takesPayment && header.paymentMethod !== "Cash" ? orNull(header.paymentProvider) : null,
       paymentReferenceNo: takesPayment && header.paymentMethod !== "Cash" ? orNull(header.paymentReferenceNo) : null,
+      invPaymentSourceDId: header.paymentSourceDId,
       remarks: orNull(header.remarks),
       lines: lines.map(buildLine),
     };
@@ -376,19 +385,44 @@ export function SalesEditor({
         }}
       >
         <div className="min-w-0 space-y-6">
+          {/* Invoice details first, as on the purchase screen: who, when and from where. */}
           <Card>
-            <CardHeader
-              title="Items"
-              description={options.pricesIncludeTax ? "Prices include tax (Inventory Settings)." : "Prices exclude tax; the tax is added on top."}
-            />
-            {/* Laid out by the box's own width: in the popup it is beside the totals, so narrower than the screen. */}
+            <CardHeader title="Invoice details" />
+            {/* Laid out by the box's own width: in the popup it is beside the summary, so narrower than the screen. */}
             <CardBody className="@container space-y-4">
-              <div className="grid gap-3 @xl:grid-cols-[minmax(0,1fr)_11rem_9.5rem]">
-                <ProductSearch onPick={addProduct} warehouseId={header.warehouseId} showTotalStock />
+              <div>
+                <span className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Sale type</span>
+                <div role="radiogroup" aria-label="Sale type" className="inline-grid grid-cols-2 rounded-lg border border-gray-300 p-1 dark:border-gray-700">
+                  {(["Cash", "Credit"] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      role="radio"
+                      aria-checked={header.saleType === type}
+                      onClick={() => set("saleType", type)}
+                      className={cn(
+                        "rounded-md px-4 py-1.5 text-sm font-medium whitespace-nowrap",
+                        header.saleType === type ? "bg-brand-500 text-white" : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5",
+                      )}
+                    >
+                      {type === "Cash" ? "Cash sale" : "Credit sale (baki)"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid gap-4 @2xl:grid-cols-3">
+                <div className="min-w-0">
+                  <CustomerPicker value={customer} onChange={setCustomer} canAdd={canAddCustomer} required={credit} includeSuppliers />
+                  {credit && !customer && (
+                    <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-400">A credit sale needs a customer on file, so the due can be collected later.</p>
+                  )}
+                </div>
                 <div>
-                  <label htmlFor="warehouseId" className="sr-only">
-                    Sell from warehouse
-                  </label>
+                  <Label htmlFor="date">Sale date</Label>
+                  <Input id="date" type="date" value={header.date} onChange={(e) => set("date", e.target.value)} required />
+                </div>
+                <div>
+                  <Label htmlFor="warehouseId">Sell from warehouse</Label>
                   <SearchSelect
                     id="warehouseId"
                     value={selectedWarehouse}
@@ -404,13 +438,29 @@ export function SalesEditor({
                     searchPlaceholder="Search warehouses…"
                   />
                 </div>
-                <div>
-                  <label htmlFor="date" className="sr-only">
-                    Sale date
-                  </label>
-                  <Input id="date" type="date" value={header.date} onChange={(e) => set("date", e.target.value)} required />
-                </div>
               </div>
+              {!credit && !customer && (
+                <div className="grid gap-4 @2xl:grid-cols-3">
+                  <div>
+                    <Label htmlFor="customerName">Walk-in name</Label>
+                    <Input id="customerName" value={header.customerName} maxLength={250} placeholder="Optional" onChange={(e) => set("customerName", e.target.value)} />
+                  </div>
+                  <div>
+                    <Label htmlFor="customerMobile">Mobile</Label>
+                    <Input id="customerMobile" value={header.customerMobile} maxLength={30} inputMode="tel" placeholder="Optional" onChange={(e) => set("customerMobile", e.target.value)} />
+                  </div>
+                </div>
+              )}
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Items"
+              description={options.pricesIncludeTax ? "Prices include tax (Inventory Settings)." : "Prices exclude tax; the tax is added on top."}
+            />
+            <CardBody className="@container space-y-4">
+              <ProductSearch onPick={addProduct} warehouseId={header.warehouseId} showTotalStock />
 
               {lines.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
@@ -461,44 +511,7 @@ export function SalesEditor({
 
         <div className="space-y-6 xl:sticky xl:top-20 xl:self-start">
           <Card>
-            <CardBody className="space-y-4">
-              <div role="radiogroup" aria-label="Sale type" className="grid grid-cols-2 rounded-lg border border-gray-300 p-1 dark:border-gray-700">
-                {(["Cash", "Credit"] as const).map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    role="radio"
-                    aria-checked={header.saleType === type}
-                    onClick={() => set("saleType", type)}
-                    className={cn(
-                      "rounded-md px-3 py-1.5 text-sm font-medium",
-                      header.saleType === type ? "bg-brand-500 text-white" : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5",
-                    )}
-                  >
-                    {type === "Cash" ? "Cash sale" : "Credit sale (baki)"}
-                  </button>
-                ))}
-              </div>
-              <CustomerPicker value={customer} onChange={setCustomer} canAdd={canAddCustomer} required={credit} includeSuppliers />
-              {credit && !customer && (
-                <p className="text-xs text-amber-700 dark:text-amber-400">A credit sale needs a customer on file, so the due can be collected later.</p>
-              )}
-              {!credit && !customer && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="customerName">Walk-in name</Label>
-                    <Input id="customerName" value={header.customerName} maxLength={250} placeholder="Optional" onChange={(e) => set("customerName", e.target.value)} />
-                  </div>
-                  <div>
-                    <Label htmlFor="customerMobile">Mobile</Label>
-                    <Input id="customerMobile" value={header.customerMobile} maxLength={30} inputMode="tel" placeholder="Optional" onChange={(e) => set("customerMobile", e.target.value)} />
-                  </div>
-                </div>
-              )}
-            </CardBody>
-          </Card>
-
-          <Card>
+            <CardHeader title="Summary" />
             <CardBody className="space-y-2.5 text-sm">
               <SummaryRow label={`Items (${quantityCount})`} value={subtotal} />
               {lineDiscount > 0 && <SummaryRow label="Discount" value={-lineDiscount} />}
@@ -532,6 +545,14 @@ export function SalesEditor({
           <Card>
             <CardHeader title={credit ? "Paid now (optional)" : "Payment"} />
             <CardBody className="space-y-3 text-sm">
+              <Field label="Payment Source" name="invPaymentSourceDId" required>
+                <PaymentSourceFields
+                  dId={header.paymentSourceDId}
+                  initialSourceId={initial.paymentSourceId ?? null}
+                  initialName={initial.paymentSourceName}
+                  onChange={(id) => set("paymentSourceDId", id)}
+                />
+              </Field>
               {credit && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -545,8 +566,7 @@ export function SalesEditor({
                 </div>
               )}
               {(!credit || paid > 0) && (
-                <div>
-                  <Label htmlFor="paymentMethod">Paid by</Label>
+                <Field label="Paid by" name="paymentMethod" hint="Paid by cheque? Record it as a customer receipt instead.">
                   <Select id="paymentMethod" value={header.paymentMethod} onChange={(e) => set("paymentMethod", e.target.value)}>
                     {COUNTER_METHODS.map((m) => (
                       <option key={m} value={m}>
@@ -554,7 +574,7 @@ export function SalesEditor({
                       </option>
                     ))}
                   </Select>
-                </div>
+                </Field>
               )}
               {(!credit || paid > 0) && header.paymentMethod !== "Cash" && (
                 <div className="grid grid-cols-2 gap-3">

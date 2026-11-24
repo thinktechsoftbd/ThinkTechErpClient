@@ -177,6 +177,7 @@ async function SaleDetail({ params }: Pick<Props, "params">) {
                         ? `${money(invoice.paidAmount)} · ${salesLabel(invoice.paymentMethod)}${invoice.paymentProvider ? ` (${invoice.paymentProvider})` : ""}${invoice.paymentReferenceNo ? ` · ${invoice.paymentReferenceNo}` : ""}`
                         : null,
                   },
+                  { label: "Payment source", value: invoice.paymentSourceName ? `${invoice.paymentSourceName}${invoice.paymentSourceType ? ` · ${invoice.paymentSourceType}` : ""}` : null },
                   { label: "Completed", value: invoice.postedAt ? formatDateTime(invoice.postedAt) : null },
                   { label: "Remarks", value: invoice.remarks },
                 ]}

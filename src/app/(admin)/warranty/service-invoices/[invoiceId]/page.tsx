@@ -110,6 +110,7 @@ async function ServiceInvoiceDetail({ params }: Pick<Props, "params">) {
                       ? `${money(invoice.paidAmount)} · ${salesLabel(invoice.paymentMethod)}${invoice.paymentProvider ? ` (${invoice.paymentProvider})` : ""}${invoice.paymentReferenceNo ? ` · ${invoice.paymentReferenceNo}` : ""}`
                       : null,
                 },
+                { label: "Payment source", value: invoice.paymentSourceName ? `${invoice.paymentSourceName}${invoice.paymentSourceType ? ` · ${invoice.paymentSourceType}` : ""}` : null },
                 { label: "Saved", value: formatDateTime(invoice.updatedAt ?? invoice.createdAt) },
                 { label: "Remarks", value: invoice.remarks },
               ]}

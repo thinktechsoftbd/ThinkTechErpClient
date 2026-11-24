@@ -69,6 +69,11 @@ export type ServiceInvoice = {
   paymentMethod: string | null;
   paymentProvider: string | null;
   paymentReferenceNo: string | null;
+  /** The payment source line (its "source type") the money taken now goes to. */
+  invPaymentSourceDId: number | null;
+  paymentSourceId: number | null;
+  paymentSourceName: string | null;
+  paymentSourceType: string | null;
   settledAmount: number;
   dueAmount: number;
   status: "Draft" | "Posted" | "Cancelled";
@@ -118,6 +123,8 @@ export type ServiceInvoiceUpsertRequest = {
   paymentMethod: string | null;
   paymentProvider: string | null;
   paymentReferenceNo: string | null;
+  /** The payment source line the money taken now goes to (required). */
+  invPaymentSourceDId: number | null;
   serviceNote: string | null;
   remarks: string | null;
   /** The parts used; may be empty when the bill is for the service charge alone. */

@@ -20,6 +20,16 @@ export function FormSection({
   );
 }
 
+/** The fields of one tab of a tabbed modal (FormTabs), laid out in two columns, with an optional note above. */
+export function TabSection({ description, children }: { description?: ReactNode; children: ReactNode }) {
+  return (
+    <>
+      {description && <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">{description}</p>}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{children}</div>
+    </>
+  );
+}
+
 /**
  * Lookup options (active values only) plus the record's current value when it is no longer
  * among them, so editing doesn't silently clear it.

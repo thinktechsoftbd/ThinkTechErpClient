@@ -17,6 +17,7 @@ import { showDate } from "@/core/utils/date";
 import { formatAmount, formatQuantity, parseDecimal, round, todayIso } from "@/core/utils/number";
 import { useLookupList } from "@/modules/inventory/components/documents/intent-submit";
 import type { BatchStockItem, ProductLookupItem, TaxGroupOption } from "@/modules/inventory/types";
+import { PaymentSourceFields } from "@/modules/purchase/components/payment-source-fields";
 import { CustomerPicker } from "@/modules/sales/components/customer-picker";
 import { COUNTER_METHODS, salesLabel, type CustomerOption, type SaleType } from "@/modules/sales/types";
 import type { ServiceInvoiceLineRequest, ServiceInvoiceUpsertRequest } from "../service-invoice-types";
@@ -69,6 +70,11 @@ export type ServiceInvoiceEditorInitial = {
   paymentMethod?: string;
   paymentProvider?: string;
   paymentReferenceNo?: string;
+  /** The payment source line (its "source type") the money taken goes to. */
+  paymentSourceDId?: number | null;
+  /** Editing: the saved source's header id, so its types load. */
+  paymentSourceId?: number | null;
+  paymentSourceName?: string;
   serviceNote?: string;
   remarks?: string;
   lines?: ServiceInvoiceEditorLine[];
@@ -160,6 +166,7 @@ export function ServiceInvoiceEditor({
     paymentMethod: initial.paymentMethod ?? "Cash",
     paymentProvider: initial.paymentProvider ?? "",
     paymentReferenceNo: initial.paymentReferenceNo ?? "",
+    paymentSourceDId: initial.paymentSourceDId ?? null,
     serviceNote: initial.serviceNote ?? "",
     remarks: initial.remarks ?? "",
   }));
@@ -212,6 +219,7 @@ export function ServiceInvoiceEditor({
   if (less > linesTotal + charge + service) problems.push("The bill discount is more than the bill.");
   if (total < 0) problems.push("The total can't be negative.");
   if (credit && (paid < 0 || paid > total)) problems.push("The amount paid now must be between 0 and the total.");
+  if (!header.paymentSourceDId) problems.push("Choose the payment source and its type.");
 
   const submit: FormAction = async (previous, formData) => {
     setShowIssues(true);
@@ -273,6 +281,7 @@ export function ServiceInvoiceEditor({
       paymentMethod: takesPayment ? header.paymentMethod : null,
       paymentProvider: takesPayment && header.paymentMethod !== "Cash" ? orNull(header.paymentProvider) : null,
       paymentReferenceNo: takesPayment && header.paymentMethod !== "Cash" ? orNull(header.paymentReferenceNo) : null,
+      invPaymentSourceDId: header.paymentSourceDId,
       serviceNote: orNull(header.serviceNote),
       remarks: orNull(header.remarks),
       lines: lines.map(buildLine),
@@ -308,6 +317,82 @@ export function ServiceInvoiceEditor({
         }}
       >
         <div className="min-w-0 space-y-6">
+          {/* Invoice details first, as on the sale and purchase screens: who, when and from where. */}
+          <Card>
+            <CardHeader title="Invoice details" />
+            {/* Laid out by the box's own width: in the popup it is beside the summary, so narrower than the screen. */}
+            <CardBody className="@container space-y-4">
+              <div>
+                <span className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Invoice type</span>
+                <div role="radiogroup" aria-label="Invoice type" className="inline-grid grid-cols-2 rounded-lg border border-gray-300 p-1 dark:border-gray-700">
+                  {(["Cash", "Credit"] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      role="radio"
+                      aria-checked={header.saleType === type}
+                      onClick={() => set("saleType", type)}
+                      className={cn(
+                        "rounded-md px-4 py-1.5 text-sm font-medium whitespace-nowrap",
+                        header.saleType === type ? "bg-brand-500 text-white" : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5",
+                      )}
+                    >
+                      {type === "Cash" ? "Cash" : "Credit (baki)"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid gap-4 @2xl:grid-cols-3">
+                <div className="min-w-0">
+                  <CustomerPicker
+                    value={customer}
+                    onChange={setCustomer}
+                    canAdd={canAddCustomer}
+                    required={credit}
+                    includeSuppliers
+                    endpoint="/api/lookup/service-invoice-customers"
+                  />
+                  {credit && !customer && (
+                    <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-400">A credit invoice needs a customer on file, so the due can be collected later.</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="date">Invoice date</Label>
+                  <Input id="date" type="date" value={header.date} onChange={(e) => set("date", e.target.value)} required />
+                </div>
+                <div>
+                  <Label htmlFor="warehouseId">Parts from warehouse</Label>
+                  <SearchSelect
+                    id="warehouseId"
+                    value={selectedWarehouse}
+                    onChange={(warehouse) => {
+                      set("warehouseId", warehouse.id);
+                      // Batches and stock figures are per warehouse.
+                      setLines((current) => current.map((l) => ({ ...l, batchId: null, stock: null })));
+                    }}
+                    load={loadWarehouses}
+                    optionKey={(warehouse) => String(warehouse.id)}
+                    optionLabel={(warehouse) => warehouse.name}
+                    placeholder="Choose a warehouse"
+                    searchPlaceholder="Search warehouses…"
+                  />
+                </div>
+              </div>
+              {!credit && !customer && (
+                <div className="grid gap-4 @2xl:grid-cols-3">
+                  <div>
+                    <Label htmlFor="customerName">Walk-in name</Label>
+                    <Input id="customerName" value={header.customerName} maxLength={250} placeholder="Optional" onChange={(e) => set("customerName", e.target.value)} />
+                  </div>
+                  <div>
+                    <Label htmlFor="customerMobile">Mobile</Label>
+                    <Input id="customerMobile" value={header.customerMobile} maxLength={30} inputMode="tel" placeholder="Optional" onChange={(e) => set("customerMobile", e.target.value)} />
+                  </div>
+                </div>
+              )}
+            </CardBody>
+          </Card>
+
           <Card>
             <CardHeader title="Service" description="What was serviced or repaired, and the charge for the work." />
             <CardBody className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_11rem]">
@@ -340,36 +425,8 @@ export function ServiceInvoiceEditor({
               title="Parts used"
               description={`Optional. ${options.pricesIncludeTax ? "Prices include tax (Inventory Settings)." : "Prices exclude tax; the tax is added on top."}`}
             />
-            {/* Laid out by the box's own width: in the popup it is beside the totals, so narrower than the screen. */}
             <CardBody className="@container space-y-4">
-              <div className="grid gap-3 @xl:grid-cols-[minmax(0,1fr)_11rem_9.5rem]">
-                <ProductSearch onPick={addProduct} warehouseId={header.warehouseId} />
-                <div>
-                  <label htmlFor="warehouseId" className="sr-only">
-                    Parts from warehouse
-                  </label>
-                  <SearchSelect
-                    id="warehouseId"
-                    value={selectedWarehouse}
-                    onChange={(warehouse) => {
-                      set("warehouseId", warehouse.id);
-                      // Batches and stock figures are per warehouse.
-                      setLines((current) => current.map((l) => ({ ...l, batchId: null, stock: null })));
-                    }}
-                    load={loadWarehouses}
-                    optionKey={(warehouse) => String(warehouse.id)}
-                    optionLabel={(warehouse) => warehouse.name}
-                    placeholder="Choose a warehouse"
-                    searchPlaceholder="Search warehouses…"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="date" className="sr-only">
-                    Invoice date
-                  </label>
-                  <Input id="date" type="date" value={header.date} onChange={(e) => set("date", e.target.value)} required />
-                </div>
-              </div>
+              <ProductSearch onPick={addProduct} warehouseId={header.warehouseId} />
 
               {lines.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
@@ -419,51 +476,7 @@ export function ServiceInvoiceEditor({
 
         <div className="space-y-6 xl:sticky xl:top-20 xl:self-start">
           <Card>
-            <CardBody className="space-y-4">
-              <div role="radiogroup" aria-label="Invoice type" className="grid grid-cols-2 rounded-lg border border-gray-300 p-1 dark:border-gray-700">
-                {(["Cash", "Credit"] as const).map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    role="radio"
-                    aria-checked={header.saleType === type}
-                    onClick={() => set("saleType", type)}
-                    className={cn(
-                      "rounded-md px-3 py-1.5 text-sm font-medium",
-                      header.saleType === type ? "bg-brand-500 text-white" : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5",
-                    )}
-                  >
-                    {type === "Cash" ? "Cash" : "Credit (baki)"}
-                  </button>
-                ))}
-              </div>
-              <CustomerPicker
-                value={customer}
-                onChange={setCustomer}
-                canAdd={canAddCustomer}
-                required={credit}
-                includeSuppliers
-                endpoint="/api/lookup/service-invoice-customers"
-              />
-              {credit && !customer && (
-                <p className="text-xs text-amber-700 dark:text-amber-400">A credit invoice needs a customer on file, so the due can be collected later.</p>
-              )}
-              {!credit && !customer && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="customerName">Walk-in name</Label>
-                    <Input id="customerName" value={header.customerName} maxLength={250} placeholder="Optional" onChange={(e) => set("customerName", e.target.value)} />
-                  </div>
-                  <div>
-                    <Label htmlFor="customerMobile">Mobile</Label>
-                    <Input id="customerMobile" value={header.customerMobile} maxLength={30} inputMode="tel" placeholder="Optional" onChange={(e) => set("customerMobile", e.target.value)} />
-                  </div>
-                </div>
-              )}
-            </CardBody>
-          </Card>
-
-          <Card>
+            <CardHeader title="Summary" />
             <CardBody className="space-y-2.5 text-sm">
               <SummaryRow label={`Parts (${lines.length})`} value={subtotal} />
               {lineDiscount > 0 && <SummaryRow label="Discount" value={-lineDiscount} />}
@@ -498,6 +511,14 @@ export function ServiceInvoiceEditor({
           <Card>
             <CardHeader title={credit ? "Paid now (optional)" : "Payment"} />
             <CardBody className="space-y-3 text-sm">
+              <Field label="Payment Source" name="invPaymentSourceDId" required>
+                <PaymentSourceFields
+                  dId={header.paymentSourceDId}
+                  initialSourceId={initial.paymentSourceId ?? null}
+                  initialName={initial.paymentSourceName}
+                  onChange={(id) => set("paymentSourceDId", id)}
+                />
+              </Field>
               {credit && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>

@@ -202,6 +202,11 @@ export type SalesInvoice = {
   paymentMethod: string | null;
   paymentProvider: string | null;
   paymentReferenceNo: string | null;
+  /** The payment source line (its "source type") the money taken now goes to. */
+  invPaymentSourceDId: number | null;
+  paymentSourceId: number | null;
+  paymentSourceName: string | null;
+  paymentSourceType: string | null;
   settledAmount: number;
   dueAmount: number;
   /** Cost of the goods sold (base currency), known once posted. */
@@ -242,6 +247,8 @@ export type SalesInvoiceUpsertRequest = {
   paymentMethod: string | null;
   paymentProvider: string | null;
   paymentReferenceNo: string | null;
+  /** The payment source line the money taken now goes to (required). */
+  invPaymentSourceDId: number | null;
   remarks: string | null;
   lines: SalesLineRequest[];
 };

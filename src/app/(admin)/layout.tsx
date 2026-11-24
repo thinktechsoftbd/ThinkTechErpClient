@@ -1,5 +1,6 @@
 import { Suspense, type ReactNode } from "react";
 import { AdminMain, AppSidebar, SidebarBackdrop } from "@/core/layout/app-sidebar";
+import { AppFooter } from "@/core/layout/app-footer";
 import { AppHeader } from "@/core/layout/app-header";
 import { OrganizationSwitcher } from "@/core/layout/organization-switcher";
 import { SessionSidebarNav, SessionUserMenu } from "@/core/layout/session-parts";
@@ -34,6 +35,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           />
           {/* Full width on every screen (no centred max width, which left empty bands on wide monitors). */}
           <main className="w-full flex-1 p-4 md:px-5 md:py-6">{children}</main>
+          <AppFooter className="border-t border-gray-200 px-4 py-4 md:px-5 dark:border-gray-800" />
         </AdminMain>
       </div>
     </SidebarProvider>

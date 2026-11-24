@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 import bizoneIcon from "@/assets/brand/bizone-icon.webp";
 import { appConfig } from "@/core/config/app";
+import { AppFooter } from "@/core/layout/app-footer";
 import { BrandLogo } from "@/core/layout/brand-logo";
 import { ThemeToggle } from "@/core/theme/theme-toggle";
 import { modules } from "@/modules/registry";
@@ -19,6 +20,7 @@ export function AuthShell({ title, description, children }: { title: string; des
           <h1 className="mb-2 text-2xl font-semibold text-gray-800 sm:text-3xl dark:text-white/90">{title}</h1>
           <p className="mb-8 text-sm text-gray-500 dark:text-gray-400">{description}</p>
           {children}
+          <AppFooter className="mt-10 border-t border-gray-100 pt-4 text-xs dark:border-gray-800" />
         </div>
       </div>
 

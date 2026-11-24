@@ -6,6 +6,8 @@ export const appConfig = {
   /** The product the console is, as its logo shows it (src/assets/brand). */
   productName: "BizOne ERP",
   productSlogan: "Connect. Manage. Grow",
+  /** The maker named in every page's footer ("© 2026 ThinkTech. All Rights Reserved. | Powered by ThinkTech"). */
+  companyName: "ThinkTech",
   description: "BizOne ERP administration console",
   loginPath: "/login",
   homePath: "/dashboard",

@@ -29,6 +29,13 @@ export type SalesListQuery = {
   to?: string;
   saleType?: string;
   paymentStatus?: string;
+  /**
+   * A column of the list (invoices: number, date, customer, type, total, due, payment or status; receipts: number,
+   * date, customer, method, amount, allocated or status; returns: number, date, sale, customer, settlement, total
+   * or status); none = newest first.
+   */
+  sort?: string;
+  direction?: "asc" | "desc";
   limit: number;
   offset: number;
 };

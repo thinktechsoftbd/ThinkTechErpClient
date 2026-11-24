@@ -4,11 +4,12 @@ import Link from "next/link";
 import { showDate } from "@/core/utils/date";
 import { useRouter } from "next/navigation";
 import { Check, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ProductSearch } from "@/core/documents/product-search";
 import { ActionForm, FormMessage } from "@/core/forms/action-form";
 import { actionError, type FormAction } from "@/core/forms/action-state";
 import { Field, Input, Label, Select, Textarea } from "@/core/forms/fields";
+import { SearchSelect, searchOptions } from "@/core/forms/search-select";
 import { buttonClasses } from "@/core/ui/button";
 import { Card, CardBody, CardHeader } from "@/core/ui/card";
 import { cn } from "@/core/utils/cn";
@@ -28,6 +29,49 @@ import { IntentSubmit, useLookupList, useSubmitIntent } from "./intent-submit";
 
 /** opening: stock at go-live with its cost; adjustment: signed changes; transfer: warehouse to warehouse. */
 export type StockEditorMode = "opening" | "adjustment" | "transfer";
+
+type WarehouseChoice = { id: number; name: string; isActive: boolean };
+
+/**
+ * A warehouse box with a search box in its list: the active warehouses (and the chosen one, even if inactive),
+ * without `exclude`. Required: the form isn't sent until one is chosen. The list is memoized so an open list
+ * isn't reloaded on every keystroke elsewhere in the form.
+ */
+function WarehousePicker({
+  id,
+  warehouses,
+  value,
+  exclude = null,
+  onChange,
+}: {
+  id: string;
+  warehouses: WarehouseChoice[];
+  value: number | null;
+  exclude?: number | null;
+  onChange: (id: number) => void;
+}) {
+  const choices = useMemo(
+    () => warehouses.filter((w) => (w.isActive || w.id === value) && w.id !== exclude),
+    [warehouses, value, exclude],
+  );
+  const load = useCallback(async (search: string, offset: number) => searchOptions(choices, (w) => w.name, search, offset), [choices]);
+  return (
+    <SearchSelect
+      id={id}
+      name={id}
+      required
+      requiredMessage="Choose a warehouse."
+      value={choices.find((w) => w.id === value) ?? null}
+      onChange={(w) => onChange(w.id)}
+      load={load}
+      optionKey={(w) => String(w.id)}
+      optionLabel={(w) => `${w.name}${w.isActive ? "" : " (inactive)"}`}
+      placeholder="Choose a warehouse"
+      searchPlaceholder="Search warehouses…"
+      emptyText={warehouses.length === 0 ? "No warehouses yet." : "No warehouse matches."}
+    />
+  );
+}
 
 export type StockEditorOptions = {
   warehouses: { id: number; name: string; isActive: boolean }[];
@@ -385,7 +429,6 @@ export function StockDocumentEditor({
     else setLines((current) => [...current, lineFromProduct(product, mode)]);
   }
 
-  const warehouseChoices = (selected: number | null) => options.warehouses.filter((w) => w.isActive || w.id === selected);
   const reasons: string[] = [...ADJUSTMENT_REASONS];
   if (mode === "adjustment" && !reasons.includes(header.reason)) reasons.push(header.reason);
   const fromName = options.warehouses.find((w) => w.id === header.warehouseId)?.name;
@@ -413,42 +456,19 @@ export function StockDocumentEditor({
               </Field>
 
               <Field label={mode === "transfer" ? "From warehouse" : "Warehouse"} name="warehouseId" required>
-                <Select
-                  id="warehouseId"
-                  value={header.warehouseId ?? ""}
-                  onChange={(e) => changeWarehouse(e.target.value ? Number(e.target.value) : null)}
-                  required
-                >
-                  <option value="" disabled>
-                    Choose a warehouse
-                  </option>
-                  {warehouseChoices(header.warehouseId).map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name}
-                    </option>
-                  ))}
-                </Select>
+                <WarehousePicker id="warehouseId" warehouses={options.warehouses} value={header.warehouseId} onChange={changeWarehouse} />
               </Field>
 
               {mode === "transfer" && (
                 <Field label="To warehouse" name="toWarehouseId" required>
-                  <Select
+                  {/* The source warehouse isn't offered: a transfer can't go where it comes from. */}
+                  <WarehousePicker
                     id="toWarehouseId"
-                    value={header.toWarehouseId ?? ""}
-                    onChange={(e) => set("toWarehouseId", e.target.value ? Number(e.target.value) : null)}
-                    required
-                  >
-                    <option value="" disabled>
-                      Choose a warehouse
-                    </option>
-                    {warehouseChoices(header.toWarehouseId)
-                      .filter((w) => w.id !== header.warehouseId)
-                      .map((w) => (
-                        <option key={w.id} value={w.id}>
-                          {w.name}
-                        </option>
-                      ))}
-                  </Select>
+                    warehouses={options.warehouses}
+                    value={header.toWarehouseId}
+                    exclude={header.warehouseId}
+                    onChange={(id) => set("toWarehouseId", id)}
+                  />
                 </Field>
               )}
 

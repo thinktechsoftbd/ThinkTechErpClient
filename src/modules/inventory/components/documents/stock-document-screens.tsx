@@ -4,7 +4,11 @@ import { notFound, redirect } from "next/navigation";
 import { ClipboardList, PackagePlus, Pencil } from "lucide-react";
 import { tryApi, type ApiResult } from "@/core/api/client";
 import { requireSession } from "@/core/auth/session";
-import { CRUD_PAGE_SIZE, FilterSelect, ListToolbar } from "@/core/crud/list-toolbar";
+import { AutoSearchToolbar } from "@/core/crud/auto-search-toolbar";
+import { ConfirmDeleteButton } from "@/core/crud/confirm-delete-button";
+import { LockedRowActions } from "@/core/crud/locked-row-actions";
+import { rowIconAction } from "@/core/crud/row-action";
+import { SortHeader, type SortDirection } from "@/core/crud/sort-header";
 import { DocumentActionButton } from "@/core/documents/document-action-button";
 import { DocumentStatusBadge } from "@/core/documents/document-status";
 import { Facts, TotalsList } from "@/core/documents/facts";
@@ -23,7 +27,9 @@ import { canManageInventory } from "../../access";
 import {
   cancelAdjustmentAction,
   deleteAdjustmentAction,
+  deleteAdjustmentFromListAction,
   deleteOpeningStockAction,
+  deleteOpeningStockFromListAction,
   postAdjustmentAction,
   saveAdjustmentAction,
   saveOpeningStockAction,
@@ -32,7 +38,7 @@ import {
 import { inventoryApi } from "../../api";
 import { getInventoryOptions, getInventorySettings } from "../../queries";
 import { ADJUSTMENT_REASONS, label, type StockAdjustment } from "../../types";
-import { DateRangeFilter, readDocumentFilters, warehouseFilterOptions, type ListSearchParams } from "./list-filters";
+import { readDocumentFilters, warehouseFilterOptions, type ListSearchParams } from "./list-filters";
 import { StockDocumentEditor, type StockEditorOptions } from "./stock-document-editor";
 import { StockLinesTable } from "./stock-lines-table";
 
@@ -92,14 +98,29 @@ export function loadLineProducts(lines: { productId: number }[]) {
 
 // ---- List
 
+const ADJUSTMENT_PAGE_SIZE = 30;
+const ADJUSTMENT_SORTS = ["number", "date", "warehouse", "reason", "lines", "value", "status"] as const;
+type AdjustmentSort = (typeof ADJUSTMENT_SORTS)[number];
+
+/**
+ * Server-side: the API filters (number or remarks; warehouse, reason, status, dates), sorts and pages; 30 per page,
+ * newest first unless a column is chosen. Filters apply as you type or choose.
+ */
 export async function AdjustmentList({ kind, searchParams }: { kind: AdjustmentKind; searchParams: Promise<ListSearchParams> }) {
   const query = await searchParams;
-  const { search, status, warehouseId, from, to, offset } = readDocumentFilters(query);
+  const filters = readDocumentFilters(query);
+  const { warehouseId, from, to, offset } = filters;
+  const search = filters.search?.trim() || undefined;
+  const status = STATUS_OPTIONS.some((option) => option.value === filters.status) ? filters.status : undefined;
   const reasonParam = firstParam(query.reason);
   const reason = kind === "opening" ? OPENING_REASON : REASON_OPTIONS.some((r) => r.value === reasonParam) ? reasonParam : undefined;
+  const sortParam = firstParam(query.sort);
+  const sort: AdjustmentSort | undefined = ADJUSTMENT_SORTS.find((value) => value === sortParam);
+  const direction: SortDirection = firstParam(query.dir) === "desc" ? "desc" : "asc";
   const { basePath } = kinds[kind];
 
-  const [options, result] = await Promise.all([
+  const [session, options, result] = await Promise.all([
+    requireSession(),
     getInventoryOptions(),
     tryApi(() =>
       inventoryApi.adjustments.list({
@@ -110,41 +131,68 @@ export async function AdjustmentList({ kind, searchParams }: { kind: AdjustmentK
         excludeOpening: kind === "adjustment" ? true : undefined,
         from,
         to,
-        limit: CRUD_PAGE_SIZE,
+        sort,
+        direction,
+        limit: ADJUSTMENT_PAGE_SIZE,
         offset,
       }),
     ),
   ]);
   const filtered = Boolean(search || status || warehouseId || from || to || (kind === "adjustment" && reason));
   const warehouses = options.ok ? options.data.warehouses : [];
+  const canManage = canManageInventory(session);
+  const filterQuery = {
+    q: search,
+    status,
+    warehouse: warehouseId === undefined ? undefined : String(warehouseId),
+    reason: kind === "adjustment" ? reason : undefined,
+    from,
+    to,
+  };
+  const sorting = { sort: sort ?? "", direction, basePath, query: filterQuery };
+  const header = (text: string, column: AdjustmentSort, className?: string) => (
+    <SortHeader label={text} column={column} className={className} {...sorting} />
+  );
+  const noun = kind === "opening" ? "opening stock" : "adjustment";
 
   return (
     <>
-      <CardHeader
-        title={result.ok ? `${formatNumber(result.data.totalCount)} ${kind === "opening" ? "opening stock document(s)" : "adjustment(s)"}` : kinds[kind].title}
-        actions={
-          <ListToolbar basePath={basePath} search={search} placeholder="Number or remarks" filtered={filtered}>
-            {warehouses.length > 1 && (
-              <FilterSelect
-                name="warehouse"
-                label="Warehouse"
-                value={warehouseId ? String(warehouseId) : undefined}
-                options={warehouseFilterOptions(warehouses)}
-                allLabel="All warehouses"
-                className="w-40"
-              />
-            )}
-            {kind === "adjustment" && (
-              <FilterSelect name="reason" label="Reason" value={reason} options={REASON_OPTIONS} allLabel="All reasons" className="w-40" />
-            )}
-            <FilterSelect name="status" label="Status" value={status} options={STATUS_OPTIONS} allLabel="All statuses" className="w-32" />
-            <DateRangeFilter from={from} to={to} />
-          </ListToolbar>
-        }
-      />
+      {/* A slim header row: the count and the filters, which apply as you type or choose. */}
+      <div className="flex flex-col gap-3 border-b border-gray-100 px-5 py-3 xl:flex-row xl:items-center xl:justify-between dark:border-gray-800">
+        <h2 className="text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-white/90">
+          {result.ok
+            ? `${formatNumber(result.data.totalCount)} ${kind === "opening" ? "document" : "adjustment"}${result.data.totalCount === 1 ? "" : "s"}`
+            : kinds[kind].title}
+        </h2>
+        <AutoSearchToolbar
+          basePath={basePath}
+          search={search}
+          placeholder="Number or remarks"
+          filters={[
+            ...(warehouses.length > 1
+              ? [
+                  {
+                    name: "warehouse",
+                    label: "Warehouse",
+                    value: filterQuery.warehouse,
+                    options: warehouseFilterOptions(warehouses),
+                    allLabel: "All warehouses",
+                    className: "w-44",
+                    searchable: true,
+                  },
+                ]
+              : []),
+            ...(kind === "adjustment"
+              ? [{ name: "reason", label: "Reason", value: reason, options: REASON_OPTIONS, allLabel: "All reasons", className: "w-40" }]
+              : []),
+            { name: "status", label: "Status", value: status, options: STATUS_OPTIONS, allLabel: "All statuses", className: "w-32" },
+          ]}
+          dateRange={{ from, to }}
+        />
+      </div>
       {!result.ok ? (
         <ApiErrorState error={result.error} />
-      ) : result.data.items.length === 0 ? (
+      ) : result.data.items.length === 0 && offset === 0 ? (
         <EmptyState
           icon={kind === "opening" ? PackagePlus : ClipboardList}
           title={filtered ? "Nothing matches these filters" : kind === "opening" ? "No opening stock yet" : "No adjustments yet"}
@@ -161,13 +209,14 @@ export async function AdjustmentList({ kind, searchParams }: { kind: AdjustmentK
           <Table>
             <THead>
               <tr>
-                <TH>Number</TH>
-                <TH>Date</TH>
-                <TH>Warehouse</TH>
-                {kind === "adjustment" && <TH>Reason</TH>}
-                <TH className="text-right">Lines</TH>
-                <TH className="text-right">Value</TH>
-                <TH>Status</TH>
+                {header("Number", "number")}
+                {header("Date", "date")}
+                {header("Warehouse", "warehouse")}
+                {kind === "adjustment" && header("Reason", "reason")}
+                {header("Lines", "lines", "text-right")}
+                {header("Value", "value", "text-right")}
+                {header("Status", "status")}
+                {canManage && <TH className="text-right">Actions</TH>}
               </tr>
             </THead>
             <TBody>
@@ -192,22 +241,45 @@ export async function AdjustmentList({ kind, searchParams }: { kind: AdjustmentK
                   <TD>
                     <DocumentStatusBadge status={item.status} />
                   </TD>
+                  {canManage && (
+                    <TD className="text-right">
+                      {/* Only a draft can be changed or deleted; a posted one is cancelled from its page. */}
+                      {item.status !== "Draft" ? (
+                        <LockedRowActions
+                          reason={
+                            item.status === "Posted"
+                              ? `A posted ${noun} can't be edited or deleted: its stock is on the books. Open it to cancel it.`
+                              : `A cancelled ${noun} can't be edited or deleted.`
+                          }
+                        />
+                      ) : (
+                        <span className="inline-flex items-center gap-1">
+                          <Link
+                            href={`${basePath}/${item.id}/edit`}
+                            className={rowIconAction("edit")}
+                            title={`Edit ${item.adjustmentNo}`}
+                            aria-label={`Edit ${item.adjustmentNo}`}
+                          >
+                            <Pencil className="size-4" aria-hidden />
+                          </Link>
+                          <ConfirmDeleteButton
+                            iconOnly
+                            action={(kind === "opening" ? deleteOpeningStockFromListAction : deleteAdjustmentFromListAction).bind(null, item.id)}
+                            itemLabel={`draft ${noun} ${item.adjustmentNo}`}
+                          />
+                        </span>
+                      )}
+                    </TD>
+                  )}
                 </TR>
               ))}
             </TBody>
           </Table>
           <Pagination
             basePath={basePath}
-            query={{
-              q: search,
-              status,
-              warehouse: warehouseId,
-              reason: kind === "adjustment" ? reason : undefined,
-              from,
-              to,
-            }}
+            query={{ ...filterQuery, sort, dir: direction === "asc" ? undefined : direction }}
             offset={offset}
-            limit={CRUD_PAGE_SIZE}
+            limit={ADJUSTMENT_PAGE_SIZE}
             count={result.data.items.length}
             total={result.data.totalCount}
           />

@@ -81,7 +81,7 @@ async function SaleDetail({ params }: Pick<Props, "params">) {
           description={`${invoice.saleType} sale to ${customerLabel(invoice)} · ${formatDate(invoice.invoiceDate)}`}
           breadcrumbs={[
             { label: "Dashboard", href: "/dashboard" },
-            { label: "Inventory", href: "/inventory" },
+            { label: "Sales", href: "/sales" },
             { label: "Sales", href: "/sales/invoices" },
             { label: invoice.invoiceNo },
           ]}

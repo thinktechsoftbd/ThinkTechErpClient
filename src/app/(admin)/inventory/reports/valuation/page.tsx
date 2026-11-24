@@ -99,7 +99,7 @@ async function ValuationReport({ searchParams }: Pick<Props, "searchParams">) {
     <div className="space-y-6">
       <ReportFilters basePath={basePath} query={filters}>
         <ReportSelect name="group" label="Group by" value={groupBy} options={GROUP_OPTIONS} className="w-40" />
-        <ReportSelect name="warehouse" label="Warehouse" value={warehouseId} options={warehouses} allLabel="All warehouses" />
+        <ReportSelect searchable name="warehouse" label="Warehouse" value={warehouseId} options={warehouses} allLabel="All warehouses" />
       </ReportFilters>
 
       {result.ok && (

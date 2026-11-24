@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { Facts } from "@/core/documents/facts";
@@ -94,6 +95,7 @@ export function ReturnEditor({
   canPost,
   action,
   cancelHref,
+  returnTo,
 }: {
   /** The posted sale the goods come back from. */
   sale: SalesInvoice;
@@ -104,7 +106,10 @@ export function ReturnEditor({
   canPost: boolean;
   action: FormAction;
   cancelHref: string;
+  /** In the popup over the returns list: saving returns to the list; Cancel closes the popup. */
+  returnTo?: string;
 }) {
+  const router = useRouter();
   const hasCustomer = sale.customerId !== null;
   const [header, setHeader] = useState(() => {
     const today = todayIso();
@@ -257,6 +262,7 @@ export function ReturnEditor({
   return (
     <ActionForm action={submit} className="space-y-6">
       <input type="hidden" name="payload" value={JSON.stringify(payload())} />
+      {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
       <FormMessage />
 
       {/* Enter in a box must not submit the form half filled in. */}
@@ -558,9 +564,15 @@ export function ReturnEditor({
                 </IntentSubmit>
               )}
             </div>
-            <Link href={cancelHref} className={buttonClasses("ghost", "md", "w-full")}>
-              Cancel
-            </Link>
+            {returnTo ? (
+              <button type="button" onClick={() => router.back()} className={buttonClasses("ghost", "md", "w-full")}>
+                Cancel
+              </button>
+            ) : (
+              <Link href={cancelHref} className={buttonClasses("ghost", "md", "w-full")}>
+                Cancel
+              </Link>
+            )}
           </div>
         </div>
       </div>

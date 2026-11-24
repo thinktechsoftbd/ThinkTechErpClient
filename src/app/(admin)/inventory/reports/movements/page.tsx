@@ -83,8 +83,8 @@ async function MovementsReport({ searchParams }: Pick<Props, "searchParams">) {
     <div className="space-y-6">
       <ReportFilters basePath={basePath} query={filters} hidden={{ product: productId }}>
         <ReportSearch value={search} placeholder="Product, document or batch" />
-        <ReportSelect name="warehouse" label="Warehouse" value={warehouseId} options={warehouses} allLabel="All warehouses" />
-        <ReportSelect name="type" label="Movement" value={movementType} options={TYPE_OPTIONS} allLabel="All movements" />
+        <ReportSelect searchable name="warehouse" label="Warehouse" value={warehouseId} options={warehouses} allLabel="All warehouses" />
+        <ReportSelect searchable name="type" label="Movement" value={movementType} options={TYPE_OPTIONS} allLabel="All movements" />
         <ReportDate name="from" label="From" value={from} />
         <ReportDate name="to" label="To" value={to} />
       </ReportFilters>

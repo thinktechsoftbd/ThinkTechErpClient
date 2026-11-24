@@ -77,8 +77,8 @@ async function ByProductReport({ searchParams }: Pick<Props, "searchParams">) {
     <div className="space-y-6">
       <ReportFilters basePath={basePath} query={filters}>
         <ReportSearch value={search} placeholder="Product name or code" />
-        <ReportSelect name="supplier" label="Supplier" value={supplierId} options={supplierList} allLabel="All suppliers" className="w-56" />
-        <ReportSelect name="category" label="Category" value={categoryId} options={categories} allLabel="All categories" className="w-56" />
+        <ReportSelect searchable name="supplier" label="Supplier" value={supplierId} options={supplierList} allLabel="All suppliers" className="w-56" />
+        <ReportSelect searchable name="category" label="Category" value={categoryId} options={categories} allLabel="All categories" className="w-56" />
         <ReportDate name="from" label="From" value={from} />
         <ReportDate name="to" label="To" value={to} />
       </ReportFilters>

@@ -17,7 +17,7 @@ export default function NewCustomerReceiptPage({ searchParams }: Props) {
         description="Collect a customer's dues (cash, bank, cheque, bKash/Nagad, card, ...) and settle their open invoices with it."
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Inventory", href: "/inventory" },
+          { label: "Sales", href: "/sales" },
           { label: "Customer Receipts", href: "/sales/receipts" },
           { label: "New" },
         ]}

@@ -4,11 +4,12 @@ import { ClipboardCheck } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
 import { FormModalButton } from "@/core/crud/form-modal-button";
-import { CRUD_PAGE_SIZE, FilterSelect, ListToolbar } from "@/core/crud/list-toolbar";
+import { AutoSearchToolbar } from "@/core/crud/auto-search-toolbar";
+import { CRUD_PAGE_SIZE } from "@/core/crud/list-toolbar";
 import { PermissionOnly } from "@/core/crud/permission-only";
 import { DocumentStatusBadge } from "@/core/documents/document-status";
 import { ApiErrorState } from "@/core/ui/api-error-state";
-import { Card, CardHeader } from "@/core/ui/card";
+import { Card } from "@/core/ui/card";
 import { EmptyState, TableSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
 import { Pagination } from "@/core/ui/pagination";
@@ -18,7 +19,7 @@ import { formatDate, formatNumber } from "@/core/utils/format";
 import { formatAmount } from "@/core/utils/number";
 import { createCountAction } from "@/modules/inventory/actions/documents";
 import { inventoryApi } from "@/modules/inventory/api";
-import { DateRangeFilter, readDocumentFilters, warehouseFilterOptions } from "@/modules/inventory/components/documents/list-filters";
+import { readDocumentFilters, warehouseFilterOptions } from "@/modules/inventory/components/documents/list-filters";
 import { NewCountFields } from "@/modules/inventory/components/documents/new-count-fields";
 import { inventoryCrumbs } from "@/modules/inventory/components/documents/stock-document-screens";
 import { getInventoryOptions, getInventorySettings } from "@/modules/inventory/queries";
@@ -87,7 +88,10 @@ async function NewCountButton() {
 }
 
 async function CountList({ searchParams }: Pick<Props, "searchParams">) {
-  const { search, status, warehouseId, from, to, offset } = readDocumentFilters(await searchParams);
+  const filters = readDocumentFilters(await searchParams);
+  const { warehouseId, from, to, offset } = filters;
+  const search = filters.search?.trim() || undefined;
+  const status = STATUS_OPTIONS.some((option) => option.value === filters.status) ? filters.status : undefined;
   const [options, result] = await Promise.all([
     getInventoryOptions(),
     tryApi(() => inventoryApi.counts.list({ search, status, warehouseId, from, to, limit: CRUD_PAGE_SIZE, offset })),
@@ -97,25 +101,34 @@ async function CountList({ searchParams }: Pick<Props, "searchParams">) {
 
   return (
     <>
-      <CardHeader
-        title={result.ok ? `${formatNumber(result.data.totalCount)} count(s)` : "Counts"}
-        actions={
-          <ListToolbar basePath={basePath} search={search} placeholder="Number or remarks" filtered={filtered}>
-            {warehouses.length > 1 && (
-              <FilterSelect
-                name="warehouse"
-                label="Warehouse"
-                value={warehouseId ? String(warehouseId) : undefined}
-                options={warehouseFilterOptions(warehouses)}
-                allLabel="All warehouses"
-                className="w-40"
-              />
-            )}
-            <FilterSelect name="status" label="Status" value={status} options={STATUS_OPTIONS} allLabel="All statuses" className="w-36" />
-            <DateRangeFilter from={from} to={to} />
-          </ListToolbar>
-        }
-      />
+      {/* A slim header row: the count and the filters, which apply as you type or choose. */}
+      <div className="flex flex-col gap-3 border-b border-gray-100 px-5 py-3 xl:flex-row xl:items-center xl:justify-between dark:border-gray-800">
+        <h2 className="text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-white/90">
+          {result.ok ? `${formatNumber(result.data.totalCount)} count${result.data.totalCount === 1 ? "" : "s"}` : "Counts"}
+        </h2>
+        <AutoSearchToolbar
+          basePath={basePath}
+          search={search}
+          placeholder="Number or remarks"
+          filters={[
+            ...(warehouses.length > 1
+              ? [
+                  {
+                    name: "warehouse",
+                    label: "Warehouse",
+                    value: warehouseId === undefined ? undefined : String(warehouseId),
+                    options: warehouseFilterOptions(warehouses),
+                    allLabel: "All warehouses",
+                    className: "w-44",
+                    searchable: true,
+                  },
+                ]
+              : []),
+            { name: "status", label: "Status", value: status, options: STATUS_OPTIONS, allLabel: "All statuses", className: "w-36" },
+          ]}
+          dateRange={{ from, to }}
+        />
+      </div>
       {!result.ok ? (
         <ApiErrorState error={result.error} />
       ) : result.data.items.length === 0 ? (

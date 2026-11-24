@@ -94,8 +94,8 @@ async function StockOnHandReport({ searchParams }: Pick<Props, "searchParams">) 
     <div className="space-y-6">
       <ReportFilters basePath={basePath} query={filters}>
         <ReportSearch value={search} placeholder="Product name or code" />
-        <ReportSelect name="warehouse" label="Warehouse" value={warehouseId} options={warehouses} allLabel="All warehouses" />
-        <ReportSelect name="category" label="Category" value={categoryId} options={categories} allLabel="All categories" className="w-56" />
+        <ReportSelect searchable name="warehouse" label="Warehouse" value={warehouseId} options={warehouses} allLabel="All warehouses" />
+        <ReportSelect searchable name="category" label="Category" value={categoryId} options={categories} allLabel="All categories" className="w-56" />
         <ReportToggle name="byWarehouse" label="Per warehouse" checked={byWarehouse} />
         <ReportToggle name="low" label="Low stock only" checked={lowStockOnly} />
         <ReportToggle name="zero" label="Include zero stock" checked={includeZero} />

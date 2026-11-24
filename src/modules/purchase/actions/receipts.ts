@@ -42,3 +42,8 @@ export async function cancelReceiptAction(id: number): Promise<ActionState> {
 export async function deleteReceiptAction(id: number): Promise<ActionState> {
   return runDocumentAction(purchaseModule, () => purchaseApi.receipts.remove(id), "Draft deleted.", "/purchase/goods-receipts");
 }
+
+/** Deletes a draft receipt from the list: the list reloads in place, keeping its filters, sort and page. */
+export async function deleteReceiptFromListAction(id: number): Promise<ActionState> {
+  return runDocumentAction(purchaseModule, () => purchaseApi.receipts.remove(id), "Draft deleted.");
+}

@@ -47,6 +47,12 @@ export type DocumentListQuery = {
   excludeOpening?: boolean;
   from?: string;
   to?: string;
+  /**
+   * A column of the list (adjustments: number, date, warehouse, reason, lines, value or status; transfers: number,
+   * date, from, to, lines, value or status); none = newest first.
+   */
+  sort?: string;
+  direction?: "asc" | "desc";
   limit: number;
   offset: number;
 };

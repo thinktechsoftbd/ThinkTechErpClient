@@ -2,6 +2,7 @@ import Form from "next/form";
 import { Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { Checkbox, Input, Select } from "@/core/forms/fields";
+import { SearchableSelectField } from "@/core/forms/searchable-select-field";
 import { Button, LinkButton } from "@/core/ui/button";
 import { Card } from "@/core/ui/card";
 import { buildHref, type QueryValues } from "@/core/ui/pagination";
@@ -100,6 +101,7 @@ export function ReportSelect({
   options,
   allLabel,
   className,
+  searchable = false,
 }: {
   name: string;
   label: string;
@@ -108,7 +110,22 @@ export function ReportSelect({
   /** The "no filter" choice; leave out when a value is always chosen. */
   allLabel?: string;
   className?: string;
+  /** A list with a search box (type to narrow a long list, e.g. warehouses or categories); Apply still sends it. */
+  searchable?: boolean;
 }) {
+  if (searchable) {
+    return (
+      <ReportField label={label} className={className} group>
+        <SearchableSelectField
+          name={name}
+          label={label}
+          value={value === undefined ? undefined : String(value)}
+          options={options}
+          allLabel={allLabel}
+        />
+      </ReportField>
+    );
+  }
   return (
     <ReportField label={label} className={className}>
       <Select name={name} defaultValue={value === undefined ? "" : String(value)} className="h-9">

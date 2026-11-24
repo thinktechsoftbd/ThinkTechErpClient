@@ -16,7 +16,7 @@ export default function StockAdjustmentsPage({ searchParams }: PageProps<"/inven
     <>
       <PageHeader
         title="Stock Adjustments"
-        description="Write off damaged, expired, lost or used stock, or add stock that was found. Count differences show up here too."
+        compact
         breadcrumbs={inventoryCrumbs({ label: "Stock Adjustments" })}
         actions={
           <Suspense>
@@ -29,7 +29,7 @@ export default function StockAdjustmentsPage({ searchParams }: PageProps<"/inven
         }
       />
       <Card>
-        <Suspense fallback={<TableSkeleton columns={7} />}>
+        <Suspense fallback={<TableSkeleton columns={8} />}>
           <AdjustmentList kind="adjustment" searchParams={searchParams} />
         </Suspense>
       </Card>

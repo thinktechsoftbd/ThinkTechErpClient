@@ -48,6 +48,8 @@ function SearchableFilter({ filter, onPick }: { filter: AutoFilter; onPick: (val
     [all, filter.options],
   );
   const what = filter.label.toLowerCase();
+  // "All customers" -> "customers", for when the list itself is empty (nothing added yet).
+  const plural = filter.allLabel.replace(/^all\s+/i, "").toLowerCase();
   return (
     <SearchSelect
       value={picked}
@@ -60,7 +62,7 @@ function SearchableFilter({ filter, onPick }: { filter: AutoFilter; onPick: (val
       optionLabel={(option) => option.shortLabel ?? option.label}
       renderOption={(option) => option.label}
       searchPlaceholder={`Search ${what}…`}
-      emptyText={`No ${what} matches.`}
+      emptyText={filter.options.length === 0 ? `No ${plural} yet.` : `No ${what} matches.`}
       panelMinWidth={300}
     />
   );

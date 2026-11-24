@@ -103,7 +103,7 @@ async function ExpiryReport({ searchParams }: Pick<Props, "searchParams">) {
           options={dayOptions}
           allLabel={alertDays ? `Alert setting (${formatNumber(alertDays)} days)` : "Alert setting"}
         />
-        <ReportSelect name="warehouse" label="Warehouse" value={warehouseId} options={warehouses} allLabel="All warehouses" />
+        <ReportSelect searchable name="warehouse" label="Warehouse" value={warehouseId} options={warehouses} allLabel="All warehouses" />
         <ReportSearch value={search} placeholder="Product or batch" />
       </ReportFilters>
 

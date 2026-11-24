@@ -71,7 +71,7 @@ export default function CustomerDuesPage({ searchParams }: Props) {
       <PageHeader
         title="Customer Dues"
         description="What each customer owes, aged by how long the invoices are past their due date. Amounts are in the base currency."
-        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Inventory", href: "/inventory" }, { label: "Customer Dues" }]}
+        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Sales", href: "/sales" }, { label: "Customer Dues" }]}
         actions={<PrintButton />}
       />
       <Suspense fallback={<ReportSkeleton stats={3} columns={11} />}>

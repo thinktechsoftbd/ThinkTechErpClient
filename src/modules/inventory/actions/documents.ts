@@ -66,11 +66,15 @@ export async function saveOpeningStockAction(id: number | null, _previous: Actio
   const missingCost = body.lines.findIndex((line) => !isQuantity(line.unitCost) || line.unitCost < 0);
   if (missingCost >= 0) return actionError(`Line ${missingCost + 1}: enter the cost per unit.`);
 
+  // From the popup over the list (returnTo = the list): back to the list instead of the saved document.
+  const target = popupReturn(formData, "/inventory/opening-stock", openingPaths);
   return saveDocument(
     inventoryModule,
     () => (id === null ? inventoryApi.adjustments.create(body) : inventoryApi.adjustments.update(id, body)),
     readIntent(formData) === "post" ? (savedId) => inventoryApi.adjustments.action(savedId, "post") : null,
-    openingPaths,
+    target.paths,
+    "posted",
+    target.replace,
   );
 }
 
@@ -112,6 +116,15 @@ export async function deleteOpeningStockAction(id: number): Promise<ActionState>
 
 export async function deleteAdjustmentAction(id: number): Promise<ActionState> {
   return runDocumentAction(inventoryModule, () => inventoryApi.adjustments.remove(id), "Draft deleted.", "/inventory/adjustments");
+}
+
+/** Deletes a draft opening stock or adjustment from its list: the list reloads in place, keeping its filters. */
+export async function deleteOpeningStockFromListAction(id: number): Promise<ActionState> {
+  return runDocumentAction(inventoryModule, () => inventoryApi.adjustments.remove(id), "Draft deleted.");
+}
+
+export async function deleteAdjustmentFromListAction(id: number): Promise<ActionState> {
+  return runDocumentAction(inventoryModule, () => inventoryApi.adjustments.remove(id), "Draft deleted.");
 }
 
 // ---- Stock transfers
@@ -167,6 +180,11 @@ export async function cancelTransferAction(id: number): Promise<ActionState> {
 
 export async function deleteTransferAction(id: number): Promise<ActionState> {
   return runDocumentAction(inventoryModule, () => inventoryApi.transfers.remove(id), "Draft deleted.", "/inventory/transfers");
+}
+
+/** Deletes a draft transfer from the list: the list reloads in place, keeping its filters, sort and page. */
+export async function deleteTransferFromListAction(id: number): Promise<ActionState> {
+  return runDocumentAction(inventoryModule, () => inventoryApi.transfers.remove(id), "Draft deleted.");
 }
 
 // ---- Stock counts

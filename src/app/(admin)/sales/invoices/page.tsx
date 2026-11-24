@@ -1,14 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plus, ShoppingBag } from "lucide-react";
+import { Pencil, Plus, ShoppingBag } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
-import { CRUD_PAGE_SIZE, FilterSelect, ListToolbar } from "@/core/crud/list-toolbar";
+import { requireSession } from "@/core/auth/session";
+import { AutoSearchToolbar } from "@/core/crud/auto-search-toolbar";
+import { ConfirmDeleteButton } from "@/core/crud/confirm-delete-button";
+import { LockedRowActions } from "@/core/crud/locked-row-actions";
 import { PermissionOnly } from "@/core/crud/permission-only";
+import { rowIconAction } from "@/core/crud/row-action";
+import { SortHeader, type SortDirection } from "@/core/crud/sort-header";
 import { DocumentStatusBadge } from "@/core/documents/document-status";
 import { ApiErrorState } from "@/core/ui/api-error-state";
 import { LinkButton } from "@/core/ui/button";
-import { Card, CardHeader } from "@/core/ui/card";
+import { Card } from "@/core/ui/card";
 import { EmptyState, TableSkeleton } from "@/core/ui/feedback";
 import { PageHeader } from "@/core/ui/page-header";
 import { Pagination, firstParam, parseOffset } from "@/core/ui/pagination";
@@ -16,8 +21,9 @@ import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatDate, formatNumber } from "@/core/utils/format";
 import { formatAmount } from "@/core/utils/number";
 import { parseIdParam } from "@/core/utils/params";
-import { DateRangeFilter } from "@/modules/inventory/components/documents/list-filters";
 import { dateParam } from "@/modules/inventory/components/reports/report-parts";
+import { canManageSales } from "@/modules/sales/access";
+import { deleteSaleFromListAction } from "@/modules/sales/actions/invoices";
 import { salesApi } from "@/modules/sales/api";
 import { getCustomerOptions } from "@/modules/sales/queries";
 import { SALES_MANAGE_PERMISSION, customerLabel } from "@/modules/sales/types";
@@ -25,6 +31,9 @@ import { SALES_MANAGE_PERMISSION, customerLabel } from "@/modules/sales/types";
 export const metadata: Metadata = { title: "Sales" };
 
 const basePath = "/sales/invoices";
+const PAGE_SIZE = 30;
+const SORTS = ["number", "date", "customer", "type", "total", "due", "payment", "status"] as const;
+type Sort = (typeof SORTS)[number];
 type Props = PageProps<"/sales/invoices">;
 
 const STATUS_OPTIONS = [
@@ -42,13 +51,18 @@ const PAYMENT_OPTIONS = [
   { value: "Paid", label: "Paid" },
 ];
 
+/** A query value only when it is one of the allowed ones (the URL may hold anything). */
+function oneOf(value: string | undefined, options: { value: string }[]) {
+  return value && options.some((option) => option.value === value) ? value : undefined;
+}
+
 export default function SalesInvoicesPage({ searchParams }: Props) {
   return (
     <>
       <PageHeader
         title="Sales"
-        description="Cash and credit sales. Completing a sale takes the stock out; a credit sale adds the due to the customer's account."
-        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Inventory", href: "/inventory" }, { label: "Sales" }]}
+        compact
+        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Sales", href: "/sales" }, { label: "Invoices" }]}
         actions={
           <Suspense>
             <PermissionOnly code={SALES_MANAGE_PERMISSION}>
@@ -60,7 +74,7 @@ export default function SalesInvoicesPage({ searchParams }: Props) {
         }
       />
       <Card>
-        <Suspense fallback={<TableSkeleton columns={8} />}>
+        <Suspense fallback={<TableSkeleton columns={9} />}>
           <InvoiceList searchParams={searchParams} />
         </Suspense>
       </Card>
@@ -68,49 +82,78 @@ export default function SalesInvoicesPage({ searchParams }: Props) {
   );
 }
 
+// Server-side: the API filters (number, customer name, code or mobile; customer, type, payment, status, dates),
+// sorts and pages; 30 per page, newest first unless a column is chosen.
 async function InvoiceList({ searchParams }: Pick<Props, "searchParams">) {
   const query = await searchParams;
-  const search = firstParam(query.q);
-  const status = firstParam(query.status);
-  const saleType = firstParam(query.type);
-  const paymentStatus = firstParam(query.payment);
+  const search = firstParam(query.q)?.trim() || undefined;
+  const status = oneOf(firstParam(query.status), STATUS_OPTIONS);
+  const saleType = oneOf(firstParam(query.type), TYPE_OPTIONS);
+  const paymentStatus = oneOf(firstParam(query.payment), PAYMENT_OPTIONS);
   const customerParam = firstParam(query.customer);
   const customerId = customerParam ? (parseIdParam(customerParam) ?? undefined) : undefined;
   // A malformed date in the URL is ignored rather than sent to the API (which refuses it).
   const from = dateParam(query.from);
   const to = dateParam(query.to);
+  const sortParam = firstParam(query.sort);
+  const sort: Sort | undefined = SORTS.find((value) => value === sortParam);
+  const direction: SortDirection = firstParam(query.dir) === "desc" ? "desc" : "asc";
   const offset = parseOffset(query.offset);
 
-  const [customers, result] = await Promise.all([
+  const [session, customers, result] = await Promise.all([
+    requireSession(),
     getCustomerOptions(),
-    tryApi(() => salesApi.invoices.list({ search, status, saleType, paymentStatus, customerId, from, to, limit: CRUD_PAGE_SIZE, offset })),
+    tryApi(() =>
+      salesApi.invoices.list({ search, status, saleType, paymentStatus, customerId, from, to, sort, direction, limit: PAGE_SIZE, offset }),
+    ),
   ]);
   const filtered = Boolean(search || status || saleType || paymentStatus || customerId || from || to);
+  const canManage = canManageSales(session);
+  const filterQuery = {
+    q: search,
+    status,
+    type: saleType,
+    payment: paymentStatus,
+    customer: customerId === undefined ? undefined : String(customerId),
+    from,
+    to,
+  };
+  const sorting = { sort: sort ?? "", direction, basePath, query: filterQuery };
+  const header = (label: string, column: Sort, className?: string) => (
+    <SortHeader label={label} column={column} className={className} {...sorting} />
+  );
 
   return (
     <>
-      <CardHeader
-        title={result.ok ? `${formatNumber(result.data.totalCount)} sale(s)` : "Sales"}
-        actions={
-          <ListToolbar basePath={basePath} search={search} placeholder="No, customer, mobile" filtered={filtered}>
-            <FilterSelect
-              name="customer"
-              label="Customer"
-              value={customerId ? String(customerId) : undefined}
-              options={(customers.ok ? customers.data : []).map((c) => ({ value: String(c.id), label: c.name }))}
-              allLabel="All customers"
-              className="w-44"
-            />
-            <FilterSelect name="type" label="Type" value={saleType} options={TYPE_OPTIONS} allLabel="Cash & credit" className="w-32" />
-            <FilterSelect name="payment" label="Payment" value={paymentStatus} options={PAYMENT_OPTIONS} allLabel="Any payment" className="w-36" />
-            <FilterSelect name="status" label="Status" value={status} options={STATUS_OPTIONS} allLabel="All statuses" className="w-32" />
-            <DateRangeFilter from={from} to={to} />
-          </ListToolbar>
-        }
-      />
+      {/* A slim header row: the count and the filters, which apply as you type or choose. */}
+      <div className="flex flex-col gap-3 border-b border-gray-100 px-5 py-3 xl:flex-row xl:items-center xl:justify-between dark:border-gray-800">
+        <h2 className="text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-white/90">
+          {result.ok ? `${formatNumber(result.data.totalCount)} sale${result.data.totalCount === 1 ? "" : "s"}` : "Sales"}
+        </h2>
+        <AutoSearchToolbar
+          basePath={basePath}
+          search={search}
+          placeholder="No, customer, mobile"
+          filters={[
+            {
+              name: "customer",
+              label: "Customer",
+              value: filterQuery.customer,
+              options: (customers.ok ? customers.data : []).map((customer) => ({ value: String(customer.id), label: customer.name })),
+              allLabel: "All customers",
+              className: "w-44",
+              searchable: true,
+            },
+            { name: "type", label: "Type", value: saleType, options: TYPE_OPTIONS, allLabel: "Cash & credit", className: "w-32" },
+            { name: "payment", label: "Payment", value: paymentStatus, options: PAYMENT_OPTIONS, allLabel: "Any payment", className: "w-36" },
+            { name: "status", label: "Status", value: status, options: STATUS_OPTIONS, allLabel: "All statuses", className: "w-32" },
+          ]}
+          dateRange={{ from, to }}
+        />
+      </div>
       {!result.ok ? (
         <ApiErrorState error={result.error} />
-      ) : result.data.items.length === 0 ? (
+      ) : result.data.items.length === 0 && offset === 0 ? (
         <EmptyState
           icon={ShoppingBag}
           title={filtered ? "No sales match these filters" : "No sales yet"}
@@ -121,14 +164,15 @@ async function InvoiceList({ searchParams }: Pick<Props, "searchParams">) {
           <Table>
             <THead>
               <tr>
-                <TH>Invoice</TH>
-                <TH>Date</TH>
-                <TH>Customer</TH>
-                <TH>Type</TH>
-                <TH className="text-right">Total</TH>
-                <TH className="text-right">Due</TH>
-                <TH>Payment</TH>
-                <TH>Status</TH>
+                {header("Invoice", "number")}
+                {header("Date", "date")}
+                {header("Customer", "customer")}
+                {header("Type", "type")}
+                {header("Total", "total", "text-right")}
+                {header("Due", "due", "text-right")}
+                {header("Payment", "payment")}
+                {header("Status", "status")}
+                {canManage && <TH className="text-right">Actions</TH>}
               </tr>
             </THead>
             <TBody>
@@ -156,15 +200,45 @@ async function InvoiceList({ searchParams }: Pick<Props, "searchParams">) {
                   <TD>
                     <DocumentStatusBadge status={invoice.status} />
                   </TD>
+                  {canManage && (
+                    <TD className="text-right">
+                      {/* Only a draft can be changed or deleted; a completed sale is cancelled from its page. */}
+                      {invoice.status !== "Draft" ? (
+                        <LockedRowActions
+                          reason={
+                            invoice.status === "Posted"
+                              ? "A completed sale can't be edited or deleted: its stock has gone out. Open it to cancel it."
+                              : "A cancelled sale can't be edited or deleted."
+                          }
+                        />
+                      ) : (
+                        <span className="inline-flex items-center gap-1">
+                          <Link
+                            href={`${basePath}/${invoice.id}/edit`}
+                            className={rowIconAction("edit")}
+                            title={`Edit ${invoice.invoiceNo}`}
+                            aria-label={`Edit ${invoice.invoiceNo}`}
+                          >
+                            <Pencil className="size-4" aria-hidden />
+                          </Link>
+                          <ConfirmDeleteButton
+                            iconOnly
+                            action={deleteSaleFromListAction.bind(null, invoice.id)}
+                            itemLabel={`draft sale ${invoice.invoiceNo}`}
+                          />
+                        </span>
+                      )}
+                    </TD>
+                  )}
                 </TR>
               ))}
             </TBody>
           </Table>
           <Pagination
             basePath={basePath}
-            query={{ q: search, status, type: saleType, payment: paymentStatus, customer: customerId, from, to }}
+            query={{ ...filterQuery, sort, dir: direction === "asc" ? undefined : direction }}
             offset={offset}
-            limit={CRUD_PAGE_SIZE}
+            limit={PAGE_SIZE}
             count={result.data.items.length}
             total={result.data.totalCount}
           />

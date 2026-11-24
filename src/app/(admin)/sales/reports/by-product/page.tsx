@@ -45,7 +45,7 @@ export default function SalesByProductPage({ searchParams }: Props) {
       <PageHeader
         title="Sales by Product"
         description="How much of each product was sold, at what average price and margin, from posted sales less the goods returned in the period. Amounts are in the base currency; the period defaults to this month."
-        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Inventory", href: "/inventory" }, { label: "Sales by Product" }]}
+        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Sales", href: "/sales" }, { label: "Sales by Product" }]}
         actions={<PrintButton />}
       />
       <Suspense fallback={<ReportSkeleton stats={4} columns={11} />}>
@@ -82,9 +82,9 @@ async function ByProductReport({ searchParams }: Pick<Props, "searchParams">) {
     <div className="space-y-6">
       <ReportFilters basePath={basePath} query={filters}>
         <ReportSearch value={search} placeholder="Product name or code" />
-        <ReportSelect name="customer" label="Customer" value={customerId} options={customers} allLabel="All customers" className="w-56" />
-        <ReportSelect name="warehouse" label="Warehouse" value={warehouseId} options={warehouses} allLabel="All warehouses" />
-        <ReportSelect name="category" label="Category" value={categoryId} options={categories} allLabel="All categories" className="w-56" />
+        <ReportSelect searchable name="customer" label="Customer" value={customerId} options={customers} allLabel="All customers" className="w-56" />
+        <ReportSelect searchable name="warehouse" label="Warehouse" value={warehouseId} options={warehouses} allLabel="All warehouses" />
+        <ReportSelect searchable name="category" label="Category" value={categoryId} options={categories} allLabel="All categories" className="w-56" />
         <ReportDate name="from" label="From" value={from} />
         <ReportDate name="to" label="To" value={to} />
       </ReportFilters>

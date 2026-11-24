@@ -82,7 +82,7 @@ async function RegisterReport({ searchParams }: Pick<Props, "searchParams">) {
     <div className="space-y-6">
       <ReportFilters basePath={basePath} query={filters}>
         <ReportSearch value={search} placeholder="Invoice, bill or VAT no" />
-        <ReportSelect name="supplier" label="Supplier" value={supplierId} options={supplierList} allLabel="All suppliers" className="w-56" />
+        <ReportSelect searchable name="supplier" label="Supplier" value={supplierId} options={supplierList} allLabel="All suppliers" className="w-56" />
         <ReportSelect name="type" label="Type" value={purchaseType} options={TYPE_OPTIONS} allLabel="Cash & credit" className="w-36" />
         <ReportDate name="from" label="From" value={from} />
         <ReportDate name="to" label="To" value={to} />

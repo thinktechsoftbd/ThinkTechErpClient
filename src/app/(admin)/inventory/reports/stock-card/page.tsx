@@ -79,7 +79,7 @@ async function StockCardReport({ searchParams }: Pick<Props, "searchParams">) {
             placeholder={card ? `${card.productName} (change)` : "Search product by name, code or barcode"}
           />
         </ReportField>
-        <ReportSelect name="warehouse" label="Warehouse" value={warehouseId} options={warehouseOptions(options)} allLabel="All warehouses" />
+        <ReportSelect searchable name="warehouse" label="Warehouse" value={warehouseId} options={warehouseOptions(options)} allLabel="All warehouses" />
         <ReportDate name="from" label="From" value={from} />
         <ReportDate name="to" label="To" value={to} />
       </ReportFilters>

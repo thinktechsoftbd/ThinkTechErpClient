@@ -63,7 +63,7 @@ async function EditSale({ params, searchParams }: Props) {
         description="A draft: no stock has moved yet. Complete it to take the stock out and record the payment or due."
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Inventory", href: "/inventory" },
+          { label: "Sales", href: "/sales" },
           { label: "Sales", href: "/sales/invoices" },
           { label: invoice.data.invoiceNo, href: `/sales/invoices/${id}` },
           { label: "Edit" },

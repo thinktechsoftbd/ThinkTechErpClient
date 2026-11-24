@@ -47,3 +47,8 @@ export async function cancelReturnAction(id: number): Promise<ActionState> {
 export async function deleteReturnAction(id: number): Promise<ActionState> {
   return runDocumentAction(purchaseModule, () => purchaseApi.returns.remove(id), "Draft deleted.", "/purchase/returns");
 }
+
+/** Deletes a draft return from the list: the list reloads in place, keeping its filters, sort and page. */
+export async function deleteReturnFromListAction(id: number): Promise<ActionState> {
+  return runDocumentAction(purchaseModule, () => purchaseApi.returns.remove(id), "Draft deleted.");
+}

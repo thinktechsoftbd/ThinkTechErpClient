@@ -68,12 +68,13 @@ async function SupplierLedgerReport({ searchParams }: Pick<Props, "searchParams"
   return (
     <div className="space-y-6">
       <ReportFilters basePath={basePath} query={{ supplier: supplierId, from, to }}>
+        {/* Type to search; with none chosen the box reads "Choose a supplier" (the ledger needs one). */}
         <ReportSelect
+          searchable
           name="supplier"
           label="Supplier"
           value={supplierId}
           options={supplierOptions(suppliers)}
-          allLabel="Choose a supplier"
           className="w-full sm:w-72"
         />
         <ReportDate name="from" label="From" value={from} />

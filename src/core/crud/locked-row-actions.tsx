@@ -1,20 +1,18 @@
-import { Pencil, Trash2 } from "lucide-react";
-
-const locked = "inline-flex size-8 cursor-not-allowed items-center justify-center rounded-lg text-gray-300 dark:text-gray-600";
+import { Lock } from "lucide-react";
 
 /**
- * The Edit and Delete icons of a row that can't be changed (e.g. a posted document), greyed out, with `reason`
- * as their tooltip, so every row shows the same actions and says why these don't apply.
+ * Shown instead of Edit and Delete on a row that can't be changed (e.g. a posted document): a blue "Locked"
+ * marker whose tooltip (`reason`) says why and what to do instead.
  */
 export function LockedRowActions({ reason }: { reason: string }) {
   return (
-    <span className="inline-flex items-center gap-1">
-      <span className={locked} title={reason} role="img" aria-label={`Edit unavailable: ${reason}`}>
-        <Pencil className="size-4" aria-hidden />
-      </span>
-      <span className={locked} title={reason} role="img" aria-label={`Delete unavailable: ${reason}`}>
-        <Trash2 className="size-4" aria-hidden />
-      </span>
+    <span
+      title={reason}
+      className="inline-flex cursor-help items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium whitespace-nowrap text-brand-600 dark:bg-brand-500/15 dark:text-brand-300"
+    >
+      <Lock className="size-3.5" aria-hidden />
+      Locked
+      <span className="sr-only">: {reason}</span>
     </span>
   );
 }

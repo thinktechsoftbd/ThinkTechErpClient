@@ -15,7 +15,7 @@ export default function NewSalePage() {
         description="Scan or search the items, choose cash or credit, and complete the sale."
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Inventory", href: "/inventory" },
+          { label: "Sales", href: "/sales" },
           { label: "Sales", href: "/sales/invoices" },
           { label: "New" },
         ]}

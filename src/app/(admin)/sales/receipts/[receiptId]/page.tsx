@@ -65,7 +65,7 @@ async function ReceiptDetail({ params }: Pick<Props, "params">) {
         description={`${isRefund ? "Refund to" : "Money receipt from"} ${receipt.customerName} · ${formatDate(receipt.receiptDate)}`}
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Inventory", href: "/inventory" },
+          { label: "Sales", href: "/sales" },
           { label: "Customer Receipts", href: "/sales/receipts" },
           { label: receipt.receiptNo },
         ]}

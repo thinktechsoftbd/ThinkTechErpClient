@@ -16,7 +16,7 @@ export default function OpeningStockPage({ searchParams }: PageProps<"/inventory
     <>
       <PageHeader
         title="Opening Stock"
-        description="The stock you have when you start using the system, with its cost. Posting puts it on the books."
+        compact
         breadcrumbs={inventoryCrumbs({ label: "Opening Stock" })}
         actions={
           <Suspense>
@@ -29,7 +29,7 @@ export default function OpeningStockPage({ searchParams }: PageProps<"/inventory
         }
       />
       <Card>
-        <Suspense fallback={<TableSkeleton columns={6} />}>
+        <Suspense fallback={<TableSkeleton columns={7} />}>
           <AdjustmentList kind="opening" searchParams={searchParams} />
         </Suspense>
       </Card>

@@ -49,7 +49,7 @@ async function EditReturn({ params, searchParams }: Props) {
       description="A draft: nothing has moved yet. Post it to put resellable goods back into stock and refund or deduct the amount."
       breadcrumbs={[
         { label: "Dashboard", href: "/dashboard" },
-        { label: "Inventory", href: "/inventory" },
+        { label: "Sales", href: "/sales" },
         { label: "Sales Returns", href: "/sales/returns" },
         { label: item.returnNo, href: viewHref },
         { label: "Edit" },

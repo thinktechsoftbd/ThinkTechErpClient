@@ -52,3 +52,8 @@ export async function cancelSaleAction(id: number): Promise<ActionState> {
 export async function deleteSaleAction(id: number): Promise<ActionState> {
   return runDocumentAction(salesModule, () => salesApi.invoices.remove(id), "Draft deleted.", "/sales/invoices");
 }
+
+/** Deletes a draft from the list: the list reloads in place, keeping its filters, sort and page. */
+export async function deleteSaleFromListAction(id: number): Promise<ActionState> {
+  return runDocumentAction(salesModule, () => salesApi.invoices.remove(id), "Draft deleted.");
+}

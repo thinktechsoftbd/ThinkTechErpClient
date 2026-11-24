@@ -50,7 +50,7 @@ export default function SalesRegisterPage({ searchParams }: Props) {
       <PageHeader
         title="Sales Register"
         description="Posted sales invoices with their total, what is still due, the cost of the goods sold and the profit. Amounts are in the base currency; the period defaults to this month."
-        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Inventory", href: "/inventory" }, { label: "Sales Register" }]}
+        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Sales", href: "/sales" }, { label: "Sales Register" }]}
         actions={<PrintButton />}
       />
       <Suspense fallback={<ReportSkeleton stats={4} columns={10} />}>
@@ -91,8 +91,8 @@ async function RegisterReport({ searchParams }: Pick<Props, "searchParams">) {
     <div className="space-y-6">
       <ReportFilters basePath={basePath} query={filters}>
         <ReportSearch value={search} placeholder="Invoice no, customer or mobile" />
-        <ReportSelect name="customer" label="Customer" value={customerId} options={customers} allLabel="All customers" className="w-56" />
-        <ReportSelect name="warehouse" label="Warehouse" value={warehouseId} options={warehouses} allLabel="All warehouses" />
+        <ReportSelect searchable name="customer" label="Customer" value={customerId} options={customers} allLabel="All customers" className="w-56" />
+        <ReportSelect searchable name="warehouse" label="Warehouse" value={warehouseId} options={warehouses} allLabel="All warehouses" />
         <ReportSelect name="type" label="Type" value={saleType} options={TYPE_OPTIONS} allLabel="Cash & credit" className="w-36" />
         <ReportDate name="from" label="From" value={from} />
         <ReportDate name="to" label="To" value={to} />

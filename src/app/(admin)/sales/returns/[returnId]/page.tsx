@@ -69,7 +69,7 @@ async function ReturnDetail({ params }: Pick<Props, "params">) {
         description={`Return from ${customerLabel(item)} · ${formatDate(item.returnDate)}`}
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Inventory", href: "/inventory" },
+          { label: "Sales", href: "/sales" },
           { label: "Sales Returns", href: "/sales/returns" },
           { label: item.returnNo },
         ]}

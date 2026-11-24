@@ -2,7 +2,7 @@
 
 import { actionError, type ActionState } from "@/core/forms/action-state";
 import { readIntent, readPayload } from "@/core/documents/payload";
-import { runDocumentAction, saveDocument } from "@/core/documents/run-action";
+import { popupReturn, runDocumentAction, saveDocument } from "@/core/documents/run-action";
 import { salesApi } from "../api";
 import { salesModule } from "../module";
 import type { SalesReturnUpsertRequest } from "../types";
@@ -30,11 +30,15 @@ export async function saveReturnAction(id: number | null, _previous: ActionState
     return actionError("Choose how the money is refunded.", { refundMethod: "Required." });
 
   const request: SalesReturnUpsertRequest = { ...body, lines };
+  // From the popup over the list (returnTo = the list): back to the list instead of the saved return.
+  const target = popupReturn(formData, "/sales/returns", paths);
   return saveDocument(
     salesModule,
     () => (id === null ? salesApi.returns.create(request) : salesApi.returns.update(id, request)),
     readIntent(formData) === "post" ? (savedId) => salesApi.returns.action(savedId, "post") : null,
-    paths,
+    target.paths,
+    "posted",
+    target.replace,
   );
 }
 
@@ -52,4 +56,9 @@ export async function cancelReturnAction(id: number): Promise<ActionState> {
 
 export async function deleteReturnAction(id: number): Promise<ActionState> {
   return runDocumentAction(salesModule, () => salesApi.returns.remove(id), "Draft deleted.", "/sales/returns");
+}
+
+/** Deletes a draft from the list: the list reloads in place, keeping its filters, sort and page. */
+export async function deleteReturnFromListAction(id: number): Promise<ActionState> {
+  return runDocumentAction(salesModule, () => salesApi.returns.remove(id), "Draft deleted.");
 }

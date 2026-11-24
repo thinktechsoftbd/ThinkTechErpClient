@@ -47,7 +47,7 @@ export default function CustomerLedgerPage({ searchParams }: Props) {
       <PageHeader
         title="Customer Ledger"
         description="A customer's sales, returns, receipts and refunds over a period, with the running balance in the base currency."
-        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Inventory", href: "/inventory" }, { label: "Customer Ledger" }]}
+        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Sales", href: "/sales" }, { label: "Customer Ledger" }]}
         actions={<PrintButton />}
       />
       <Suspense fallback={<ReportSkeleton stats={4} columns={6} />}>
@@ -71,12 +71,13 @@ async function CustomerLedgerReport({ searchParams }: Pick<Props, "searchParams"
   return (
     <div className="space-y-6">
       <ReportFilters basePath={basePath} query={{ customer: customerId, from, to }}>
+        {/* Type to search; with none chosen the box reads "Choose a customer" (the ledger needs one). */}
         <ReportSelect
+          searchable
           name="customer"
           label="Customer"
           value={customerId}
           options={customers}
-          allLabel="Choose a customer"
           className="w-full sm:w-72"
         />
         <ReportDate name="from" label="From" value={from} />

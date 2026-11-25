@@ -17,9 +17,9 @@ import { saveAllocationAction } from "@/modules/sms/actions/allocations";
 import { smsApi } from "@/modules/sms/api";
 import { AllocationFields } from "@/modules/sms/components/allocations/allocation-fields";
 import { AllocationsTable } from "@/modules/sms/components/allocations/allocations-table";
-import { DateRangeFilter, dateParam, guidParam, idParam } from "@/modules/sms/components/list-filters";
+import { DateRangeFilter, dateParam, guidParam } from "@/modules/sms/components/list-filters";
 import { getSmsOrganizations, getSmsProviders } from "@/modules/sms/queries";
-import { SMS_MANAGE_PERMISSION, organizationLabel, providerLabel } from "@/modules/sms/types";
+import { SMS_MANAGE_PERMISSION, organizationLabel } from "@/modules/sms/types";
 
 export const metadata: Metadata = { title: "SMS Allocations" };
 
@@ -31,7 +31,7 @@ export default function SmsAllocationsPage({ searchParams }: Props) {
     <>
       <PageHeader
         title="Allocations"
-        description="SMS given to organizations from a provider's stock. Changes can't leave an organization below what it already used."
+        description="SMS given to organizations from the stock of each one's provider (set in Security → Organizations). Changes can't leave an organization below what it already used."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "SMS", href: "/sms" }, { label: "Allocations" }]}
         actions={
           <Suspense>
@@ -42,7 +42,7 @@ export default function SmsAllocationsPage({ searchParams }: Props) {
         }
       />
       <Card>
-        <Suspense fallback={<TableSkeleton columns={6} />}>
+        <Suspense fallback={<TableSkeleton columns={5} />}>
           <AllocationList searchParams={searchParams} />
         </Suspense>
       </Card>
@@ -80,7 +80,6 @@ async function NewAllocationButton({ searchParams }: Pick<Props, "searchParams">
 async function AllocationList({ searchParams }: Pick<Props, "searchParams">) {
   const query = await searchParams;
   const search = firstParam(query.q);
-  const providerId = idParam(query.provider);
   const organizationId = guidParam(query.organizationId);
   const from = dateParam(query.from);
   const to = dateParam(query.to);
@@ -90,26 +89,18 @@ async function AllocationList({ searchParams }: Pick<Props, "searchParams">) {
     requireSession(),
     getSmsProviders(),
     getSmsOrganizations(),
-    tryApi(() => smsApi.allocations.list({ search, providerId, organizationId, from, to, limit: CRUD_PAGE_SIZE, offset })),
+    tryApi(() => smsApi.allocations.list({ search, organizationId, from, to, limit: CRUD_PAGE_SIZE, offset })),
   ]);
   const providerList = providers.ok ? providers.data : [];
   const organizationList = organizations.ok ? organizations.data.items : [];
-  const filtered = Boolean(search || providerId || organizationId || from || to);
+  const filtered = Boolean(search || organizationId || from || to);
 
   return (
     <>
       <CardHeader
         title={result.ok ? `${formatNumber(result.data.totalCount)} allocation(s)` : "Allocations"}
         actions={
-          <ListToolbar basePath={basePath} search={search} placeholder="Organization, provider, remarks" filtered={filtered}>
-            <FilterSelect
-              name="provider"
-              label="Provider"
-              value={providerId ? String(providerId) : undefined}
-              options={providerList.map((provider) => ({ value: String(provider.id), label: providerLabel(provider) }))}
-              allLabel="All providers"
-              className="w-44"
-            />
+          <ListToolbar basePath={basePath} search={search} placeholder="Organization, remarks" filtered={filtered}>
             <FilterSelect
               name="organizationId"
               label="Organization"
@@ -130,7 +121,7 @@ async function AllocationList({ searchParams }: Pick<Props, "searchParams">) {
         <EmptyState
           icon={ArrowLeftRight}
           title={filtered ? "No allocations match these filters" : "No allocations yet"}
-          description={filtered ? undefined : "Give an organization SMS from a provider's stock with Allocate."}
+          description={filtered ? undefined : "Give an organization SMS from its provider's stock with Allocate."}
         />
       ) : (
         <>
@@ -142,7 +133,7 @@ async function AllocationList({ searchParams }: Pick<Props, "searchParams">) {
           />
           <Pagination
             basePath={basePath}
-            query={{ q: search, provider: providerId, organizationId, from, to }}
+            query={{ q: search, organizationId, from, to }}
             offset={offset}
             limit={CRUD_PAGE_SIZE}
             count={result.data.items.length}

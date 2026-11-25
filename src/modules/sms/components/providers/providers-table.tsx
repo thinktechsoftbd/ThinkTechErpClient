@@ -34,6 +34,9 @@ export function ProvidersTable({ rows, canManage }: { rows: SmsProvider[]; canMa
             <TD className="max-w-72">
               {row.apiBaseUrl ? <span className="block truncate" title={row.apiBaseUrl}>{row.apiBaseUrl}</span> : <span className={muted}>—</span>}
               {row.apiUsername && <span className={`block text-xs ${muted}`}>User: {row.apiUsername}</span>}
+              <span className={`block text-xs ${muted}`}>
+                Sender: {row.senderId ? <span className="font-mono">{row.senderId}</span> : "none (can't send)"}
+              </span>
             </TD>
             <TD>
               {row.hasApiPassword || row.hasApiKey ? (
@@ -67,7 +70,7 @@ export function ProvidersTable({ rows, canManage }: { rows: SmsProvider[]; canMa
                   <ConfirmDeleteButton
                     action={deleteProviderAction.bind(null, row.id)}
                     itemLabel={`provider "${row.name}"`}
-                    message="A provider SMS were bought from or allocated with can't be deleted; deactivate it instead."
+                    message="A provider SMS were bought from or organizations send through can't be deleted; deactivate it instead."
                   />
                 </span>
               </TD>

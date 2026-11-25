@@ -18,7 +18,14 @@ import {
   updateUserAction,
 } from "../actions";
 import { deploymentPath } from "../deployment-types";
-import type { Organization, RoleSummary, SecurityPermission, SecurityRole, SecurityUser } from "../types";
+import type {
+  Organization,
+  OrganizationSmsProviderOption,
+  RoleSummary,
+  SecurityPermission,
+  SecurityRole,
+  SecurityUser,
+} from "../types";
 import { OrganizationFields, PermissionFields } from "./forms";
 import { UserFields } from "./user-forms";
 
@@ -33,15 +40,17 @@ export function smsAllocationsHref(organization: Pick<Organization, "objectId">)
 /**
  * With `canManage` (ORGANIZATION.M) each row has Edit, opening the form in a popup; with `smsLinks` (the
  * user can open the SMS module) it links to the organization's allocations; with `deploymentLinks`
- * (DEPLOYMENT.V or .M) to its deployment page.
+ * (DEPLOYMENT.V or .M) to its deployment page. `smsProviders` feeds the Edit popup's SMS provider picker.
  */
 export function OrganizationsTable({
   organizations,
+  smsProviders,
   canManage = false,
   smsLinks = false,
   deploymentLinks = false,
 }: {
   organizations: Organization[];
+  smsProviders: OrganizationSmsProviderOption[];
   canManage?: boolean;
   smsLinks?: boolean;
   deploymentLinks?: boolean;
@@ -57,7 +66,7 @@ export function OrganizationsTable({
           <TH>Slug</TH>
           <TH>Contact</TH>
           <TH>Location</TH>
-          <TH className="text-right">SMS used</TH>
+          <TH className="text-right">SMS</TH>
           <TH>Status</TH>
           {withActions && <TH className="text-right">Actions</TH>}
         </tr>
@@ -90,7 +99,10 @@ export function OrganizationsTable({
               {organization.phone && <p className="text-xs">{organization.phone}</p>}
             </TD>
             <TD className={muted}>{[organization.city, organization.country].filter(Boolean).join(", ") || "—"}</TD>
-            <TD className="text-right tabular-nums">{formatNumber(organization.smsUsage)}</TD>
+            <TD className="text-right">
+              <span className="tabular-nums">{formatNumber(organization.smsUsage)} used</span>
+              <p className={`text-xs ${muted}`}>{organization.smsProviderName ?? "No provider"}</p>
+            </TD>
             <TD>
               <StatusBadge active={organization.isActive} />
             </TD>
@@ -108,7 +120,7 @@ export function OrganizationsTable({
                       size="lg"
                     >
                       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                        <OrganizationFields organization={organization} />
+                        <OrganizationFields organization={organization} smsProviders={smsProviders} />
                       </div>
                     </FormModalButton>
                   )}

@@ -105,6 +105,7 @@ function organizationBody(formData: FormData, fieldErrors: FieldErrors): Organiz
     isExternal: formData.get("isExternal") === "on",
     isActive: formData.get("isActive") === "on",
     isFinalized: formData.get("isFinalized") === "on",
+    smsProviderId: optionalId(formData, "smsProviderId"),
   };
 }
 

@@ -1,9 +1,15 @@
 import { ActionForm, FormMessage } from "@/core/forms/action-form";
-import { Checkbox, Field, Input, Textarea } from "@/core/forms/fields";
+import { Checkbox, Field, Input, Select, Textarea } from "@/core/forms/fields";
 import { ImageUpload } from "@/core/forms/image-upload";
 import { formatQuantity } from "@/core/utils/number";
 import { saveOrganizationAction, savePermissionAction, saveRoleAction } from "../actions";
-import { ORGANIZATION_MANAGE_PERMISSION, type Organization, type SecurityPermission, type SecurityRole } from "../types";
+import {
+  ORGANIZATION_MANAGE_PERMISSION,
+  type Organization,
+  type OrganizationSmsProviderOption,
+  type SecurityPermission,
+  type SecurityRole,
+} from "../types";
 import { FormActions, PermissionPicker } from "./form-parts";
 import { OrganizationIdField } from "./organization-id-field";
 
@@ -44,12 +50,20 @@ function OrganizationInput({
   );
 }
 
-export function OrganizationForm({ organization, readOnly }: { organization?: Organization; readOnly?: boolean }) {
+export function OrganizationForm({
+  organization,
+  smsProviders,
+  readOnly,
+}: {
+  organization?: Organization;
+  smsProviders: OrganizationSmsProviderOption[];
+  readOnly?: boolean;
+}) {
   return (
     <ActionForm action={saveOrganizationAction.bind(null, organization?.id ?? null)}>
       <fieldset disabled={readOnly} className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <FormMessage className="md:col-span-2" />
-        <OrganizationFields organization={organization} />
+        <OrganizationFields organization={organization} smsProviders={smsProviders} />
         <FormActions
           readOnly={readOnly}
           submitLabel={organization ? "Save organization" : "Create organization"}
@@ -63,10 +77,33 @@ export function OrganizationForm({ organization, readOnly }: { organization?: Or
 }
 
 /**
- * The organization's fields, as items of a two-column grid the caller provides: the page form above,
- * and the New organization popup on the list.
+ * The SMS provider picker's options: the active providers, and the organization's own provider even
+ * when it is inactive or the list couldn't be loaded (so saving never drops it by accident).
  */
-export function OrganizationFields({ organization }: { organization?: Organization }) {
+function smsProviderOptions(providers: OrganizationSmsProviderOption[], organization: Organization | undefined) {
+  const options = providers
+    .filter((provider) => provider.isActive || provider.id === organization?.smsProviderId)
+    .map((provider) => ({
+      id: provider.id,
+      label: `${provider.name} (${provider.code})${provider.isActive ? "" : " (inactive)"}${provider.hasSenderId ? "" : " (no sender ID)"}`,
+    }));
+  if (organization?.smsProviderId && !options.some((option) => option.id === organization.smsProviderId)) {
+    options.push({ id: organization.smsProviderId, label: organization.smsProviderName ?? `Provider ${organization.smsProviderId}` });
+  }
+  return options;
+}
+
+/**
+ * The organization's fields, as items of a two-column grid the caller provides: the page form above,
+ * the New organization popup and the Edit popups on the list. `smsProviders` feeds the SMS provider picker.
+ */
+export function OrganizationFields({
+  organization,
+  smsProviders,
+}: {
+  organization?: Organization;
+  smsProviders: OrganizationSmsProviderOption[];
+}) {
   const field = { organization };
   return (
     <>
@@ -126,6 +163,20 @@ export function OrganizationFields({ organization }: { organization?: Organizati
       <Checkbox name="isActive" defaultChecked={organization?.isActive ?? true} label="Active" className="md:col-span-2" />
 
       <h4 className={`${sectionTitle} pt-2`}>SMS</h4>
+      <Field
+        label="SMS provider"
+        name="smsProviderId"
+        hint="Its SMS are sent through this provider, from the provider's sender ID, and allocated from its stock. Changing it moves the allocated SMS to the new provider."
+      >
+        <Select id="smsProviderId" name="smsProviderId" defaultValue={organization?.smsProviderId ? String(organization.smsProviderId) : ""}>
+          <option value="">No SMS provider</option>
+          {smsProviderOptions(smsProviders, organization).map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
+      </Field>
       <Field label="SMS used" name="smsUsage" hint="Recorded under SMS → Organizations; it can't be changed here.">
         <Input
           id="smsUsage"
@@ -135,13 +186,12 @@ export function OrganizationFields({ organization }: { organization?: Organizati
           className="bg-gray-50 tabular-nums dark:bg-white/[0.03]"
         />
       </Field>
-      <div className="flex items-end pb-3">
-        <Checkbox
-          name="isFinalized"
-          defaultChecked={organization?.isFinalized ?? false}
-          label="Finalized: lock its SMS allocations (none can be added, changed or deleted)"
-        />
-      </div>
+      <Checkbox
+        name="isFinalized"
+        defaultChecked={organization?.isFinalized ?? false}
+        label="Finalized: lock its SMS allocations (none can be added, changed or deleted)"
+        className="md:col-span-2"
+      />
     </>
   );
 }

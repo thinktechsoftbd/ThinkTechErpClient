@@ -7,13 +7,13 @@ import { actionSuccess, type ActionState } from "@/core/forms/action-state";
 import { smsApi } from "../api";
 import { smsModule } from "../module";
 import type { SmsAllocationUpsertRequest } from "../types";
-import { invalid, optionalText, requiredDate, requiredGuid, requiredId, smsCount, type FieldErrors } from "./form-input";
+import { invalid, optionalText, requiredDate, requiredGuid, smsCount, type FieldErrors } from "./form-input";
 
-// Save and delete Server Actions for SMS allocated to organizations from a provider's stock.
+// Save and delete Server Actions for SMS allocated to organizations from their provider's stock (the provider is the
+// organization's, chosen in Security → Organizations).
 
 function allocationBody(formData: FormData, fieldErrors: FieldErrors): SmsAllocationUpsertRequest {
   return {
-    providerId: requiredId(formData, "providerId", "Choose the provider.", fieldErrors),
     organizationObjectId: requiredGuid(formData, "organizationObjectId", "Choose the organization.", fieldErrors),
     allocatedSms: smsCount(formData, "allocatedSms", 1, Number.MAX_SAFE_INTEGER, fieldErrors),
     allocationDate: requiredDate(formData, "allocationDate", fieldErrors),
@@ -22,8 +22,8 @@ function allocationBody(formData: FormData, fieldErrors: FieldErrors): SmsAlloca
 }
 
 /**
- * Allocates (id = null) or changes an allocation. The API refuses more than the provider has left,
- * and a change that would leave the organization below what it already used.
+ * Allocates (id = null) or changes an allocation. The API refuses an organization without a provider,
+ * more than its provider has left, and a change that would leave the organization below what it already used.
  */
 export async function saveAllocationAction(id: number | null, _previous: ActionState, formData: FormData): Promise<ActionState> {
   const fieldErrors: FieldErrors = {};

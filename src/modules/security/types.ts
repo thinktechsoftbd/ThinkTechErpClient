@@ -76,6 +76,12 @@ export type Organization = {
   smsUsage: number;
   /** Finalized: its SMS allocations are locked (none can be added, changed or deleted). */
   isFinalized: boolean;
+  /**
+   * The SMS provider it sends through (with that provider's sender ID); null: none yet. Its SMS
+   * allocations come from this provider's stock.
+   */
+  smsProviderId: number | null;
+  smsProviderName: string | null;
   createdAt: string;
   createdBy: number | null;
   updatedAt: string | null;
@@ -84,10 +90,21 @@ export type Organization = {
 
 export type OrganizationUpsertRequest = Omit<
   Organization,
-  "id" | "objectId" | "smsUsage" | "createdAt" | "createdBy" | "updatedAt" | "updatedBy"
+  "id" | "objectId" | "smsUsage" | "smsProviderName" | "createdAt" | "createdBy" | "updatedAt" | "updatedBy"
 > & {
   /** Null keeps the current Organization Id (or, on create, lets the API generate one). */
   objectId: string | null;
+};
+
+/** An SMS provider for an organization's SMS provider picker (GET /api/security/organizations/sms-providers). */
+export type OrganizationSmsProviderOption = {
+  id: number;
+  name: string;
+  code: string;
+  /** Inactive providers can only be kept, not newly chosen. */
+  isActive: boolean;
+  /** Without a sender ID, SMS can't be sent through it. */
+  hasSenderId: boolean;
 };
 
 export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

@@ -41,6 +41,7 @@ function providerBody(formData: FormData, fieldErrors: FieldErrors): SmsProvider
     apiUsername: optionalText(formData, "apiUsername", 150, fieldErrors),
     apiPassword: secret(formData, "apiPassword", 1000, fieldErrors),
     apiKey: secret(formData, "apiKey", 2000, fieldErrors),
+    senderId: optionalText(formData, "senderId", 50, fieldErrors),
     isActive: checked(formData, "isActive"),
   };
 }
@@ -63,7 +64,7 @@ export async function saveProviderAction(id: number | null, _previous: ActionSta
   return actionSuccess(id === null ? "Provider added." : "Provider saved.");
 }
 
-/** The API refuses (409) a provider SMS were bought from or allocated with: deactivate it instead. */
+/** The API refuses (409) a provider SMS were bought from or organizations send through: deactivate it instead. */
 export async function deleteProviderAction(id: number): Promise<ActionState> {
   try {
     await requireModuleAccess(smsModule);

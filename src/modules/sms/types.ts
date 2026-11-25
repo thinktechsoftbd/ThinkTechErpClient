@@ -24,8 +24,11 @@ export type SmsProvider = {
   apiUsername: string | null;
   hasApiPassword: boolean;
   hasApiKey: boolean;
+  /** The number or brand name SMS are sent from; without it the gateway refuses to send. */
+  senderId: string | null;
   isActive: boolean;
   purchasedSms: number;
+  /** Allocated to the organizations that send through this provider. */
   allocatedSms: number;
   /** Bought from the provider and not yet allocated to an organization. */
   availableSms: number;
@@ -43,6 +46,8 @@ export type SmsProviderUpsertRequest = {
   apiPassword: string | null;
   /** Null keeps the stored key, "" removes it, a value replaces it. */
   apiKey: string | null;
+  /** Null: none. */
+  senderId: string | null;
   isActive: boolean;
 };
 
@@ -89,12 +94,10 @@ export type SmsPurchaseUpsertRequest = {
 
 // ---- Allocations
 
+/** SMS given to an organization from the stock of its provider (chosen in Security → Organizations). */
 export type SmsAllocation = {
   id: number;
   objectId: string;
-  providerId: number;
-  providerName: string;
-  providerCode: string;
   organizationObjectId: string;
   organizationId: number;
   organizationName: string;
@@ -106,8 +109,8 @@ export type SmsAllocation = {
   updatedAt: string | null;
 };
 
+/** Allocated from the organization's provider; the API refuses an organization without one. */
 export type SmsAllocationUpsertRequest = {
-  providerId: number;
   organizationObjectId: string;
   allocatedSms: number;
   allocationDate: string;
@@ -126,6 +129,10 @@ export type SmsOrganizationBalance = {
   isActive: boolean;
   /** Finalized in Security → Organizations: its allocations are locked (no new, changed or deleted ones). */
   isFinalized: boolean;
+  /** The provider it sends through and is allocated from (Security → Organizations); null: none yet. */
+  providerId: number | null;
+  providerName: string | null;
+  providerCode: string | null;
   allocatedSms: number;
   smsUsage: number;
   availableSms: number;

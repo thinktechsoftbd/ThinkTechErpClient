@@ -7,21 +7,24 @@ import { cn } from "@/core/utils/cn";
 import type { PaymentSource } from "@/modules/inventory/types";
 
 /**
- * Payment Source picker for a purchase invoice: a searchable box over the server-side payment
- * sources, and its cascading "Source Type" select (the chosen source's lines). The selected line id
- * is the value saved as `invPaymentSourceDId`.
+ * Payment Source picker for an invoice (purchase, sales, service): a searchable box over the
+ * server-side payment sources, and its cascading "Source Type" select (the chosen source's lines).
+ * The selected line id is the value saved as `invPaymentSourceDId`.
  */
 export function PaymentSourceFields({
   dId,
   onChange,
   initialSourceId = null,
   initialName,
+  required = true,
 }: {
   dId: number | null;
   onChange: (dId: number | null) => void;
   /** Editing: the saved source's header id, loaded so its types are available. */
   initialSourceId?: number | null;
   initialName?: string;
+  /** Marks Source Type as required (a sale on credit with nothing paid now doesn't need one). */
+  required?: boolean;
 }) {
   const [selected, setSelected] = useState<PaymentSource | null>(null);
   const [query, setQuery] = useState("");
@@ -160,7 +163,7 @@ export function PaymentSourceFields({
 
       <div>
         <Label htmlFor="invPaymentSourceType">
-          Source Type <span className="text-red-500">*</span>
+          Source Type {required && <span className="text-red-500">*</span>}
         </Label>
         <Select
           id="invPaymentSourceType"

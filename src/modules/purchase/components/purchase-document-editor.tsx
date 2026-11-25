@@ -329,6 +329,8 @@ export function PurchaseDocumentEditor({
       : charges.filter((c) => c.onSupplierBill && header.supplierId).reduce((sum, c) => sum + num(c.amount), 0);
   const total = round(linesTotal + (mode === "receipt" ? 0 : chargesOnBill) + (mode === "invoice" ? num(header.roundOff) : 0));
   const paid = mode !== "invoice" ? 0 : credit ? num(header.paidAmount) : total;
+  /** Something is paid (a cash purchase, or something paid now on credit): the payment source is then required. */
+  const paysNow = !credit || paid > 0;
 
   function updateLine(key: string, patch: Partial<EditorLine>) {
     setLines((current) => current.map((line) => (line.key === key ? { ...line, ...patch } : line)));
@@ -402,7 +404,8 @@ export function PurchaseDocumentEditor({
         paymentMethod: paid > 0 ? header.paymentMethod : null,
         paymentProvider: paid > 0 ? orNull(header.paymentProvider) : null,
         paymentReferenceNo: paid > 0 ? orNull(header.paymentReferenceNo) : null,
-        invPaymentSourceDId: header.paymentSourceDId,
+        // Only when something is paid: a credit purchase with nothing paid now has no payment source.
+        invPaymentSourceDId: paid > 0 ? header.paymentSourceDId : null,
         remarks: orNull(header.remarks),
         lines: builtLines,
         charges: buildCharges(),
@@ -1000,12 +1003,18 @@ export function PurchaseDocumentEditor({
             <Card>
               <CardHeader title={credit ? "Paid now (optional)" : "Payment"} />
               <CardBody className="space-y-4">
-                <Field label="Payment Source" name="invPaymentSourceDId" required>
+                <Field
+                  label="Payment Source"
+                  name="invPaymentSourceDId"
+                  required={paysNow}
+                  hint={paysNow ? undefined : "Only needed when something is paid now."}
+                >
                   <PaymentSourceFields
                     dId={header.paymentSourceDId}
                     initialSourceId={initial.paymentSourceId ?? null}
                     initialName={initial.paymentSourceName}
                     onChange={(id) => set("paymentSourceDId", id)}
+                    required={paysNow}
                   />
                 </Field>
                 {credit && (

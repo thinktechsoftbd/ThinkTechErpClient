@@ -198,6 +198,8 @@ export function ServiceInvoiceEditor({
   const total = round(beforeRound + num(header.roundOff));
   const paid = credit ? num(header.paidAmount) : total;
   const due = round(total - paid);
+  /** Money is taken now (a cash bill, or something paid now on credit): the payment source is then required. */
+  const takesMoney = !credit || paid > 0;
 
   // ---- Checks before saving (the API checks everything again)
   const problems: string[] = [];
@@ -219,7 +221,7 @@ export function ServiceInvoiceEditor({
   if (less > linesTotal + charge + service) problems.push("The bill discount is more than the bill.");
   if (total < 0) problems.push("The total can't be negative.");
   if (credit && (paid < 0 || paid > total)) problems.push("The amount paid now must be between 0 and the total.");
-  if (!header.paymentSourceDId) problems.push("Choose the payment source and its type.");
+  if (takesMoney && !header.paymentSourceDId) problems.push("Choose the payment source and its type.");
 
   const submit: FormAction = async (previous, formData) => {
     setShowIssues(true);
@@ -281,7 +283,8 @@ export function ServiceInvoiceEditor({
       paymentMethod: takesPayment ? header.paymentMethod : null,
       paymentProvider: takesPayment && header.paymentMethod !== "Cash" ? orNull(header.paymentProvider) : null,
       paymentReferenceNo: takesPayment && header.paymentMethod !== "Cash" ? orNull(header.paymentReferenceNo) : null,
-      invPaymentSourceDId: header.paymentSourceDId,
+      // Only when money is taken: a credit bill with nothing paid now has no payment source.
+      invPaymentSourceDId: takesPayment ? header.paymentSourceDId : null,
       serviceNote: orNull(header.serviceNote),
       remarks: orNull(header.remarks),
       lines: lines.map(buildLine),
@@ -511,12 +514,18 @@ export function ServiceInvoiceEditor({
           <Card>
             <CardHeader title={credit ? "Paid now (optional)" : "Payment"} />
             <CardBody className="space-y-3 text-sm">
-              <Field label="Payment Source" name="invPaymentSourceDId" required>
+              <Field
+                label="Payment Source"
+                name="invPaymentSourceDId"
+                required={takesMoney}
+                hint={takesMoney ? undefined : "Only needed when something is paid now."}
+              >
                 <PaymentSourceFields
                   dId={header.paymentSourceDId}
                   initialSourceId={initial.paymentSourceId ?? null}
                   initialName={initial.paymentSourceName}
                   onChange={(id) => set("paymentSourceDId", id)}
+                  required={takesMoney}
                 />
               </Field>
               {credit && (

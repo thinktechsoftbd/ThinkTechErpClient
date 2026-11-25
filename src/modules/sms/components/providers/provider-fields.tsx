@@ -30,6 +30,14 @@ export function ProviderFields({ value }: { value?: SmsProvider }) {
       </Field>
       <SecretField name="apiPassword" label="API password" maxLength={1000} editing={Boolean(value)} isSet={value?.hasApiPassword ?? false} />
       <SecretField name="apiKey" label="API key" maxLength={2000} editing={Boolean(value)} isSet={value?.hasApiKey ?? false} />
+      <Field
+        label="Sender ID"
+        name="senderId"
+        hint="The number or brand name SMS are sent from, e.g. 8809648909301. Organizations sending through this provider use it; without it, sending is refused."
+        className={wide}
+      >
+        <Input id="senderId" name="senderId" maxLength={50} defaultValue={value?.senderId ?? ""} autoComplete="off" />
+      </Field>
       <Checkbox
         name="isActive"
         defaultChecked={value?.isActive ?? true}

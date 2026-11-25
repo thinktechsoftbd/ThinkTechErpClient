@@ -18,6 +18,7 @@ import { canManageOrganizations } from "@/modules/security/access";
 import { securityApi } from "@/modules/security/api";
 import { OrganizationForm } from "@/modules/security/components/forms";
 import { smsAllocationsHref } from "@/modules/security/components/tables";
+import { getOrganizationSmsProviders } from "@/modules/security/queries";
 import { smsModule } from "@/modules/sms/module";
 
 export const metadata: Metadata = { title: "Organization" };
@@ -35,7 +36,11 @@ export default function OrganizationPage({ params }: Props) {
 async function OrganizationDetail({ params }: Pick<Props, "params">) {
   const id = parseIdParam((await params).organizationId);
   if (id === null) notFound();
-  const [session, result] = await Promise.all([requireSession(), tryApi(() => securityApi.getOrganization(id))]);
+  const [session, result, smsProviders] = await Promise.all([
+    requireSession(),
+    tryApi(() => securityApi.getOrganization(id)),
+    getOrganizationSmsProviders(),
+  ]);
   if (!result.ok) {
     if (result.error.status === 404) notFound();
     return (
@@ -85,7 +90,11 @@ async function OrganizationDetail({ params }: Pick<Props, "params">) {
         <CardHeader title="Organization" />
         {/* Less space under the title: the form starts with its own section heading. */}
         <CardBody className="pt-3 sm:pt-4">
-          <OrganizationForm organization={organization} readOnly={!canManageOrganizations(session)} />
+          <OrganizationForm
+            organization={organization}
+            smsProviders={smsProviders.ok ? smsProviders.data : []}
+            readOnly={!canManageOrganizations(session)}
+          />
         </CardBody>
       </Card>
     </>

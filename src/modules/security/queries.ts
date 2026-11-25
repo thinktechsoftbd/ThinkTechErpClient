@@ -20,6 +20,9 @@ export const getOrganizationOptions = cache(() =>
   ),
 );
 
+/** The SMS providers of the organization form's picker; loaded once even when every row's edit popup needs them. */
+export const getOrganizationSmsProviders = cache(() => tryApi(() => securityApi.getOrganizationSmsProviders()));
+
 export const getSubscriptionModuleOptions = cache(() =>
   tryApi(async (): Promise<PickerOption[]> =>
     (await securityApi.getSubscriptionModules({ limit: MAX_LIMIT, offset: 0 })).items

@@ -25,10 +25,11 @@ function organizationOptions(
     .filter((organization) => organization.isActive || keep.has(organization.objectId))
     .map((organization) => ({
       objectId: organization.objectId,
-      label: `${organizationLabel(organization)}${organization.isActive ? "" : " (inactive)"}${organization.isFinalized ? " (finalized)" : ""}`,
+      label: `${organizationLabel(organization)}${organization.providerName ? ` · ${organization.providerName}` : " (no SMS provider)"}${organization.isActive ? "" : " (inactive)"}${organization.isFinalized ? " (finalized)" : ""}`,
       balance: organization,
-      // Finalized organizations' allocations are locked: shown, but they can't be chosen.
-      locked: organization.isFinalized,
+      // Finalized organizations' allocations are locked, and one without a provider has no stock to be
+      // allocated from: shown, but they can't be chosen.
+      locked: organization.isFinalized || organization.providerId === null,
     }));
   // Beyond the picker's first 500 organizations: still show the one being edited.
   if (value && !options.some((option) => option.objectId === value.organizationObjectId)) {
@@ -41,8 +42,9 @@ function organizationOptions(
 }
 
 /**
- * Fields of the allocate/edit allocation modal: an active provider (with what it has left to
- * allocate) and an organization (with what it has left), the SMS count, date and remarks.
+ * Fields of the allocate/edit allocation modal: an organization (with what it has left, and what its
+ * provider has left to allocate), the SMS count, date and remarks. The SMS come from the stock of the
+ * organization's provider, chosen in Security → Organizations.
  */
 export function AllocationFields({
   value,
@@ -51,61 +53,48 @@ export function AllocationFields({
   organizationObjectId,
 }: {
   value?: SmsAllocation;
-  /** Every provider; inactive ones are offered only when the allocation already uses them. */
+  /** Every provider, for what the chosen organization's provider has left to allocate. */
   providers: SmsProvider[];
   /** Every organization; inactive ones are offered only when already chosen. */
   organizations: SmsOrganizationBalance[];
   /** Organization chosen up front for a new allocation (e.g. from ?organizationId=). */
   organizationObjectId?: string;
 }) {
-  const providerOptions = providers.filter((provider) => provider.isActive || provider.id === value?.providerId);
   const orgOptions = organizationOptions(organizations, value, organizationObjectId);
 
-  const [providerId, setProviderId] = useState(
-    String(value?.providerId ?? (providerOptions.length === 1 ? providerOptions[0].id : "")),
-  );
-  // A finalized organization from ?organizationId= isn't preselected: it can't be allocated to.
+  // A finalized organization, or one without a provider, from ?organizationId= isn't preselected: it can't be allocated to.
   const [organizationId, setOrganizationId] = useState(
     value?.organizationObjectId ??
       (orgOptions.some((option) => option.objectId === organizationObjectId && !option.locked) ? organizationObjectId : undefined) ??
       "",
   );
 
-  // This allocation's own SMS go back to its provider's stock when it is changed.
-  const leftToAllocate = (provider: SmsProvider) =>
-    provider.availableSms + (value && provider.id === value.providerId ? value.allocatedSms : 0);
-  const provider = providerOptions.find((option) => String(option.id) === providerId);
   const organization = orgOptions.find((option) => option.objectId === organizationId)?.balance;
+  const provider = providers.find((option) => option.id === organization?.providerId);
+  // This allocation's own SMS go back to its provider's stock when it is changed.
+  const ownProviderId = value && organizations.find((option) => option.objectId === value.organizationObjectId)?.providerId;
+  const leftToAllocate = provider ? provider.availableSms + (value && provider.id === ownProviderId ? value.allocatedSms : 0) : 0;
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <Field
-        label="Provider"
-        name="providerId"
-        required
-        className={wide}
-        hint={provider ? `${formatQuantity(leftToAllocate(provider))} SMS left to allocate.` : "Allocated from this provider's stock."}
-      >
-        <Select id="providerId" name="providerId" value={providerId} onChange={(event) => setProviderId(event.target.value)} required>
-          <option value="" disabled>
-            Choose a provider
-          </option>
-          {providerOptions.map((option) => (
-            <option key={option.id} value={option.id}>
-              {`${providerLabel(option)} · ${formatQuantity(leftToAllocate(option))} left to allocate${option.isActive ? "" : " (inactive)"}`}
-            </option>
-          ))}
-        </Select>
-      </Field>
       <Field
         label="Organization"
         name="organizationObjectId"
         required
         className={wide}
         hint={
-          organization
-            ? `Has ${formatQuantity(organization.availableSms)} SMS left (${formatQuantity(organization.allocatedSms)} allocated, ${formatQuantity(organization.smsUsage)} used).`
-            : undefined
+          organization ? (
+            <>
+              {`Has ${formatQuantity(organization.availableSms)} SMS left (${formatQuantity(organization.allocatedSms)} allocated, ${formatQuantity(organization.smsUsage)} used).`}
+              {provider && (
+                <span className="block">
+                  {`Allocated from ${providerLabel(provider)}${provider.isActive ? "" : " (inactive)"}, which has ${formatQuantity(leftToAllocate)} left to allocate.`}
+                </span>
+              )}
+            </>
+          ) : (
+            "SMS come from the stock of the organization's provider, chosen in Security → Organizations."
+          )
         }
       >
         <Select

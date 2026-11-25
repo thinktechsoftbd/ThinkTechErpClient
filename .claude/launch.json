@@ -8,6 +8,12 @@
       "port": 3000
     },
     {
+      "name": "thinktecherp-api-thinktecherp-db",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-I", "C:/Users/Dev/AppData/Local/Temp/claude/794c45cbbb6b360f/4e3c1bf2-19a4-4afc-b1f0-b1aaa4e74066/scratchpad/launch_api_5291.py"],
+      "port": 5291
+    },
+    {
       "name": "thinktecherp-api",
       "runtimeExecutable": "dotnet",
       "runtimeArgs": ["run", "--project", "../ThinkTechErp/ThinkTechErpAPI/ThinkTechErpAPI", "--launch-profile", "http"],

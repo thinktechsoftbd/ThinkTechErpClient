@@ -18,6 +18,7 @@ import { securityApi } from "@/modules/security/api";
 import { PermissionOnly } from "@/core/crud/permission-only";
 import { OrganizationFields } from "@/modules/security/components/forms";
 import { OrganizationsTable } from "@/modules/security/components/tables";
+import { getOrganizationSmsProviders } from "@/modules/security/queries";
 import { ORGANIZATION_MANAGE_PERMISSION, type Organization } from "@/modules/security/types";
 import { smsModule } from "@/modules/sms/module";
 
@@ -41,19 +42,7 @@ export default function OrganizationsPage({ searchParams }: Props) {
         actions={
           <Suspense>
             <PermissionOnly code={ORGANIZATION_MANAGE_PERMISSION}>
-              <FormModalButton
-                mode="create"
-                label="New organization"
-                title="New organization"
-                description="Fill in its details. The Organization ID is generated when left empty."
-                action={createOrganizationFromListAction}
-                submitLabel="Create organization"
-                size="lg"
-              >
-                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                  <OrganizationFields />
-                </div>
-              </FormModalButton>
+              <NewOrganizationButton />
             </PermissionOnly>
           </Suspense>
         }
@@ -64,6 +53,26 @@ export default function OrganizationsPage({ searchParams }: Props) {
         </Suspense>
       </Card>
     </>
+  );
+}
+
+/** The New organization popup; its SMS provider picker needs the providers. */
+async function NewOrganizationButton() {
+  const smsProviders = await getOrganizationSmsProviders();
+  return (
+    <FormModalButton
+      mode="create"
+      label="New organization"
+      title="New organization"
+      description="Fill in its details. The Organization ID is generated when left empty."
+      action={createOrganizationFromListAction}
+      submitLabel="Create organization"
+      size="lg"
+    >
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <OrganizationFields smsProviders={smsProviders.ok ? smsProviders.data : []} />
+      </div>
+    </FormModalButton>
   );
 }
 
@@ -92,7 +101,11 @@ async function OrganizationsList({ searchParams }: Pick<Props, "searchParams">) 
   const activeParam = firstParam(query.active);
   const isActive = parseActiveFilter(activeParam);
 
-  const [session, result] = await Promise.all([requireSession(), tryApi(() => securityApi.getOrganizations())]);
+  const [session, result, smsProviders] = await Promise.all([
+    requireSession(),
+    tryApi(() => securityApi.getOrganizations()),
+    getOrganizationSmsProviders(),
+  ]);
   const filtered = Boolean(search || kind || isActive !== undefined);
   const rows = result.ok
     ? result.data.filter(
@@ -125,6 +138,7 @@ async function OrganizationsList({ searchParams }: Pick<Props, "searchParams">) 
         // The Allocations and Deployment links open other screens, so only for users who can open them.
         <OrganizationsTable
           organizations={rows}
+          smsProviders={smsProviders.ok ? smsProviders.data : []}
           canManage={canManageOrganizations(session)}
           smsLinks={canAccessModule(session, smsModule)}
           deploymentLinks={canViewDeployments(session)}

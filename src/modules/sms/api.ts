@@ -36,7 +36,7 @@ export const smsApi = {
     create: (body: SmsProviderUpsertRequest) => apiFetch<SmsProvider>(`${base}/providers`, { method: "POST", body }),
     update: (id: number, body: SmsProviderUpsertRequest) =>
       apiFetch<SmsProvider>(`${base}/providers/${id}`, { method: "PUT", body }),
-    /** 409 once SMS were bought from or allocated with the provider. */
+    /** 409 once SMS were bought from the provider or an organization sends through it. */
     remove: (id: number) => apiFetch<void>(`${base}/providers/${id}`, { method: "DELETE" }),
   },
 
@@ -51,7 +51,8 @@ export const smsApi = {
   },
 
   allocations: {
-    list: (query: SmsListQuery) => apiFetch<PagedResult<SmsAllocation>>(`${base}/allocations`, { query }),
+    /** An allocation has no provider of its own (it is its organization's), so no provider filter. */
+    list: (query: Omit<SmsListQuery, "providerId">) => apiFetch<PagedResult<SmsAllocation>>(`${base}/allocations`, { query }),
     create: (body: SmsAllocationUpsertRequest) => apiFetch<SmsAllocation>(`${base}/allocations`, { method: "POST", body }),
     update: (id: number, body: SmsAllocationUpsertRequest) =>
       apiFetch<SmsAllocation>(`${base}/allocations/${id}`, { method: "PUT", body }),

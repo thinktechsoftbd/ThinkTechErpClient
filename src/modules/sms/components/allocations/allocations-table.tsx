@@ -16,7 +16,7 @@ export function AllocationsTable({
   canManage,
 }: {
   rows: SmsAllocation[];
-  /** For the edit modal's pickers. */
+  /** For the edit modal: what each organization's provider has left to allocate. */
   providers: SmsProvider[];
   organizations: SmsOrganizationBalance[];
   canManage: boolean;
@@ -29,7 +29,6 @@ export function AllocationsTable({
         <tr>
           <TH>Date</TH>
           <TH>Organization</TH>
-          <TH>Provider</TH>
           <TH className="text-right">SMS</TH>
           <TH>Remarks</TH>
           {canManage && <TH className="text-right">Actions</TH>}
@@ -42,10 +41,6 @@ export function AllocationsTable({
             <TD>
               <span className="font-medium text-gray-800 dark:text-white/90">{row.organizationName}</span>
               {row.organizationCode && <span className={`block text-xs ${muted}`}>{row.organizationCode}</span>}
-            </TD>
-            <TD>
-              {row.providerName}
-              <span className={`block font-mono text-xs ${muted}`}>{row.providerCode}</span>
             </TD>
             <TD className="text-right font-medium tabular-nums text-gray-800 dark:text-white/90">{formatNumber(row.allocatedSms)}</TD>
             <TD className={row.remarks ? "max-w-72" : muted}>

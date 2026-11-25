@@ -6,6 +6,7 @@ import type {
   OrganizationClient,
   OrganizationClientOrganizationOption,
   OrganizationClientUpsertRequest,
+  OrganizationSmsProviderOption,
   OrganizationUpsertRequest,
   PagedResult,
   PermissionUpsertRequest,
@@ -55,6 +56,8 @@ export const securityApi = {
     apiFetch<OrganizationClient>(`${organizationClient(id)}/active`, { method: "PATCH", body: { isActive } }),
 
   getOrganizations: () => apiFetch<Organization[]>(`${base}/organizations`),
+  /** Every SMS provider, active first, for the organization form (needs only the organizations' View permission). */
+  getOrganizationSmsProviders: () => apiFetch<OrganizationSmsProviderOption[]>(`${base}/organizations/sms-providers`),
   getOrganization: (id: number) => apiFetch<Organization>(organization(id)),
   createOrganization: (body: OrganizationUpsertRequest) =>
     apiFetch<Organization>(`${base}/organizations`, { method: "POST", body }),

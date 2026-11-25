@@ -97,7 +97,8 @@ export function TaxGroupsTable({ rows, taxRates, canManage }: { rows: TaxGroup[]
                 <span className="inline-flex items-center gap-1">
                   <FormModalButton
                     mode="edit"
-                    label="Edit"
+                    iconOnly
+                    label="Edit tax group"
                     title="Edit tax group"
                     description={row.name}
                     action={saveTaxGroupAction.bind(null, row.id)}
@@ -106,6 +107,7 @@ export function TaxGroupsTable({ rows, taxRates, canManage }: { rows: TaxGroup[]
                     <TaxGroupFields value={row} taxRates={taxRates} />
                   </FormModalButton>
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deleteTaxGroupAction.bind(null, row.id)}
                     itemLabel={`tax group "${row.name}"`}
                     message="A group used on products or documents can't be deleted; deactivate it instead."

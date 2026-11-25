@@ -55,7 +55,8 @@ export function ShippingZonesTable({ rows, canManage }: { rows: ShippingZone[]; 
                   <span className="inline-flex items-center gap-1">
                     <FormModalButton
                       mode="edit"
-                      label="Edit"
+                      iconOnly
+                      label="Edit shipping zone"
                       title="Edit shipping zone"
                       action={saveShippingZoneAction.bind(null, row.id)}
                       submitLabel="Save changes"
@@ -63,6 +64,7 @@ export function ShippingZonesTable({ rows, canManage }: { rows: ShippingZone[]; 
                       <ShippingZoneFields value={row} />
                     </FormModalButton>
                     <ConfirmDeleteButton
+                      iconOnly
                       action={deleteShippingZoneAction.bind(null, row.id)}
                       itemLabel={`shipping zone "${row.name}"`}
                       message={

@@ -83,7 +83,8 @@ export function OrganizationClientsTable({
               <TD className="text-right">
                 <FormModalButton
                   mode="edit"
-                  label="Edit"
+                  iconOnly
+                  label="Edit API client"
                   title="Edit API client"
                   description={client.clientName}
                   action={saveOrganizationClientAction.bind(null, client.id)}

@@ -100,7 +100,8 @@ export function TaxRatesTable({ rows, canManage }: { rows: TaxRate[]; canManage:
                 <span className="inline-flex items-center gap-1">
                   <FormModalButton
                     mode="edit"
-                    label="Edit"
+                    iconOnly
+                    label="Edit tax rate"
                     title="Edit tax rate"
                     description={row.code}
                     action={saveTaxRateAction.bind(null, row.id)}
@@ -109,6 +110,7 @@ export function TaxRatesTable({ rows, canManage }: { rows: TaxRate[]; canManage:
                     <TaxRateFields value={row} />
                   </FormModalButton>
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deleteTaxRateAction.bind(null, row.id)}
                     itemLabel={`tax rate "${row.code}"`}
                     message={

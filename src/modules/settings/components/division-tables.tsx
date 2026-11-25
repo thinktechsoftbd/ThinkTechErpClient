@@ -47,7 +47,8 @@ export function DivisionsTable({ rows, canManage }: { rows: Division[]; canManag
                 <span className="inline-flex items-center gap-1">
                   <FormModalButton
                     mode="edit"
-                    label="Edit"
+                    iconOnly
+                    label="Edit division"
                     title="Edit division"
                     action={saveDivisionAction.bind(null, row.id)}
                     submitLabel="Save changes"
@@ -55,6 +56,7 @@ export function DivisionsTable({ rows, canManage }: { rows: Division[]; canManag
                     <DivisionFields value={row} />
                   </FormModalButton>
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deleteDivisionAction.bind(null, row.id)}
                     itemLabel={`division "${row.name}"`}
                     message={

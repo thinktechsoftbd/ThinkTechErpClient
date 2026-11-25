@@ -72,7 +72,8 @@ export function AllocationsTable({
                 <span className="inline-flex items-center gap-1">
                   <FormModalButton
                     mode="edit"
-                    label="Edit"
+                    iconOnly
+                    label="Edit allocation"
                     title="Edit allocation"
                     description={`${row.organizationName} · ${formatDate(row.allocationDate)} · ${formatNumber(row.allocatedSms)} SMS`}
                     action={saveAllocationAction.bind(null, row.id)}
@@ -81,6 +82,7 @@ export function AllocationsTable({
                     <AllocationFields value={row} providers={providers} organizations={organizations} />
                   </FormModalButton>
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deleteAllocationAction.bind(null, row.id)}
                     itemLabel={`the allocation of ${formatNumber(row.allocatedSms)} SMS to ${row.organizationName}`}
                     message="The SMS go back to the provider's stock. An allocation the organization already used can't be deleted."

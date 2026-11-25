@@ -49,7 +49,8 @@ export function LookupTablesTable({ rows, canManage }: { rows: LookupTable[]; ca
                 <span className="inline-flex items-center gap-1">
                   <FormModalButton
                     mode="edit"
-                    label="Edit"
+                    iconOnly
+                    label={`Edit ${row.name}`}
                     title="Edit lookup table"
                     action={saveLookupTableAction.bind(null, row.id)}
                     submitLabel="Save changes"
@@ -57,6 +58,7 @@ export function LookupTablesTable({ rows, canManage }: { rows: LookupTable[]; ca
                     <LookupTableFields value={row} />
                   </FormModalButton>
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deleteLookupTableAction.bind(null, row.id)}
                     itemLabel={`lookup table "${row.name}"`}
                     message={
@@ -114,7 +116,8 @@ export function LookupDataTable({
                 <span className="inline-flex items-center gap-1">
                   <FormModalButton
                     mode="edit"
-                    label="Edit"
+                    iconOnly
+                    label={`Edit ${row.name}`}
                     title="Edit lookup value"
                     action={saveLookupDataAction.bind(null, row.id)}
                     submitLabel="Save changes"
@@ -122,6 +125,7 @@ export function LookupDataTable({
                     <LookupDataFields value={row} tables={tables} />
                   </FormModalButton>
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deleteLookupDataAction.bind(null, row.id)}
                     itemLabel={`"${row.name}" from ${row.lookupTableName}`}
                     message="Values already used elsewhere (e.g. as a subscription's currency) can't be deleted; deactivate them instead."

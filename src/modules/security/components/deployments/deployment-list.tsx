@@ -34,7 +34,8 @@ export function DeploymentList({
                 <span className="inline-flex items-center gap-1">
                   <FormModalButton
                     mode="edit"
-                    label="Edit"
+                    iconOnly
+                    label={`Edit ${deployment.serviceType} deployment`}
                     title={`Edit ${deployment.serviceType} deployment`}
                     action={saveDeploymentAction.bind(null, deployment.organizationObjectId, deployment.id)}
                     submitLabel="Save changes"
@@ -43,6 +44,7 @@ export function DeploymentList({
                     <DeploymentFields value={deployment} serviceTypes={serviceTypes} />
                   </FormModalButton>
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deleteDeploymentAction.bind(null, deployment.id)}
                     itemLabel={`${deployment.serviceType} deployment`}
                     message="Its detail lines are deleted with it. Mark it inactive instead to keep the record."

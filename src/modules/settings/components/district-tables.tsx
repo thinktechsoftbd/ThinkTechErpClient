@@ -66,7 +66,8 @@ export function DistrictsTable({
                 <span className="inline-flex items-center gap-1">
                   <FormModalButton
                     mode="edit"
-                    label="Edit"
+                    iconOnly
+                    label="Edit district"
                     title="Edit district"
                     action={saveDistrictAction.bind(null, row.id)}
                     submitLabel="Save changes"
@@ -74,6 +75,7 @@ export function DistrictsTable({
                     <DistrictFields value={row} divisions={divisions} zones={zones} />
                   </FormModalButton>
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deleteDistrictAction.bind(null, row.id)}
                     itemLabel={`district "${row.name}" (${row.divisionName})`}
                     message={

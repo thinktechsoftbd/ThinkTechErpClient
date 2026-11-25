@@ -78,7 +78,8 @@ export function PurchasesTable({
                   <span className="inline-flex items-center gap-1">
                     <FormModalButton
                       mode="edit"
-                      label="Edit"
+                      iconOnly
+                      label="Edit purchase"
                       title="Edit purchase"
                       description={`${row.providerName} · ${formatDate(row.purchaseDate)} · ${formatNumber(row.smsQuantity)} SMS`}
                       action={savePurchaseAction.bind(null, row.id)}
@@ -88,6 +89,7 @@ export function PurchasesTable({
                       <PurchaseFields value={row} providers={providers} currencies={currencies} />
                     </FormModalButton>
                     <ConfirmDeleteButton
+                      iconOnly
                       action={deletePurchaseAction.bind(null, row.id)}
                       itemLabel={`the purchase of ${formatNumber(row.smsQuantity)} SMS from ${row.providerName}`}
                       message="A purchase whose SMS are already allocated to organizations can't be deleted; reduce the allocations first."

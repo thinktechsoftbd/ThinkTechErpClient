@@ -65,7 +65,8 @@ export function AreasTable({
                 <span className="inline-flex items-center gap-1">
                   <FormModalButton
                     mode="edit"
-                    label="Edit"
+                    iconOnly
+                    label="Edit area"
                     title="Edit area"
                     action={saveAreaAction.bind(null, row.id)}
                     submitLabel="Save changes"
@@ -73,6 +74,7 @@ export function AreasTable({
                     <AreaFields value={row} districts={districts} zones={zones} />
                   </FormModalButton>
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deleteAreaAction.bind(null, row.id)}
                     itemLabel={`area "${row.name}" (${row.districtName})`}
                     message="Areas used by a supplier address or an order can't be deleted; deactivate them instead."

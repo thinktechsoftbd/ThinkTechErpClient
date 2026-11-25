@@ -100,7 +100,8 @@ export function OrganizationsTable({
                   {canManage && (
                     <FormModalButton
                       mode="edit"
-                      label="Edit"
+                      iconOnly
+                      label={`Edit ${organization.nameEn}`}
                       title="Edit organization"
                       description={organization.code ? `${organization.nameEn} · ${organization.code}` : organization.nameEn}
                       action={saveOrganizationAction.bind(null, organization.id)}

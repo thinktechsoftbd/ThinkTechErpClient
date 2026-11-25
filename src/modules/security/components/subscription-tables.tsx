@@ -57,7 +57,8 @@ export function SubscriptionModulesTable({ rows, canManage }: { rows: Subscripti
                 <span className="inline-flex items-center gap-1">
                   <FormModalButton
                     mode="edit"
-                    label="Edit"
+                    iconOnly
+                    label="Edit subscription module"
                     title="Edit subscription module"
                     action={saveSubscriptionModuleAction.bind(null, row.id)}
                     submitLabel="Save changes"
@@ -65,6 +66,7 @@ export function SubscriptionModulesTable({ rows, canManage }: { rows: Subscripti
                     <SubscriptionModuleFields value={row} />
                   </FormModalButton>
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deleteSubscriptionModuleAction.bind(null, row.id)}
                     itemLabel={`module "${row.moduleName}"`}
                     message={
@@ -150,7 +152,8 @@ export function SubscriptionsTable({
                 <span className="inline-flex items-center gap-1">
                   <FormModalButton
                     mode="edit"
-                    label="Edit"
+                    iconOnly
+                    label="Edit subscription"
                     title="Edit subscription"
                     description={`${row.organizationName} · ${row.moduleName}`}
                     action={saveSubscriptionAction.bind(null, row.id)}
@@ -160,6 +163,7 @@ export function SubscriptionsTable({
                     <SubscriptionFields value={row} organizations={organizations} modules={modules} currencies={currencies} />
                   </FormModalButton>
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deleteSubscriptionAction.bind(null, row.id)}
                     itemLabel={`the ${row.moduleName} subscription of ${row.organizationName}`}
                     message="Consider setting its status to Cancelled instead, to keep its history."

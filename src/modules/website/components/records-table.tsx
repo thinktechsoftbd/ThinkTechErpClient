@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Pencil, Trash2 } from "lucide-react";
-import { rowAction } from "@/core/crud/row-action";
-import { ConfirmActionButton } from "@/core/forms/confirm-action-button";
+import { Pencil } from "lucide-react";
+import { ConfirmDeleteButton } from "@/core/crud/confirm-delete-button";
+import { rowIconAction } from "@/core/crud/row-action";
 import { Badge } from "@/core/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/core/ui/table";
 import { formatDateTime } from "@/core/utils/format";
@@ -61,15 +61,19 @@ export function RecordsTable({
               <TD className="text-right">
                 {id && (
                   <span className="inline-flex items-center gap-1">
-                    <Link href={`${basePath}/${encodeURIComponent(id)}`} className={rowAction("edit")}>
-                      <Pencil className="size-4" aria-hidden /> Edit
-                    </Link>
-                    <ConfirmActionButton
-                      action={deleteWebsiteRecordAction.bind(null, definition.table, id, undefined)}
-                      confirmMessage={`Delete this ${definition.singular.toLowerCase()}? This cannot be undone.`}
+                    <Link
+                      href={`${basePath}/${encodeURIComponent(id)}`}
+                      className={rowIconAction("edit")}
+                      title={`Edit this ${definition.singular.toLowerCase()}`}
+                      aria-label={`Edit this ${definition.singular.toLowerCase()}`}
                     >
-                      <Trash2 className="size-4" aria-hidden /> Delete
-                    </ConfirmActionButton>
+                      <Pencil className="size-4" aria-hidden />
+                    </Link>
+                    <ConfirmDeleteButton
+                      iconOnly
+                      action={deleteWebsiteRecordAction.bind(null, definition.table, id, undefined)}
+                      itemLabel={`this ${definition.singular.toLowerCase()}`}
+                    />
                   </span>
                 )}
               </TD>

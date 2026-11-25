@@ -56,7 +56,8 @@ export function ProvidersTable({ rows, canManage }: { rows: SmsProvider[]; canMa
                 <span className="inline-flex items-center gap-1">
                   <FormModalButton
                     mode="edit"
-                    label="Edit"
+                    iconOnly
+                    label="Edit provider"
                     title="Edit provider"
                     description={providerLabel(row)}
                     action={saveProviderAction.bind(null, row.id)}
@@ -65,6 +66,7 @@ export function ProvidersTable({ rows, canManage }: { rows: SmsProvider[]; canMa
                     <ProviderFields value={row} />
                   </FormModalButton>
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deleteProviderAction.bind(null, row.id)}
                     itemLabel={`provider "${row.name}"`}
                     message="A provider SMS were bought from or allocated with can't be deleted; deactivate it instead."

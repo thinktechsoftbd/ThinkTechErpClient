@@ -91,7 +91,8 @@ export function SubscriptionPlansTable({
                 <span className="inline-flex items-center gap-1">
                   <FormModalButton
                     mode="edit"
-                    label="Edit"
+                    iconOnly
+                    label="Edit subscription plan"
                     title="Edit subscription plan"
                     description={row.nameEn}
                     action={saveSubscriptionPlanAction.bind(null, row.id)}
@@ -101,6 +102,7 @@ export function SubscriptionPlansTable({
                     <SubscriptionPlanFields value={row} currencies={currencies} />
                   </FormModalButton>
                   <ConfirmDeleteButton
+                    iconOnly
                     action={deleteSubscriptionPlanAction.bind(null, row.id)}
                     itemLabel={`subscription plan "${row.nameEn}"`}
                     message="Its features and their details are deleted too. This cannot be undone."

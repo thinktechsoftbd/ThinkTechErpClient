@@ -4,7 +4,8 @@ import { PageSkeleton } from "@/core/ui/feedback";
 import { serviceInvoiceModule } from "@/modules/warranty/service-invoice-module";
 
 /**
- * Service invoices with the @modal slot: from the list, New opens in a popup over it (@modal/(.)new). Gated by
+ * Service invoices with the @modal slot: from the list, New and a draft's Edit open in a popup over it
+ * (@modal/(.)new, @modal/(.)[invoiceId]/edit); a refresh or shared link opens the full page. Gated by
  * SERVICE_INVOICE.V/M (the Warranty layout above lets those users in too).
  */
 export default function ServiceInvoicesLayout({ children, modal }: LayoutProps<"/warranty/service-invoices">) {

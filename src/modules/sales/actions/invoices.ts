@@ -57,3 +57,20 @@ export async function deleteSaleAction(id: number): Promise<ActionState> {
 export async function deleteSaleFromListAction(id: number): Promise<ActionState> {
   return runDocumentAction(salesModule, () => salesApi.invoices.remove(id), "Draft deleted.");
 }
+
+/** A completed sale that isn't finalized back to draft (its stock back), then its edit page. */
+export async function unpostSaleAction(id: number): Promise<ActionState> {
+  return runDocumentAction(salesModule, () => salesApi.invoices.action(id, "unpost"), "Back to draft.", paths.edit(id));
+}
+
+/** A completed sale that isn't finalized back to draft (its stock back), then deleted; the list reloads in place. */
+export async function deletePostedSaleFromListAction(id: number): Promise<ActionState> {
+  return runDocumentAction(
+    salesModule,
+    async () => {
+      await salesApi.invoices.action(id, "unpost");
+      await salesApi.invoices.remove(id);
+    },
+    "Sale deleted; its stock is back.",
+  );
+}

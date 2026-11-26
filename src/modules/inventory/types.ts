@@ -118,6 +118,11 @@ export type InventorySetting = {
   expiryAlertDays: number;
   defaultWarehouseId: number | null;
   defaultWarehouseName: string | null;
+  /** The ledger head a finalized service invoice's service charge (labour) posts to. */
+  serviceChargeAccSubClassId: number | null;
+  serviceChargeHeadCode: string | null;
+  serviceChargeHeadName: string | null;
+  serviceChargeHeadPath: string | null;
   updatedAt: string | null;
 };
 
@@ -129,6 +134,7 @@ export type InventorySettingUpdateRequest = {
   requireApproval: boolean;
   expiryAlertDays: number;
   defaultWarehouseId: number | null;
+  serviceChargeAccSubClassId: number | null;
 };
 
 export type ProductUnit = {

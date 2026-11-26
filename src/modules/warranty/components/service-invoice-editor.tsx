@@ -6,7 +6,7 @@ import { AlertTriangle, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { computeLine } from "@/core/documents/line-math";
 import { ProductSearch } from "@/core/documents/product-search";
-import { ActionForm, FormMessage, SubmitButton } from "@/core/forms/action-form";
+import { ActionForm, FormMessage } from "@/core/forms/action-form";
 import { actionError, type FormAction } from "@/core/forms/action-state";
 import { Field, Input, Label, Select, Textarea } from "@/core/forms/fields";
 import { SearchSelect } from "@/core/forms/search-select";
@@ -15,7 +15,7 @@ import { Card, CardBody, CardHeader } from "@/core/ui/card";
 import { cn } from "@/core/utils/cn";
 import { showDate } from "@/core/utils/date";
 import { formatAmount, formatQuantity, parseDecimal, round, todayIso } from "@/core/utils/number";
-import { useLookupList } from "@/modules/inventory/components/documents/intent-submit";
+import { IntentSubmit, useLookupList, useSubmitIntent } from "@/modules/inventory/components/documents/intent-submit";
 import type { BatchStockItem, ProductLookupItem, TaxGroupOption } from "@/modules/inventory/types";
 import { PaymentSourceFields } from "@/modules/purchase/components/payment-source-fields";
 import { CustomerPicker } from "@/modules/sales/components/customer-picker";
@@ -173,6 +173,7 @@ export function ServiceInvoiceEditor({
   const [customer, setCustomer] = useState<CustomerOption | null>(initial.customer ?? null);
   const [lines, setLines] = useState<ServiceInvoiceEditorLine[]>(initial.lines ?? []);
   const [showIssues, setShowIssues] = useState(false);
+  const { chosen: chosenIntent, choose: chooseIntent } = useSubmitIntent();
   const taxGroups = useMemo(() => new Map(options.taxGroups.map((g) => [g.id, g])), [options.taxGroups]);
   const set = <K extends keyof typeof header>(key: K, value: (typeof header)[K]) => setHeader((current) => ({ ...current, [key]: value }));
 
@@ -590,9 +591,16 @@ export function ServiceInvoiceEditor({
                 ))}
               </ul>
             )}
-            <SubmitButton className="w-full" pendingLabel="Saving…">
-              Save service invoice · {formatAmount(total)}
-            </SubmitButton>
+            {/* Save draft is first in the DOM (shown below) so Enter in a field saves, never finalizes. */}
+            <div className="flex flex-col-reverse gap-2">
+              <IntentSubmit intent="save" chosen={chosenIntent} onChoose={chooseIntent} variant="outline" pendingLabel="Saving…">
+                Save draft
+              </IntentSubmit>
+              {/* Posts the invoice, then its bill voucher from the ledger mappings; it is then locked. */}
+              <IntentSubmit intent="finalize" chosen={chosenIntent} onChoose={chooseIntent} variant="primary" pendingLabel="Finalizing…">
+                Save &amp; finalize · {formatAmount(total)}
+              </IntentSubmit>
+            </div>
             {returnTo ? (
               <button type="button" onClick={() => router.back()} className={buttonClasses("ghost", "md", "w-full")}>
                 Cancel

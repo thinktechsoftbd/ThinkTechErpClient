@@ -78,6 +78,10 @@ export type ServiceInvoice = {
   dueAmount: number;
   status: "Draft" | "Posted" | "Cancelled";
   paymentStatus: "Unpaid" | "PartiallyPaid" | "Paid";
+  /** The bill voucher made by finalizing the invoice, while it is there. */
+  billVoucherId: number | null;
+  billVoucherRefNo: string | null;
+  billVoucherStatus: string | null;
   lineCount: number;
   postedAt: string | null;
   postedBy: number | null;

@@ -60,3 +60,20 @@ export async function deleteInvoiceAction(id: number): Promise<ActionState> {
 export async function deleteInvoiceFromListAction(id: number): Promise<ActionState> {
   return runDocumentAction(purchaseModule, () => purchaseApi.invoices.remove(id), "Draft deleted.");
 }
+
+/** A posted invoice that isn't finalized back to draft (its stock reversed), then its edit page. */
+export async function unpostInvoiceAction(id: number): Promise<ActionState> {
+  return runDocumentAction(purchaseModule, () => purchaseApi.invoices.action(id, "unpost"), "Back to draft.", paths.edit(id));
+}
+
+/** A posted invoice that isn't finalized back to draft (its stock reversed), then deleted; the list reloads in place. */
+export async function deletePostedInvoiceFromListAction(id: number): Promise<ActionState> {
+  return runDocumentAction(
+    purchaseModule,
+    async () => {
+      await purchaseApi.invoices.action(id, "unpost");
+      await purchaseApi.invoices.remove(id);
+    },
+    "Invoice deleted; its stock movement is reversed.",
+  );
+}

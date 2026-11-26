@@ -22,7 +22,7 @@ import { formatAmount, formatQuantity } from "@/core/utils/number";
 import { parseIdParam } from "@/core/utils/params";
 import { PrintButton } from "@/modules/inventory/components/reports/print-button";
 import { canManageSales } from "@/modules/sales/access";
-import { cancelSaleAction, deleteSaleAction, finalizeSaleAction, postSaleAction } from "@/modules/sales/actions/invoices";
+import { cancelSaleAction, deleteSaleAction, finalizeSaleAction, postSaleAction, unpostSaleAction } from "@/modules/sales/actions/invoices";
 import { salesApi } from "@/modules/sales/api";
 import { SalesMemo } from "@/modules/sales/components/sales-memo";
 import { customerLabel, salesLabel } from "@/modules/sales/types";
@@ -60,8 +60,8 @@ async function SaleDetail({ params }: Pick<Props, "params">) {
   const lineDiscount = invoice.discountAmount - invoice.extraDiscountAmount;
   const profit = invoice.totalAmount - invoice.taxAmount - invoice.costAmount;
   const returnable = invoice.lines.some((line) => line.quantity - line.returnedQuantity > 0.0001);
-  // Finalized: its bill voucher is posted, and the sale is locked until the voucher is deleted.
-  const finalized = invoice.billVoucherId !== null;
+  // Finalized: its bill voucher is posted, and the sale is locked until the voucher is unposted (it then goes back to draft).
+  const finalized = invoice.billVoucherStatus === "Posted";
   const finalizeMessage =
     "Finalize this sale? It is completed (if still a draft) and its bill voucher is posted from the ledger mappings. " +
     "It can't be cancelled until that voucher is deleted.";
@@ -132,6 +132,16 @@ async function SaleDetail({ params }: Pick<Props, "params">) {
                   Cancel sale
                 </DocumentActionButton>
               )}
+              {/* Locked only while finalized and fully paid; a finalized sale's bill voucher is unposted on the way. */}
+              {canManage && isPosted && (!finalized || invoice.paymentStatus !== "Paid") && (
+                <DocumentActionButton
+                  action={unpostSaleAction.bind(null, id)}
+                  variant="outline"
+                  confirmMessage={`Put this sale back to draft? Its stock comes back so it can be changed or deleted, then completed again.${finalized ? ` Its bill voucher ${invoice.billVoucherRefNo} is unposted.` : ""} Receipts and returns against it must be cancelled first.`}
+                >
+                  Back to draft
+                </DocumentActionButton>
+              )}
               {canManage && (
                 <LinkButton href="/sales/invoices/new" size="sm" variant={isPosted ? "primary" : "outline"}>
                   <Plus className="size-4" aria-hidden /> New sale
@@ -148,7 +158,7 @@ async function SaleDetail({ params }: Pick<Props, "params">) {
                 items={[
                   {
                     label: "Bill voucher",
-                    value: finalized ? (
+                    value: invoice.billVoucherId !== null ? (
                       <Link href={`/accounting/vouchers?view=${invoice.billVoucherId}`} className="text-brand-500 hover:underline">
                         {invoice.billVoucherRefNo}
                         {invoice.billVoucherStatus === "Draft" ? " (unposted)" : ""}

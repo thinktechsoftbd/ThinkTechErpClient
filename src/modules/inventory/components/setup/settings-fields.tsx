@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { Checkbox, Field, Input, Select } from "@/core/forms/fields";
+import { LedgerHeadField } from "@/modules/accounting/components/ledger-head-picker";
+import { mappedLedgerHead } from "@/modules/accounting/components/pickers";
 import type { InventorySetting } from "../../types";
 
 const MONTHS = [
@@ -128,6 +130,27 @@ export function InventorySettingsFields({
             hint="Stock documents need approval before they are posted."
             defaultChecked={settings.requireApproval}
           />
+        </div>
+      </Group>
+
+      <Group title="Accounting" description="Ledger heads used when invoices are finalized into bill vouchers.">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            label="Service charge ledger head"
+            name="serviceChargeAccSubClassId"
+            hint="A service invoice's service charge (labour) posts here; its parts post to their categories' heads."
+          >
+            <LedgerHeadField
+              id="serviceChargeAccSubClassId"
+              name="serviceChargeAccSubClassId"
+              defaultValue={mappedLedgerHead({
+                accSubClassId: settings.serviceChargeAccSubClassId,
+                ledgerHeadCode: settings.serviceChargeHeadCode,
+                ledgerHeadName: settings.serviceChargeHeadName,
+                ledgerHeadPath: settings.serviceChargeHeadPath,
+              })}
+            />
+          </Field>
         </div>
       </Group>
     </>

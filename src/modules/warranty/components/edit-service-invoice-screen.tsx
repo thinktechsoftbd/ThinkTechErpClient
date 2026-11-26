@@ -5,6 +5,8 @@ import { Alert } from "@/core/ui/alert";
 import { ApiErrorState } from "@/core/ui/api-error-state";
 import { Card } from "@/core/ui/card";
 import { PageHeader } from "@/core/ui/page-header";
+import { MapLedgerHeadsButton } from "@/modules/accounting/components/map-ledger-heads-button";
+import { loadUnmappedHeads } from "@/modules/accounting/voucher-mappings";
 import { canManageSales } from "@/modules/sales/access";
 import { canManageServiceInvoices } from "../access";
 import { saveServiceInvoiceAction } from "../actions/service-invoices";
@@ -29,7 +31,18 @@ export async function EditServiceInvoiceScreen({ id, notice, returnTo }: { id: n
   // Only a draft can be changed, and only with SERVICE_INVOICE.M.
   if (invoice.data.status !== "Draft" || !canManageServiceInvoices(session)) redirect(`/warranty/service-invoices/${id}`);
   if (!options.ok) return <Card><ApiErrorState error={options.error} /></Card>;
-  const initial = await loadServiceInvoiceEditorInitial(invoice.data);
+  // A failed finalize: the parts' categories (and the customer of an unpaid part) still without a ledger head get a
+  // Map button beside the reason. The service charge head is chosen under Inventory → Settings.
+  const owedByCustomer = invoice.data.customerId !== null && invoice.data.totalAmount > invoice.data.paidAmount;
+  const [initial, unmapped] = await Promise.all([
+    loadServiceInvoiceEditorInitial(invoice.data),
+    notice
+      ? loadUnmappedHeads(
+          invoice.data.lines.map((line) => line.productId),
+          owedByCustomer ? { kind: "customer", id: invoice.data.customerId! } : null,
+        )
+      : Promise.resolve([]),
+  ]);
   if (!initial.ok) return <Card><ApiErrorState error={initial.error} /></Card>;
 
   return (
@@ -49,7 +62,10 @@ export async function EditServiceInvoiceScreen({ id, notice, returnTo }: { id: n
       )}
       {notice && (
         <Alert tone="error" className="mb-6">
-          {notice}
+          <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span>{notice}</span>
+            {unmapped.length > 0 && <MapLedgerHeadsButton items={unmapped} />}
+          </span>
         </Alert>
       )}
       <ServiceInvoiceEditor

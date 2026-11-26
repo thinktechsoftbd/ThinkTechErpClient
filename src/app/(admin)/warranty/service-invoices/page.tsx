@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Pencil, Plus, Receipt } from "lucide-react";
+import { Plus, Receipt } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
 import { requireSession } from "@/core/auth/session";
 import { AutoSearchToolbar } from "@/core/crud/auto-search-toolbar";
-import { ConfirmDeleteButton } from "@/core/crud/confirm-delete-button";
-import { LockedRowActions } from "@/core/crud/locked-row-actions";
 import { PermissionOnly } from "@/core/crud/permission-only";
-import { rowIconAction } from "@/core/crud/row-action";
+import { InvoiceRowActions } from "@/core/documents/invoice-row-actions";
 import { SortHeader, type SortDirection } from "@/core/crud/sort-header";
 import { DocumentStatusBadge } from "@/core/documents/document-status";
 import { ApiErrorState } from "@/core/ui/api-error-state";
@@ -24,7 +22,11 @@ import { parseIdParam } from "@/core/utils/params";
 import { dateParam } from "@/modules/inventory/components/reports/report-parts";
 import { customerLabel } from "@/modules/sales/types";
 import { canManageServiceInvoices } from "@/modules/warranty/access";
-import { deleteServiceInvoiceFromListAction } from "@/modules/warranty/actions/service-invoices";
+import {
+  deletePostedServiceInvoiceFromListAction,
+  deleteServiceInvoiceFromListAction,
+  unpostServiceInvoiceAction,
+} from "@/modules/warranty/actions/service-invoices";
 import { serviceInvoiceApi } from "@/modules/warranty/service-invoice-api";
 import { SERVICE_INVOICE_MANAGE_PERMISSION } from "@/modules/warranty/service-invoice-types";
 
@@ -221,26 +223,16 @@ async function InvoiceList({ searchParams }: Pick<Props, "searchParams">) {
                   </TD>
                   {canManage && (
                     <TD className="text-right">
-                      {/* Only a draft can be changed or deleted. */}
-                      {invoice.status !== "Draft" ? (
-                        <LockedRowActions reason={`A ${invoice.status.toLowerCase()} service invoice can't be edited or deleted.`} />
-                      ) : (
-                        <span className="inline-flex items-center gap-1">
-                          <Link
-                            href={`${basePath}/${invoice.id}/edit`}
-                            className={rowIconAction("edit")}
-                            title={`Edit ${invoice.invoiceNo}`}
-                            aria-label={`Edit ${invoice.invoiceNo}`}
-                          >
-                            <Pencil className="size-4" aria-hidden />
-                          </Link>
-                          <ConfirmDeleteButton
-                            iconOnly
-                            action={deleteServiceInvoiceFromListAction.bind(null, invoice.id)}
-                            itemLabel={`service invoice ${invoice.invoiceNo}`}
-                          />
-                        </span>
-                      )}
+                      {/* Locked only while finalized (bill voucher posted) or cancelled; a posted one goes back to draft first. */}
+                      <InvoiceRowActions
+                        invoice={invoice}
+                        noun="service invoice"
+                        editHref={`${basePath}/${invoice.id}/edit`}
+                        deleteDraft={deleteServiceInvoiceFromListAction.bind(null, invoice.id)}
+                        unpostAndEdit={unpostServiceInvoiceAction.bind(null, invoice.id)}
+                        unpostAndDelete={deletePostedServiceInvoiceFromListAction.bind(null, invoice.id)}
+                        movesStock={false}
+                      />
                     </TD>
                   )}
                 </TR>

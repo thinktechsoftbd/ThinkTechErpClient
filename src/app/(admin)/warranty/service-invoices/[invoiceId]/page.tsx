@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pencil, Plus } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
 import { requireSession } from "@/core/auth/session";
 import { ConfirmDeleteButton } from "@/core/crud/confirm-delete-button";
+import { DocumentActionButton } from "@/core/documents/document-action-button";
 import { DocumentStatusBadge } from "@/core/documents/document-status";
 import { Facts, TotalsList } from "@/core/documents/facts";
 import { ApiErrorState } from "@/core/ui/api-error-state";
+import { Badge } from "@/core/ui/badge";
 import { LinkButton } from "@/core/ui/button";
 import { Card, CardBody, CardHeader } from "@/core/ui/card";
 import { PageSkeleton } from "@/core/ui/feedback";
@@ -18,7 +21,11 @@ import { formatAmount, formatQuantity } from "@/core/utils/number";
 import { parseIdParam } from "@/core/utils/params";
 import { customerLabel, salesLabel } from "@/modules/sales/types";
 import { canManageServiceInvoices } from "@/modules/warranty/access";
-import { deleteServiceInvoiceAction } from "@/modules/warranty/actions/service-invoices";
+import {
+  deleteServiceInvoiceAction,
+  finalizeServiceInvoiceAction,
+  unpostServiceInvoiceAction,
+} from "@/modules/warranty/actions/service-invoices";
 import { serviceInvoiceApi } from "@/modules/warranty/service-invoice-api";
 
 export const metadata: Metadata = { title: "Service Invoice" };
@@ -46,6 +53,13 @@ async function ServiceInvoiceDetail({ params }: Pick<Props, "params">) {
   const canManage = canManageServiceInvoices(session);
   const money = (value: number) => `${formatAmount(value)} ${invoice.currency}`;
   const isDraft = invoice.status === "Draft";
+  // Finalized: posted, with its bill voucher posted. Unposting the voucher puts the invoice back to draft.
+  const finalized = invoice.billVoucherStatus === "Posted";
+  const isPosted = invoice.status === "Posted";
+  const canFinalize = canManage && !finalized && (isDraft || invoice.status === "Posted");
+  const finalizeMessage =
+    "Finalize this service invoice? It is posted (if still a draft) and its bill voucher is posted from the ledger " +
+    "mappings. A posted service invoice can't be changed or deleted.";
   const lineDiscount = invoice.discountAmount - invoice.extraDiscountAmount;
 
   return (
@@ -55,6 +69,7 @@ async function ServiceInvoiceDetail({ params }: Pick<Props, "params">) {
           <span className="inline-flex items-center gap-3">
             {invoice.invoiceNo} <DocumentStatusBadge status={invoice.status} />
             {invoice.status !== "Cancelled" && <DocumentStatusBadge status={invoice.paymentStatus} />}
+            {finalized && <Badge tone="brand">Finalized</Badge>}
           </span>
         }
         description={`${invoice.saleType} service invoice to ${customerLabel(invoice)} · ${formatDate(invoice.invoiceDate)}`}
@@ -74,6 +89,21 @@ async function ServiceInvoiceDetail({ params }: Pick<Props, "params">) {
                 <ConfirmDeleteButton action={deleteServiceInvoiceAction.bind(null, id)} itemLabel={`service invoice ${invoice.invoiceNo}`} />
               </>
             )}
+            {canFinalize && (
+              <DocumentActionButton action={finalizeServiceInvoiceAction.bind(null, id)} variant="primary" confirmMessage={finalizeMessage}>
+                Finalize
+              </DocumentActionButton>
+            )}
+            {/* Locked only while finalized and fully paid; a finalized invoice's bill voucher is unposted on the way. */}
+            {canManage && isPosted && (!finalized || invoice.paymentStatus !== "Paid") && (
+              <DocumentActionButton
+                action={unpostServiceInvoiceAction.bind(null, id)}
+                variant="outline"
+                confirmMessage={`Put this service invoice back to draft, so it can be changed or deleted, then finalized again?${finalized ? ` Its bill voucher ${invoice.billVoucherRefNo} is unposted.` : ""}`}
+              >
+                Back to draft
+              </DocumentActionButton>
+            )}
             {canManage && (
               <LinkButton href="/warranty/service-invoices/new" size="sm">
                 <Plus className="size-4" aria-hidden /> New service invoice
@@ -88,6 +118,15 @@ async function ServiceInvoiceDetail({ params }: Pick<Props, "params">) {
           <CardBody>
             <Facts
               items={[
+                {
+                  label: "Bill voucher",
+                  value: invoice.billVoucherId !== null ? (
+                    <Link href={`/accounting/vouchers?view=${invoice.billVoucherId}`} className="text-brand-500 hover:underline">
+                      {invoice.billVoucherRefNo}
+                      {invoice.billVoucherStatus === "Draft" ? " (unposted)" : ""}
+                    </Link>
+                  ) : null,
+                },
                 {
                   label: "Customer",
                   value: invoice.customerId ? (

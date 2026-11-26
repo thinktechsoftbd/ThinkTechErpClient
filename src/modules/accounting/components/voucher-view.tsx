@@ -70,7 +70,7 @@ export function VoucherActions({
       {canPost && voucher.status === "Posted" && (
         <DocumentActionButton
           action={unpostVoucherAction.bind(null, voucher.id)}
-          confirmMessage="Unpost this voucher? Its entries leave the ledgers and it becomes a draft again."
+          confirmMessage="Unpost this voucher? Its entries leave the ledgers and it becomes a draft again. If it was made by finalizing an invoice, that invoice goes back to draft too (its stock movement reversed), so it can be edited or deleted."
         >
           Unpost
         </DocumentActionButton>

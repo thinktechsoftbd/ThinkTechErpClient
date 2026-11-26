@@ -101,7 +101,7 @@ export async function postVoucherAction(id: number): Promise<ActionState> {
 
 /** Takes a posted voucher out of the ledgers and makes it a draft again (ACCOUNTING.P). */
 export async function unpostVoucherAction(id: number): Promise<ActionState> {
-  return runDocumentAction(accountingModule, () => accountingApi.vouchers.action(id, "unpost"), "Voucher unposted; it is a draft again.");
+  return runDocumentAction(accountingModule, () => accountingApi.vouchers.action(id, "unpost"), "Voucher unposted; it is a draft again, and so is any invoice it was made from.");
 }
 
 /** Takes a posted voucher (a bill payment or collection too) out of the ledgers. */

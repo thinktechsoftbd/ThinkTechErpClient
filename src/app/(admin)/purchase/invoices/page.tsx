@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Pencil, Plus, Receipt } from "lucide-react";
+import { Plus, Receipt } from "lucide-react";
 import { Suspense } from "react";
 import { tryApi } from "@/core/api/client";
 import { requireSession } from "@/core/auth/session";
 import { AutoSearchToolbar } from "@/core/crud/auto-search-toolbar";
-import { ConfirmDeleteButton } from "@/core/crud/confirm-delete-button";
-import { LockedRowActions } from "@/core/crud/locked-row-actions";
 import { PermissionOnly } from "@/core/crud/permission-only";
-import { rowIconAction } from "@/core/crud/row-action";
+import { InvoiceRowActions } from "@/core/documents/invoice-row-actions";
 import { SortHeader, type SortDirection } from "@/core/crud/sort-header";
 import { DocumentStatusBadge } from "@/core/documents/document-status";
 import { ApiErrorState } from "@/core/ui/api-error-state";
@@ -23,7 +21,7 @@ import { formatAmount } from "@/core/utils/number";
 import { parseIdParam } from "@/core/utils/params";
 import { dateParam } from "@/modules/inventory/components/reports/report-parts";
 import { canManagePurchase } from "@/modules/purchase/access";
-import { deleteInvoiceFromListAction } from "@/modules/purchase/actions/invoices";
+import { deleteInvoiceFromListAction, deletePostedInvoiceFromListAction, unpostInvoiceAction } from "@/modules/purchase/actions/invoices";
 import { purchaseApi } from "@/modules/purchase/api";
 import { getSupplierOptions } from "@/modules/purchase/queries";
 import { PURCHASE_MANAGE_PERMISSION } from "@/modules/purchase/types";
@@ -203,32 +201,15 @@ async function InvoiceList({ searchParams }: Pick<Props, "searchParams">) {
                   </TD>
                   {canManage && (
                     <TD className="text-right">
-                      {/* Only a draft can be changed or deleted; a posted invoice is cancelled from its page. */}
-                      {invoice.status !== "Draft" ? (
-                        <LockedRowActions
-                          reason={
-                            invoice.status === "Posted"
-                              ? "A posted invoice can't be edited or deleted: its stock and payment are recorded. Open it to cancel it."
-                              : "A cancelled invoice can't be edited or deleted."
-                          }
-                        />
-                      ) : (
-                        <span className="inline-flex items-center gap-1">
-                          <Link
-                            href={`${basePath}/${invoice.id}/edit`}
-                            className={rowIconAction("edit")}
-                            title={`Edit ${invoice.invoiceNo}`}
-                            aria-label={`Edit ${invoice.invoiceNo}`}
-                          >
-                            <Pencil className="size-4" aria-hidden />
-                          </Link>
-                          <ConfirmDeleteButton
-                            iconOnly
-                            action={deleteInvoiceFromListAction.bind(null, invoice.id)}
-                            itemLabel={`draft invoice ${invoice.invoiceNo}`}
-                          />
-                        </span>
-                      )}
+                      {/* Locked only while finalized (bill voucher posted) or cancelled; a posted invoice goes back to draft first. */}
+                      <InvoiceRowActions
+                        invoice={invoice}
+                        noun="purchase invoice"
+                        editHref={`${basePath}/${invoice.id}/edit`}
+                        deleteDraft={deleteInvoiceFromListAction.bind(null, invoice.id)}
+                        unpostAndEdit={unpostInvoiceAction.bind(null, invoice.id)}
+                        unpostAndDelete={deletePostedInvoiceFromListAction.bind(null, invoice.id)}
+                      />
                     </TD>
                   )}
                 </TR>

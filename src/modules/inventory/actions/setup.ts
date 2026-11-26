@@ -477,6 +477,7 @@ export async function saveInventorySettingsAction(_previous: ActionState, formDa
     requireApproval: checked(formData, "requireApproval"),
     expiryAlertDays: readWhole(formData, "expiryAlertDays", { min: 0, max: 3650 }, 30, fieldErrors),
     defaultWarehouseId: optionalId(formData, "defaultWarehouseId", fieldErrors),
+    serviceChargeAccSubClassId: optionalId(formData, "serviceChargeAccSubClassId", fieldErrors),
   };
   if (hasErrors(fieldErrors)) return invalid(fieldErrors);
 
